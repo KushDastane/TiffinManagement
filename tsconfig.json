@@ -6,9 +6,8 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
     "nativewind-env.d.ts",
-    "src/App.js"
-, "App.js"  ]
+    "src/App.js",
+    "App.js"
+  ]
 }
