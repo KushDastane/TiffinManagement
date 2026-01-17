@@ -1,14 +1,22 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MenuScreen } from '../screens/admin/MenuScreen';
 import { OrdersScreen } from '../screens/admin/OrdersScreen';
 import { SettingsScreen } from '../screens/admin/SettingsScreen';
-
-// Placeholder screens
-const StudentsScreen = () => <View className="flex-1 items-center justify-center"><Text>Student List</Text></View>;
+import { StudentsScreen } from '../screens/admin/StudentsScreen';
+import { StudentDetailsScreen } from '../screens/admin/StudentDetailsScreen';
 
 const Tab = createBottomTabNavigator();
+const StudentStackNav = createNativeStackNavigator();
+
+// Nested Stack for Students tab so we can drill down to details
+const StudentsStack = () => (
+    <StudentStackNav.Navigator>
+        <StudentStackNav.Screen name="StudentsList" component={StudentsScreen} options={{ headerShown: false }} />
+        <StudentStackNav.Screen name="StudentDetails" component={StudentDetailsScreen} options={{ title: 'Ledger' }} />
+    </StudentStackNav.Navigator>
+);
 
 export const AdminStack = () => {
     return (
@@ -20,7 +28,7 @@ export const AdminStack = () => {
         >
             <Tab.Screen name="Menu" component={MenuScreen} options={{ title: 'Manage Menu' }} />
             <Tab.Screen name="Orders" component={OrdersScreen} options={{ title: 'Live Orders' }} />
-            <Tab.Screen name="Students" component={StudentsScreen} />
+            <Tab.Screen name="Students" component={StudentsStack} options={{ title: 'Students', headerShown: false }} />
             <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'Kitchen' }} />
         </Tab.Navigator>
     );
