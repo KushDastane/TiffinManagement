@@ -9,15 +9,30 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
+/**
+ * Places a detailed order.
+ * orderData: {
+ *   userId, userDisplayName,
+ *   slot: "lunch" | "dinner",
+ *   type: "ROTI_SABZI" | "OTHER",
+ *   variant: "half" | "full" (if Roti-Sabzi),
+ *   mainItem: String ("Gobi" or "Misal"),
+ *   addons: Array,
+ *   extras: Array of objects {name, quantity, price},
+ *   quantity: Number (Main item qty),
+ *   totalAmount: Number
+ * }
+ */
 export const placeOrder = async (kitchenId, orderData) => {
     try {
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
+        const dateId = new Date().toISOString().split('T')[0];
+
         await addDoc(ordersRef, {
             ...orderData,
+            dateId,
             status: 'placed',
-            createdAt: serverTimestamp(),
-            // Store date string for easy filtering
-            dateId: new Date().toISOString().split('T')[0]
+            createdAt: serverTimestamp()
         });
         return { success: true };
     } catch (error) {

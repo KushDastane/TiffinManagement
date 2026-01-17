@@ -11,7 +11,7 @@ export default function App() {
             <AuthProvider>
                 <TenantProvider>
                     <RootNavigator />
-                    <StatusBar style="auto" />
+                    <StatusBar style="dark" />
                 </TenantProvider>
             </AuthProvider>
         </SafeAreaProvider>

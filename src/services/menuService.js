@@ -1,28 +1,33 @@
 import {
-    collection,
     doc,
     setDoc,
     getDoc,
-    query,
-    where,
-    getDocs,
     onSnapshot
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-// Use YYYY-MM-DD for IDs to make looking up specific dates easy
+// Use YYYY-MM-DD for IDs
 export const getMenuDateId = (dateObj) => {
     return dateObj.toISOString().split('T')[0];
 };
 
-export const saveMenu = async (kitchenId, date, menuItems) => {
+/**
+ * Saves a detailed menu for a specific date.
+ * Structure:
+ * {
+ *   dateId: "2024-01-20",
+ *   lunch: { type, status, rotiSabzi: {...}, other: {...}, extras: [] },
+ *   dinner: { ... }
+ * }
+ */
+export const saveMenu = async (kitchenId, date, menuData) => {
     try {
         const dateId = typeof date === 'string' ? date : getMenuDateId(date);
         const menuRef = doc(db, 'kitchens', kitchenId, 'menus', dateId);
 
         await setDoc(menuRef, {
             dateId,
-            items: menuItems,
+            ...menuData, // Expects { lunch: {...}, dinner: {...} }
             updatedAt: new Date().toISOString()
         }, { merge: true });
 
@@ -33,24 +38,6 @@ export const saveMenu = async (kitchenId, date, menuItems) => {
     }
 };
 
-export const getMenu = async (kitchenId, date) => {
-    try {
-        const dateId = typeof date === 'string' ? date : getMenuDateId(date);
-        const menuRef = doc(db, 'kitchens', kitchenId, 'menus', dateId);
-        const docSnap = await getDoc(menuRef);
-
-        if (docSnap.exists()) {
-            return { data: docSnap.data(), exists: true };
-        } else {
-            return { data: null, exists: false };
-        }
-    } catch (error) {
-        console.error("Error fetching menu:", error);
-        return { error: error.message };
-    }
-};
-
-// Real-time listener for a specific date's menu
 export const subscribeToMenu = (kitchenId, date, callback) => {
     const dateId = typeof date === 'string' ? date : getMenuDateId(date);
     const menuRef = doc(db, 'kitchens', kitchenId, 'menus', dateId);
