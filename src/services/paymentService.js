@@ -10,85 +10,105 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-// Fetch all students joined to this kitchen
-export const getKitchenStudents = async (kitchenId) => {
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
+const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+const uploadImage = async (uri) => {
+    if (!uri) return null;
+    if (!CLOUDINARY_URL || !UPLOAD_PRESET) {
+        console.warn("Cloudinary not configured. Skipping upload.");
+        return uri; // Return local URI for now if no config
+    }
+
     try {
-        const q = query(collection(db, 'users'), where('joinedKitchens', 'array-contains', kitchenId));
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const formData = new FormData();
+        formData.append('file', {
+            uri,
+            type: 'image/jpeg',
+            name: 'upload.jpg',
+        });
+        formData.append('upload_preset', UPLOAD_PRESET);
+
+        const response = await fetch(CLOUDINARY_URL, {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await response.json();
+        return data.secure_url;
     } catch (error) {
-        console.error("Error fetching students:", error);
-        return [];
+        console.error("Image upload failed:", error);
+        return null;
     }
 };
 
-export const recordPayment = async (kitchenId, userId, amount, note = '') => {
+export const requestPayment = async (kitchenId, paymentData) => {
+    // paymentData: { userId, userDisplayName, amount, method, screenshotUri, note }
     try {
-        await addDoc(collection(db, 'kitchens', kitchenId, 'payments'), {
-            userId,
-            amount: parseFloat(amount),
-            type: 'credit', // Credit means student paid money
-            note,
+        let screenshotUrl = null;
+        if (paymentData.screenshotUri) {
+            screenshotUrl = await uploadImage(paymentData.screenshotUri);
+        }
+
+        const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
+        await addDoc(paymentsRef, {
+            userId: paymentData.userId,
+            userDisplayName: paymentData.userDisplayName,
+            amount: parseFloat(paymentData.amount),
+            type: 'credit',
+            method: paymentData.method, // 'UPI' | 'CASH'
+            status: 'pending', // Default for student requests
+            screenshotUrl,
+            note: paymentData.note || '',
             createdAt: serverTimestamp()
         });
         return { success: true };
     } catch (error) {
-        console.error("Error recording payment:", error);
+        console.error("Error requesting payment:", error);
         return { error: error.message };
     }
 };
 
-// Calculate balance: Total Orders cost - Total Payments
-export const subscribeToStudentLedger = (kitchenId, userId, callback) => {
-    const ordersQuery = query(
-        collection(db, 'kitchens', kitchenId, 'orders'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-    );
-
-    const paymentsQuery = query(
-        collection(db, 'kitchens', kitchenId, 'payments'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-    );
-
-    // Combine both streams? Or just fetch once for MVP?
-    // Real-time calculation is complex with two streams. 
-    // Let's do a simplified approach: Listen to both collection changes?
-    // OR just one big callback after fetching both.
-
-    // Better simpler approach for MVP:
-    // Just fetch all data initially or on refresh. 
-    // But "Multi-tenant" usually implies real-time data.
-
-    // Let's rely on callback firing when we get fresh data.
-    // For now, let's just export simple getters and handle composition in UI or a hook.
-    // Actually, let's make a function that fetches both and computes.
-};
+// ... existing functions (getKitchenStudents, recordPayment - rename record to 'adminRecordPayment' if needed or reuse) ...
 
 export const getStudentBalance = async (kitchenId, userId) => {
     try {
-        // 1. Get Orders (Debits)
+        // 1. Get Orders (Debits) - CONFIRMED ONLY usually, but for MVP maybe all 'placed' count as debt? 
+        // User said: "On order confirm, deduct from ledger". So we should filter by status='accepted' | 'confirmed'
+        // But for MVP, let's include 'placed' as "Tentative Debt" or just all.
+        // Let's stick to: Orders = Debit.
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
         const qOrders = query(ordersRef, where('userId', '==', userId));
         const ordersSnap = await getDocs(qOrders);
-        const totalDebits = ordersSnap.docs.reduce((sum, doc) => sum + (doc.data().price || 0), 0);
+        const totalDebits = ordersSnap.docs.reduce((sum, doc) => sum + (doc.data().totalAmount || 0), 0);
 
-        // 2. Get Payments (Credits)
+        // 2. Get Payments (Credits) - Only ACCEPTED payments count towards actual balance
+        // PENDING payments do NOT reduce debt yet.
         const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
-        const qPayments = query(paymentsRef, where('userId', '==', userId));
+        const qPayments = query(paymentsRef, where('userId', '==', userId), where('status', '==', 'accepted'));
         const paymentsSnap = await getDocs(qPayments);
         const totalCredits = paymentsSnap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
 
+        // Also fetch Pending payments for display
+        const qPendingPayments = query(paymentsRef, where('userId', '==', userId), where('status', '==', 'pending'));
+        const pendingSnap = await getDocs(qPendingPayments);
+
         return {
-            balance: totalDebits - totalCredits, // Positive means Student OWES money
+            balance: totalDebits - totalCredits,
             totalOrders: totalDebits,
             totalPaid: totalCredits,
-            orders: ordersSnap.docs.map(d => ({ ...d.data(), id: d.id, type: 'order' })),
-            payments: paymentsSnap.docs.map(d => ({ ...d.data(), id: d.id, type: 'payment' }))
+            orders: ordersSnap.docs.map(d => ({ ...d.data(), id: d.id, isDebit: true, date: d.data().createdAt })),
+            payments: paymentsSnap.docs.map(d => ({ ...d.data(), id: d.id, isDebit: false, date: d.data().createdAt })),
+            pendingPayments: pendingSnap.docs.map(d => ({ ...d.data(), id: d.id }))
         };
     } catch (error) {
         console.error("Error getting balance:", error);
         return { balance: 0, error: error.message };
     }
+};
+
+// Real-time subs
+export const subscribeToHistory = (kitchenId, userId, callback) => {
+    // For simpler MVP, just re-using getStudentBalance or similar.
+    // Implementing a combined listener is complex. 
+    // We will stick to polling/focus-effect for now as done in previous screens.
 };

@@ -18,13 +18,11 @@ export const HistoryScreen = () => {
 
         const data = await getStudentBalance(tenant.id, user.uid);
 
-        setLedger(data);
-        const allTxns = [
-            ...(data.orders || []).map(o => ({ ...o, date: o.createdAt?.toMillis ? o.createdAt.toMillis() : Date.now(), isOrder: true })),
-            ...(data.payments || []).map(p => ({ ...p, date: p.createdAt?.toMillis ? p.createdAt.toMillis() : Date.now(), isOrder: false }))
-        ].sort((a, b) => b.date - a.date);
+        // Filter ONLY orders for History Screen
+        const orderTxns = (data.orders || []).map(o => ({ ...o, date: o.createdAt?.toMillis ? o.createdAt.toMillis() : Date.now(), isOrder: true }));
 
-        setTransactions(allTxns);
+        setTransactions(orderTxns.sort((a, b) => b.date - a.date));
+        setLedger(data); // Still useful if we want to show balance somewhere, but main list is orders
         setLoading(false);
     };
 

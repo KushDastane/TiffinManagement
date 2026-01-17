@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, RefreshControl } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
-import { useTenant } from '../../contexts/TenantContext';
-import { getMenuDateId, subscribeToMenu } from '../../services/menuService';
-import { placeOrder, subscribeToMyOrders } from '../../services/orderService';
-import { getStudentBalance } from '../../services/paymentService'; // Import ledger service
+import React, { useState, useEffect } from "react";
+import {
+    View,
+    Text,
+    Pressable,
+    ScrollView,
+    ActivityIndicator,
+    Alert,
+    RefreshControl,
+} from "react-native";
+import { useAuth } from "../../contexts/AuthContext";
+import { useTenant } from "../../contexts/TenantContext";
+import { getMenuDateId, subscribeToMenu } from "../../services/menuService";
+import { placeOrder, subscribeToMyOrders } from "../../services/orderService";
+import { getStudentBalance } from "../../services/paymentService"; // Import ledger service
 
 const WeekSummary = ({ orders }) => {
     // Generate last 7 days including today
@@ -16,8 +24,8 @@ const WeekSummary = ({ orders }) => {
     }
 
     const hasOrder = (date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        return orders.some(o => o.dateId === dateStr);
+        const dateStr = date.toISOString().split("T")[0];
+        return orders.some((o) => o.dateId === dateStr);
     };
 
     return (
@@ -28,9 +36,13 @@ const WeekSummary = ({ orders }) => {
                 return (
                     <View key={index} className="items-center">
                         <Text className="text-xs text-gray-400 mb-1">{date.getDate()}</Text>
-                        <View className={`w-8 h-8 rounded-full items-center justify-center ${ordered ? 'bg-green-500' : 'bg-gray-100'} ${isToday ? 'border-2 border-yellow-400' : ''}`}>
-                            <Text className={`font-bold ${ordered ? 'text-white' : 'text-gray-300'}`}>
-                                {date.toLocaleDateString('en-US', { weekday: 'narrow' })}
+                        <View
+                            className={`w-8 h-8 rounded-full items-center justify-center ${ordered ? "bg-green-500" : "bg-gray-100"} ${isToday ? "border-2 border-yellow-400" : ""}`}
+                        >
+                            <Text
+                                className={`font-bold ${ordered ? "text-white" : "text-gray-300"}`}
+                            >
+                                {date.toLocaleDateString("en-US", { weekday: "narrow" })}
                             </Text>
                         </View>
                     </View>
@@ -47,30 +59,42 @@ const WalletCard = ({ balance, loading }) => (
             <ActivityIndicator color="white" />
         ) : (
             <View className="flex-row items-end">
-                <Text className={`text-4xl font-bold ${balance > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                    {balance > 0 ? '-' : ''}₹{Math.abs(balance)}
+                <Text
+                    className={`text-4xl font-bold ${balance > 0 ? "text-red-400" : "text-green-400"}`}
+                >
+                    {balance > 0 ? "-" : ""}₹{Math.abs(balance)}
                 </Text>
                 <Text className="text-gray-500 mb-2 ml-2 font-medium">
-                    {balance > 0 ? 'Due' : 'Advance'}
+                    {balance > 0 ? "Due" : "Advance"}
                 </Text>
             </View>
         )}
-        <TouchableOpacity className="bg-gray-800 mt-4 py-3 rounded-lg items-center border border-gray-700">
+        <Pressable
+            style={{
+                backgroundColor: '#1f2937', // bg-gray-800
+                marginTop: 16, // mt-4
+                paddingVertical: 12, // py-3
+                borderRadius: 8, // rounded-lg
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: '#374151', // border-gray-700
+            }}
+        >
             <Text className="text-gray-300 font-bold">+ Add Money (Upload Slip)</Text>
-        </TouchableOpacity>
+        </Pressable>
     </View>
 );
 
 // ... SlotCard Component (Same as before) ...
 const SlotCard = ({ slotName, slotData, onOrder }) => {
-    const [variant, setVariant] = useState('full');
+    const [variant, setVariant] = useState("full");
     const [extras, setExtras] = useState({});
-    const isActive = slotData.status === 'SET';
+    const isActive = slotData.status === "SET";
 
     // Time Check Logic (Same as before)
     const now = new Date();
     const currentHour = now.getHours();
-    const isLunch = slotName === 'Lunch';
+    const isLunch = slotName === "Lunch";
     const isTimeValid = isLunch ? currentHour < 14 : currentHour < 22; // Extended slightly for testing
     const canOrder = isActive && isTimeValid;
 
@@ -80,14 +104,17 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
 
     const calculateTotal = () => {
         let total = 0;
-        if (type === 'ROTI_SABZI') {
-            total += variant === 'half' ? Number(rotiSabzi.halfPrice) : Number(rotiSabzi.fullPrice);
+        if (type === "ROTI_SABZI") {
+            total +=
+                variant === "half"
+                    ? Number(rotiSabzi.halfPrice)
+                    : Number(rotiSabzi.fullPrice);
         } else {
             total += Number(other.price);
         }
 
         if (menuExtras) {
-            menuExtras.forEach(e => {
+            menuExtras.forEach((e) => {
                 const qty = extras[e.name] || 0;
                 total += qty * Number(e.price);
             });
@@ -97,18 +124,23 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
 
     const handlePlaceOrder = () => {
         const orderPayload = {
-            slot: isLunch ? 'lunch' : 'dinner',
+            slot: isLunch ? "lunch" : "dinner",
             type,
-            variant: type === 'ROTI_SABZI' ? variant : null,
-            mainItem: type === 'ROTI_SABZI' ? rotiSabzi.sabzi : other.itemName,
-            addons: type === 'ROTI_SABZI' && variant === 'full' ? rotiSabzi.addons : [],
-            extras: menuExtras ? menuExtras.filter(e => extras[e.name] > 0).map(e => ({
-                name: e.name,
-                price: e.price,
-                quantity: extras[e.name]
-            })) : [],
+            variant: type === "ROTI_SABZI" ? variant : null,
+            mainItem: type === "ROTI_SABZI" ? rotiSabzi.sabzi : other.itemName,
+            addons:
+                type === "ROTI_SABZI" && variant === "full" ? rotiSabzi.addons : [],
+            extras: menuExtras
+                ? menuExtras
+                    .filter((e) => extras[e.name] > 0)
+                    .map((e) => ({
+                        name: e.name,
+                        price: e.price,
+                        quantity: extras[e.name],
+                    }))
+                : [],
             quantity: 1,
-            totalAmount: calculateTotal()
+            totalAmount: calculateTotal(),
         };
         onOrder(orderPayload);
     };
@@ -126,32 +158,67 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
                 {!isTimeValid && <Text className="text-red-500 font-bold">Closed</Text>}
             </View>
 
-            {type === 'ROTI_SABZI' ? (
+            {type === "ROTI_SABZI" ? (
                 <View>
-                    <Text className="text-lg font-bold text-yellow-700 mb-2">{rotiSabzi.sabzi}</Text>
+                    <Text className="text-lg font-bold text-yellow-700 mb-2">
+                        {rotiSabzi.sabzi}
+                    </Text>
                     <View className="flex-row mb-4 bg-gray-50 p-1 rounded-lg">
-                        <TouchableOpacity
-                            className={`flex-1 p-3 rounded-md items-center ${variant === 'half' ? 'bg-white shadow-sm border border-gray-200' : ''}`}
-                            onPress={() => setVariant('half')}
+                        <Pressable
+                            style={{
+                                flex: 1,
+                                padding: 12,
+                                borderRadius: 6,
+                                alignItems: 'center',
+                                backgroundColor: variant === "half" ? "white" : undefined,
+                                shadowColor: variant === "half" ? "#000" : undefined,
+                                shadowOffset: variant === "half" ? { width: 0, height: 1 } : undefined,
+                                shadowOpacity: variant === "half" ? 0.05 : undefined,
+                                shadowRadius: variant === "half" ? 2 : undefined,
+                                borderWidth: variant === "half" ? 1 : 0,
+                                borderColor: variant === "half" ? "#e5e7eb" : undefined,
+                            }}
+                            onPress={() => setVariant("half")}
                         >
                             <Text className="font-bold">Half</Text>
                             <Text className="text-gray-500">₹{rotiSabzi.halfPrice}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            className={`flex-1 p-3 rounded-md items-center ${variant === 'full' ? 'bg-white shadow-sm border border-gray-200' : ''}`}
-                            onPress={() => setVariant('full')}
+                        </Pressable>
+                        <Pressable
+                            style={{
+                                flex: 1,
+                                padding: 12,
+                                borderRadius: 6,
+                                alignItems: 'center',
+                                backgroundColor: variant === "full" ? "white" : undefined,
+                                shadowColor: variant === "full" ? "#000" : undefined,
+                                shadowOffset: variant === "full" ? { width: 0, height: 1 } : undefined,
+                                shadowOpacity: variant === "full" ? 0.05 : undefined,
+                                shadowRadius: variant === "full" ? 2 : undefined,
+                                borderWidth: variant === "full" ? 1 : 0,
+                                borderColor: variant === "full" ? "#e5e7eb" : undefined,
+                            }}
+                            onPress={() => setVariant("full")}
                         >
                             <Text className="font-bold">Full</Text>
                             <Text className="text-gray-500">₹{rotiSabzi.fullPrice}</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     </View>
-                    <Text className="text-gray-500 text-sm mb-2">Includes: 4 Roti, Sabzi{variant === 'full' ? ', ' + (rotiSabzi.addons || []).join(', ') : ''}</Text>
+                    <Text className="text-gray-500 text-sm mb-2">
+                        Includes: 4 Roti, Sabzi
+                        {variant === "full"
+                            ? ", " + (rotiSabzi.addons || []).join(", ")
+                            : ""}
+                    </Text>
                 </View>
             ) : (
                 <View className="mb-4">
                     <View className="flex-row justify-between">
-                        <Text className="text-lg font-bold text-gray-800">{other.itemName}</Text>
-                        <Text className="text-lg font-bold text-yellow-600">₹{other.price}</Text>
+                        <Text className="text-lg font-bold text-gray-800">
+                            {other.itemName}
+                        </Text>
+                        <Text className="text-lg font-bold text-yellow-600">
+                            ₹{other.price}
+                        </Text>
                     </View>
                 </View>
             )}
@@ -160,19 +227,30 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
                 <View className="mt-2 border-t border-gray-100 pt-3">
                     <Text className="font-bold text-gray-600 mb-2">Add Extras</Text>
                     {menuExtras.map((extra, idx) => (
-                        <View key={idx} className="flex-row justify-between items-center mb-3">
+                        <View
+                            key={idx}
+                            className="flex-row justify-between items-center mb-3"
+                        >
                             <View>
                                 <Text className="font-medium">{extra.name}</Text>
                                 <Text className="text-gray-400 text-xs">₹{extra.price}</Text>
                             </View>
                             <View className="flex-row items-center bg-gray-100 rounded-lg">
-                                <TouchableOpacity onPress={() => updateExtraQty(extra.name, -1)} className="px-3 py-1">
+                                <Pressable
+                                    onPress={() => updateExtraQty(extra.name, -1)}
+                                    style={{ paddingHorizontal: 12, paddingVertical: 4 }}
+                                >
                                     <Text className="text-xl font-bold text-gray-600">-</Text>
-                                </TouchableOpacity>
-                                <Text className="font-bold px-2">{extras[extra.name] || 0}</Text>
-                                <TouchableOpacity onPress={() => updateExtraQty(extra.name, 1)} className="px-3 py-1">
+                                </Pressable>
+                                <Text className="font-bold px-2">
+                                    {extras[extra.name] || 0}
+                                </Text>
+                                <Pressable
+                                    onPress={() => updateExtraQty(extra.name, 1)}
+                                    style={{ paddingHorizontal: 12, paddingVertical: 4 }}
+                                >
                                     <Text className="text-xl font-bold text-gray-600">+</Text>
-                                </TouchableOpacity>
+                                </Pressable>
                             </View>
                         </View>
                     ))}
@@ -182,18 +260,27 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
             <View className="mt-4 border-t border-dashed border-gray-300 pt-4">
                 <View className="flex-row justify-between items-end mb-4">
                     <Text className="text-gray-500">Total Amount</Text>
-                    <Text className="text-2xl font-bold text-gray-800">₹{calculateTotal()}</Text>
+                    <Text className="text-2xl font-bold text-gray-800">
+                        ₹{calculateTotal()}
+                    </Text>
                 </View>
 
-                <TouchableOpacity
-                    className={`w-full bg-yellow-400 rounded-lg p-4 items-center ${!canOrder ? 'opacity-50 bg-gray-300' : ''}`}
+                <Pressable
+                    style={{
+                        width: '100%',
+                        backgroundColor: !canOrder ? '#d1d5db' : '#facc15', // bg-gray-300 : bg-yellow-400
+                        borderRadius: 8,
+                        padding: 16,
+                        alignItems: 'center',
+                        opacity: !canOrder ? 0.5 : 1,
+                    }}
                     onPress={handlePlaceOrder}
                     disabled={!canOrder}
                 >
                     <Text className="text-black font-bold text-lg">
                         {canOrder ? "Place Order" : "Ordering Closed"}
                     </Text>
-                </TouchableOpacity>
+                </Pressable>
             </View>
         </View>
     );
@@ -222,10 +309,14 @@ export const HomeScreen = () => {
         if (!tenant?.id) return;
 
         // Subscribe to Menu
-        const unsubMenu = subscribeToMenu(tenant.id, today, (data) => setMenu(data));
+        const unsubMenu = subscribeToMenu(tenant.id, today, (data) =>
+            setMenu(data),
+        );
 
         // Subscribe to Orders (for Weekly Summary)
-        const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, (data) => setMyOrders(data));
+        const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, (data) =>
+            setMyOrders(data),
+        );
 
         fetchData();
 
@@ -254,7 +345,7 @@ export const HomeScreen = () => {
                         const result = await placeOrder(tenant.id, {
                             userId: user.uid,
                             userDisplayName: userProfile?.phoneNumber || user.email,
-                            ...orderPayload
+                            ...orderPayload,
                         });
                         setLoading(false);
                         if (result.error) Alert.alert("Error", "Failed to place order.");
@@ -262,9 +353,9 @@ export const HomeScreen = () => {
                             Alert.alert("Success", "Order placed successfully!");
                             fetchData(); // Refresh balance
                         }
-                    }
-                }
-            ]
+                    },
+                },
+            ],
         );
     };
 
@@ -273,12 +364,19 @@ export const HomeScreen = () => {
     return (
         <ScrollView
             className="flex-1 bg-gray-50 p-4"
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
         >
             {/* Header */}
             <View className="mb-6">
-                <Text className="text-gray-500 font-medium text-lg">Hello, {(userProfile?.phoneNumber || user?.email || 'Student').split('@')[0]}</Text>
-                <Text className="text-3xl font-extrabold text-gray-800">{tenant.name}</Text>
+                <Text className="text-gray-500 font-medium text-lg">
+                    Hello,{" "}
+                    {(userProfile?.phoneNumber || user?.email || "Student").split("@")[0]}
+                </Text>
+                <Text className="text-3xl font-extrabold text-gray-800">
+                    {tenant.name}
+                </Text>
             </View>
 
             {/* Wallet & Stats */}
@@ -286,17 +384,31 @@ export const HomeScreen = () => {
             <WeekSummary orders={myOrders} />
 
             <View className="mb-4">
-                <Text className="text-lg font-bold text-gray-800 border-l-4 border-yellow-400 pl-3">Today's Menu</Text>
+                <Text className="text-lg font-bold text-gray-800 border-l-4 border-yellow-400 pl-3">
+                    Today's Menu
+                </Text>
             </View>
 
-            {(!menu || (!menu.lunch && !menu.dinner)) ? (
+            {!menu || (!menu.lunch && !menu.dinner) ? (
                 <View className="bg-white p-10 rounded-xl items-center justify-center border border-gray-200 mb-10">
                     <Text className="text-gray-400 text-lg">Menu not updated yet.</Text>
                 </View>
             ) : (
                 <>
-                    {menu.lunch && <SlotCard slotName="Lunch" slotData={menu.lunch} onOrder={handleConfirmOrder} />}
-                    {menu.dinner && <SlotCard slotName="Dinner" slotData={menu.dinner} onOrder={handleConfirmOrder} />}
+                    {menu.lunch && (
+                        <SlotCard
+                            slotName="Lunch"
+                            slotData={menu.lunch}
+                            onOrder={handleConfirmOrder}
+                        />
+                    )}
+                    {menu.dinner && (
+                        <SlotCard
+                            slotName="Dinner"
+                            slotData={menu.dinner}
+                            onOrder={handleConfirmOrder}
+                        />
+                    )}
                 </>
             )}
 
