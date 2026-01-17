@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Image, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Image, Pressable, RefreshControl } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { getStudentBalance } from '../../services/paymentService';
@@ -84,12 +84,18 @@ export const KhataScreen = ({ navigation }) => {
                     {ledger.balance > 0 ? "You owe this amount" : "Advance paid"}
                 </Text>
 
-                <TouchableOpacity
-                    className="mt-4 bg-yellow-400 p-3 rounded-lg items-center"
+                <Pressable
+                    style={{
+                        marginTop: 16,
+                        backgroundColor: '#facc15', // yellow-400
+                        padding: 12,
+                        borderRadius: 8,
+                        alignItems: 'center'
+                    }}
                     onPress={() => navigation.navigate('AddPayment')}
                 >
                     <Text className="font-bold text-black">Pay Now / Add Entry</Text>
-                </TouchableOpacity>
+                </Pressable>
             </View>
 
             {loading && transactions.length === 0 ? (

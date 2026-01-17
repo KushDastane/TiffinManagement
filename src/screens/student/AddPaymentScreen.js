@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Image,
   Alert,
   ActivityIndicator,
@@ -81,8 +81,18 @@ export const AddPaymentScreen = ({ navigation }) => {
         Payment Mode
       </Text>
       <View className="flex-row mb-6 bg-gray-100 p-1 rounded-lg">
-        <TouchableOpacity
-          className={`native flex-1 p-3 rounded-md items-center ${mode === "UPI" ? "bg-white shadow-sm" : ""}`}
+        <Pressable
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 6,
+            alignItems: 'center',
+            backgroundColor: mode === "UPI" ? "white" : undefined,
+            shadowColor: mode === "UPI" ? "#000" : undefined,
+            shadowOffset: mode === "UPI" ? { width: 0, height: 1 } : undefined,
+            shadowOpacity: mode === "UPI" ? 0.05 : undefined,
+            shadowRadius: mode === "UPI" ? 2 : undefined,
+          }}
           onPress={() => setMode("UPI")}
         >
           <Text
@@ -90,9 +100,19 @@ export const AddPaymentScreen = ({ navigation }) => {
           >
             UPI / Online
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          className={`flex-1 p-3 rounded-md items-center ${mode === "CASH" ? "bg-white shadow-sm" : ""}`}
+        </Pressable>
+        <Pressable
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 6,
+            alignItems: 'center',
+            backgroundColor: mode === "CASH" ? "white" : undefined,
+            shadowColor: mode === "CASH" ? "#000" : undefined,
+            shadowOffset: mode === "CASH" ? { width: 0, height: 1 } : undefined,
+            shadowOpacity: mode === "CASH" ? 0.05 : undefined,
+            shadowRadius: mode === "CASH" ? 2 : undefined,
+          }}
           onPress={() => setMode("CASH")}
         >
           <Text
@@ -100,7 +120,7 @@ export const AddPaymentScreen = ({ navigation }) => {
           >
             Cash
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Amount */}
@@ -121,8 +141,18 @@ export const AddPaymentScreen = ({ navigation }) => {
           <Text className="text-gray-500 font-bold mb-2 uppercase text-xs tracking-wider">
             Payment Screenshot
           </Text>
-          <TouchableOpacity
-            className="native bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 items-center justify-center h-48"
+          <Pressable
+            style={{
+              backgroundColor: '#f9fafb', // bg-gray-50
+              borderWidth: 2,
+              borderColor: '#d1d5db', // border-gray-300
+              borderStyle: 'dashed',
+              borderRadius: 12, // rounded-xl
+              padding: 24, // p-6
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 192, // h-48
+            }}
             onPress={pickImage}
           >
             {image ? (
@@ -139,12 +169,20 @@ export const AddPaymentScreen = ({ navigation }) => {
                 </Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
-      <TouchableOpacity
-        className={`native w-full bg-yellow-400 rounded-xl p-4 items-center mb-10 ${loading ? "opacity-70" : ""}`}
+      <Pressable
+        style={{
+          width: '100%',
+          backgroundColor: '#facc15', // yellow-400
+          borderRadius: 12, // rounded-xl
+          padding: 16, // p-4
+          alignItems: 'center',
+          marginBottom: 40, // mb-10
+          opacity: loading ? 0.7 : 1,
+        }}
         onPress={handleSubmit}
         disabled={loading}
       >
@@ -153,7 +191,7 @@ export const AddPaymentScreen = ({ navigation }) => {
         ) : (
           <Text className="text-black font-bold text-lg">Submit Entry</Text>
         )}
-      </TouchableOpacity>
+      </Pressable>
     </ScrollView>
   );
 };
