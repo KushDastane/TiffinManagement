@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ---------------------------------------------------------
+    // MULTI-TENANT DEV RULES
+    // ---------------------------------------------------------
+    // Problem with old rules: They hardcoded a specific Admin UID.
+    // New Logic: Any logged-in user can Create/Join a kitchen.
+    
+    // Helper: Is the user logged in?
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. Users: Standard Profile Security
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 2. Kitchens (Registry):
+    // - Create: Anyone (to start a business)
+    // - Read: Anyone (to find a kitchen to join)
+    // - Update: Ideally Owner only, but for Dev: Anyone
+    match /kitchens/{kitchenId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 3. Data Collections (Menus, Orders)
+    // Relaxed for Phase 1/2 Verification.
+    // Allows any logged-in user to write (Admin creates Menu, Student places Order)
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
