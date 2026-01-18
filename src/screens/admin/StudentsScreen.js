@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { useTenant } from '../../contexts/TenantContext';
 import { getKitchenStudents, getStudentBalance } from '../../services/paymentService';
 import { useFocusEffect } from '@react-navigation/native';
+import tw from 'twrnc';
 
 export const StudentsScreen = ({ navigation }) => {
     const { tenant } = useTenant();
@@ -37,26 +38,41 @@ export const StudentsScreen = ({ navigation }) => {
     );
 
     const renderItem = ({ item }) => (
-        <TouchableOpacity
-            className="bg-white p-4 rounded-xl mb-3 border border-gray-100 shadow-sm flex-row justify-between items-center"
+        <Pressable
             onPress={() => navigation.navigate('StudentDetails', { student: item })}
+            style={{
+                backgroundColor: '#FFFFFF',
+                padding: 16,
+                borderRadius: 12,
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: '#F3F4F6',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 2,
+                elevation: 1
+            }}
         >
             <View>
-                <Text className="font-bold text-lg text-gray-800">{item.phoneNumber || item.email}</Text>
-                <Text className="text-gray-500 text-sm">Tap to view ledger</Text>
+                <Text style={tw`font-bold text-lg text-gray-800`}>{item.phoneNumber || item.email}</Text>
+                <Text style={tw`text-gray-500 text-sm`}>Tap to view ledger</Text>
             </View>
             <View>
-                <Text className={`font-bold text-lg ${item.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <Text style={tw`font-bold text-lg ${item.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                     {item.balance > 0 ? `Due: ₹${item.balance}` : `Adv: ₹${Math.abs(item.balance)}`}
                 </Text>
             </View>
-        </TouchableOpacity>
+        </Pressable>
     );
 
     return (
-        <View className="flex-1 bg-gray-50 p-4">
+        <View style={tw`flex-1 bg-gray-50 p-4`}>
             {loading ? (
-                <View className="flex-1 items-center justify-center">
+                <View style={tw`flex-1 items-center justify-center`}>
                     <ActivityIndicator size="large" color="#EAB308" />
                 </View>
             ) : (
@@ -68,8 +84,8 @@ export const StudentsScreen = ({ navigation }) => {
                         <RefreshControl refreshing={loading} onRefresh={fetchStudents} />
                     }
                     ListEmptyComponent={
-                        <View className="items-center justify-center py-20">
-                            <Text className="text-gray-400 text-lg">No students joined yet.</Text>
+                        <View style={tw`items-center justify-center py-20`}>
+                            <Text style={tw`text-gray-400 text-lg`}>No students joined yet.</Text>
                         </View>
                     }
                 />

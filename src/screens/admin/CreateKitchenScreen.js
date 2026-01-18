@@ -6,17 +6,10 @@ import { createKitchen } from '../../services/kitchenService';
 export const CreateKitchenScreen = () => {
     const { user } = useAuth();
     const [name, setName] = useState('');
-    const [address, setAddress] = useState({
-        line1: '',
-        city: '',
-        state: '',
-        pinCode: ''
-    });
     const [primaryColor, setPrimaryColor] = useState('#FACC15'); // Default Yellow
+    const [kitchenType, setKitchenType] = useState('DABBA'); // Default Type
     const [loading, setLoading] = useState(false);
 
-    // Common Indian states list for simple selection or suggestion (optional, keeping text input for now)
-    // Simplified color options
     const colors = [
         { name: 'Yellow', code: '#FACC15' },
         { name: 'Orange', code: '#F97316' },
@@ -26,11 +19,10 @@ export const CreateKitchenScreen = () => {
         { name: 'Purple', code: '#A855F7' },
     ];
 
-    // Default meal types
-    const [mealTypes, setMealTypes] = useState([
-        { id: 'lunch', label: 'Lunch', price: 60 },
-        { id: 'dinner', label: 'Dinner', price: 60 }
-    ]);
+    const types = [
+        { id: 'DABBA', label: 'Tiffin / Dabba', icon: '🍱', desc: 'Fixed meals (Lunch/Dinner)' },
+        { id: 'CANTEEN', label: 'Canteen / Order', icon: '🍔', desc: 'Menu based items (Fast food/Cafe)' }
+    ];
 
     const handleCreate = async () => {
         if (!name.trim()) {
@@ -38,16 +30,10 @@ export const CreateKitchenScreen = () => {
             return;
         }
 
-        if (!address.line1.trim() || !address.city.trim() || !address.pinCode.trim()) {
-            Alert.alert("Error", "Address, City and PIN Code are mandatory");
-            return;
-        }
-
         setLoading(true);
         const result = await createKitchen(user.uid, {
             name,
-            address,
-            mealTypes,
+            kitchenType,
             theme: {
                 primaryColor
             }
@@ -60,101 +46,96 @@ export const CreateKitchenScreen = () => {
     };
 
     return (
-        <ScrollView className="flex-1 bg-white p-4">
+        <ScrollView className="flex-1 bg-white p-6">
             <View className="pt-8 pb-6">
-                <Text className="text-3xl font-extrabold text-gray-800">Setup Your Kitchen</Text>
-                <Text className="text-gray-500">Configure your brand and location.</Text>
+                <Text className="text-4xl font-black text-gray-900 leading-tight">Create Your Kitchen</Text>
+                <Text className="text-gray-500 font-medium text-lg">Setup your brand in seconds.</Text>
             </View>
 
+            {/* General Info */}
             <View className="mb-8">
-                <Text className="text-gray-600 mb-2 font-bold uppercase tracking-wider text-xs">General Info</Text>
+                <Text className="text-gray-400 mb-2 font-black uppercase tracking-widest text-[10px]">Kitchen Name</Text>
                 <TextInput
-                    className="w-full border border-gray-200 rounded-xl p-4 mb-4 text-lg bg-gray-50 focus:border-yellow-400"
-                    placeholder="Kitchen Name (e.g. Mavshi's Kitchen)"
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xl bg-gray-50 focus:border-yellow-400 font-bold"
+                    placeholder="e.g. Grandma's Tiffin"
                     value={name}
                     onChangeText={setName}
                 />
             </View>
 
+            {/* Kitchen Type Selection */}
             <View className="mb-8">
-                <Text className="text-gray-600 mb-2 font-bold uppercase tracking-wider text-xs">Location Details</Text>
-                <TextInput
-                    className="w-full border border-gray-200 rounded-xl p-4 mb-3 bg-gray-50"
-                    placeholder="Address Line (House/Street/Area)"
-                    value={address.line1}
-                    onChangeText={(text) => setAddress({ ...address, line1: text })}
-                />
-                <View className="flex-row space-x-3 mb-3">
-                    <TextInput
-                        className="flex-1 border border-gray-200 rounded-xl p-4 bg-gray-50"
-                        placeholder="City"
-                        value={address.city}
-                        onChangeText={(text) => setAddress({ ...address, city: text })}
-                    />
-                    <TextInput
-                        className="flex-1 border border-gray-200 rounded-xl p-4 bg-gray-50"
-                        placeholder="State"
-                        value={address.state}
-                        onChangeText={(text) => setAddress({ ...address, state: text })}
-                    />
+                <Text className="text-gray-400 mb-3 font-black uppercase tracking-widest text-[10px]">What do you serve?</Text>
+                <View className="flex-row gap-4">
+                    {types.map((t) => (
+                        <TouchableOpacity
+                            key={t.id}
+                            onPress={() => setKitchenType(t.id)}
+                            style={{
+                                flex: 1,
+                                padding: 16,
+                                borderRadius: 16,
+                                borderWidth: 2,
+                                alignItems: 'center',
+                                backgroundColor: kitchenType === t.id ? '#111827' : '#FFFFFF',
+                                borderColor: kitchenType === t.id ? '#111827' : '#F3F4F6'
+                            }}
+                        >
+                            <Text className="text-2xl mb-1">{t.icon}</Text>
+                            <Text className={`font-black text-center ${kitchenType === t.id ? 'text-white' : 'text-gray-900'}`}>{t.label}</Text>
+                            <Text className={`text-[10px] text-center mt-1 font-medium ${kitchenType === t.id ? 'text-gray-400' : 'text-gray-500'}`}>{t.desc}</Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
-                <TextInput
-                    className="w-full border border-gray-200 rounded-xl p-4 bg-gray-50"
-                    placeholder="PIN Code"
-                    keyboardType="numeric"
-                    maxLength={6}
-                    value={address.pinCode}
-                    onChangeText={(text) => setAddress({ ...address, pinCode: text })}
-                />
             </View>
 
-            <View className="mb-8">
-                <Text className="text-gray-600 mb-3 font-bold uppercase tracking-wider text-xs">Brand Branding</Text>
-                <View className="flex-row flex-wrap">
+            {/* Brand Branding */}
+            <View className="mb-10">
+                <Text className="text-gray-400 mb-3 font-black uppercase tracking-widest text-[10px]">Brand Color</Text>
+                <View className="flex-row flex-wrap gap-4">
                     {colors.map((c) => (
                         <TouchableOpacity
                             key={c.code}
                             onPress={() => setPrimaryColor(c.code)}
-                            className="mr-3 mb-3 items-center justify-center"
+                            style={{ alignItems: 'center', justifyContent: 'center' }}
                         >
                             <View
-                                style={{ backgroundColor: c.code }}
-                                className={`w-12 h-12 rounded-full border-4 ${primaryColor === c.code ? 'border-gray-800' : 'border-transparent'}`}
+                                style={{
+                                    backgroundColor: c.code,
+                                    width: 48,
+                                    height: 48,
+                                    borderRadius: 24,
+                                    borderWidth: 4,
+                                    borderColor: primaryColor === c.code ? '#111827' : 'transparent'
+                                }}
                             />
                         </TouchableOpacity>
                     ))}
                 </View>
             </View>
 
-            <View className="mb-10">
-                <Text className="text-gray-600 mb-3 font-bold uppercase tracking-wider text-xs">Default Meal Prices</Text>
-                {mealTypes.map((meal, index) => (
-                    <View key={meal.id} className="flex-row items-center justify-between bg-gray-50 p-4 rounded-xl mb-2 border border-gray-100">
-                        <Text className="font-bold text-gray-700">{meal.label}</Text>
-                        <TextInput
-                            className="font-bold text-green-600 w-20 text-right"
-                            value={String(meal.price)}
-                            keyboardType="numeric"
-                            onChangeText={(text) => {
-                                const newTypes = [...mealTypes];
-                                newTypes[index].price = parseInt(text) || 0;
-                                setMealTypes(newTypes);
-                            }}
-                        />
-                    </View>
-                ))}
-            </View>
-
             <TouchableOpacity
-                style={{ backgroundColor: primaryColor }}
-                className={`w-full rounded-2xl p-5 items-center shadow-lg mb-10 ${loading ? 'opacity-70' : ''}`}
                 onPress={handleCreate}
                 disabled={loading}
+                style={{
+                    width: '100%',
+                    backgroundColor: primaryColor,
+                    borderRadius: 16,
+                    padding: 20,
+                    alignItems: 'center',
+                    marginBottom: 48,
+                    opacity: loading ? 0.7 : 1,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 2
+                }}
             >
                 {loading ? (
-                    <ActivityIndicator color="white" />
+                    <ActivityIndicator color="black" />
                 ) : (
-                    <Text className="text-gray-900 font-extrabold text-xl">Start My Kitchen</Text>
+                    <Text style={{ color: '#000', fontWeight: '900', fontSize: 20 }}>Start My Kitchen</Text>
                 )}
             </TouchableOpacity>
         </ScrollView>

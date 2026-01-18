@@ -17,10 +17,9 @@ import { db } from '../config/firebase';
  *   userId, userDisplayName,
  *   slot: "lunch" | "dinner",
  *   type: "ROTI_SABZI" | "OTHER",
- *   variant: "half" | "full" (if Roti-Sabzi),
  *   mainItem: String ("Gobi" or "Misal"),
- *   addons: Array,
- *   extras: Array of objects {name, quantity, price},
+ *   variantSnapshot: { id, label, basePrice, quantities: { roti } },
+ *   componentsSnapshot: Array of { id, name, price, quantity, isDailySpecial },
  *   quantity: Number (Main item qty),
  *   totalAmount: Number
  * }

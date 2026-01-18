@@ -19,16 +19,43 @@ const generateJoinCode = () => {
 export const createKitchen = async (ownerId, kitchenData) => {
     try {
         const joinCode = generateJoinCode();
+        const { kitchenType, ...rest } = kitchenData;
 
-        // TODO: Ensure uniqueness of joinCode in a loop if needed, 
-        // but for MVP collision probability is low enough.
+        // Smart Defaults based on Type
+        let mealTypes = [];
+        if (kitchenType === 'DABBA') {
+            mealTypes = [
+                { id: 'lunch', label: 'Lunch', mode: 'FIXED', startTime: '07:00', endTime: '13:00', allowCustomization: true },
+                { id: 'dinner', label: 'Dinner', mode: 'FIXED', startTime: '16:00', endTime: '21:00', allowCustomization: true }
+            ];
+        } else {
+            mealTypes = [
+                { id: 'breakfast', label: 'Breakfast', mode: 'MENU', startTime: '07:00', endTime: '11:00' },
+                { id: 'lunch', label: 'Lunch', mode: 'MENU', startTime: '11:00', endTime: '15:00' },
+                { id: 'snacks', label: 'Snacks', mode: 'MENU', startTime: '15:00', endTime: '19:00' }
+            ];
+        }
 
         const newKitchen = {
             ownerId,
             joinCode,
             status: 'active',
             createdAt: serverTimestamp(),
-            ...kitchenData
+            mealTypes,
+            fixedMealConfig: {
+                global: {
+                    variants: [
+                        { id: 'v1', label: 'Half Dabba', quantities: { roti: 4 }, basePrice: 50 },
+                        { id: 'v2', label: 'Full Dabba', quantities: { roti: 6 }, basePrice: 80 }
+                    ],
+                    optionalComponents: [
+                        { id: 'c1', name: 'Dal Rice', price: 20, enabled: true, allowQuantity: false },
+                        { id: 'c2', name: 'Extra Roti', price: 5, enabled: true, allowQuantity: true }
+                    ]
+                },
+                overrides: {}
+            },
+            ...rest
         };
 
         const docRef = await addDoc(collection(db, 'kitchens'), newKitchen);
@@ -95,5 +122,19 @@ export const getAllKitchens = async (filter = '') => {
     } catch (error) {
         console.error("Error fetching kitchens:", error);
         return [];
+    }
+};
+
+export const updateKitchen = async (kitchenId, updates) => {
+    try {
+        const kitchenRef = doc(db, 'kitchens', kitchenId);
+        await updateDoc(kitchenRef, {
+            ...updates,
+            updatedAt: serverTimestamp()
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating kitchen:", error);
+        return { error: error.message };
     }
 };

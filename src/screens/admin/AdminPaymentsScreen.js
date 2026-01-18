@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert, Modal, RefreshControl } from 'react-native';
+import { View, Text, FlatList, Pressable, ActivityIndicator, Image, Alert, Modal, RefreshControl } from 'react-native';
 import { useTenant } from '../../contexts/TenantContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import tw from 'twrnc';
 
 export const AdminPaymentsScreen = () => {
     const { tenant } = useTenant();
@@ -48,87 +49,111 @@ export const AdminPaymentsScreen = () => {
     };
 
     const renderItem = ({ item }) => (
-        <View className="bg-white p-4 rounded-xl mb-3 border border-gray-100 shadow-sm">
-            <View className="flex-row justify-between">
+        <View style={tw`bg-white p-4 rounded-xl mb-3 border border-gray-100 shadow-sm`}>
+            <View style={tw`flex-row justify-between`}>
                 <View>
-                    <Text className="font-bold text-gray-800 text-lg">{item.userDisplayName}</Text>
-                    <Text className="text-xs text-gray-400">
+                    <Text style={tw`font-bold text-gray-800 text-lg`}>{item.userDisplayName}</Text>
+                    <Text style={tw`text-xs text-gray-400`}>
                         {new Date(item.createdAt?.toMillis ? item.createdAt.toMillis() : Date.now()).toDateString()}
                     </Text>
-                    <View className="flex-row items-center mt-1">
-                        <Text className={`font-bold text-sm uppercase px-2 py-0.5 rounded ${item.method === 'UPI' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                    <View style={tw`flex-row items-center mt-1`}>
+                        <Text style={tw`font-bold text-sm uppercase px-2 py-0.5 rounded ${item.method === 'UPI' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                             {item.method}
                         </Text>
                         <View
-                            style={{ backgroundColor: item.status === 'pending' ? `${primaryColor}20` : undefined }}
-                            className={`ml-2 px-2 py-0.5 rounded ${item.status === 'pending' ? '' :
-                                    (item.status === 'accepted' ? 'bg-green-100' : 'bg-red-100')
-                                }`}
+                            style={[
+                                tw`ml-2 px-2 py-0.5 rounded`,
+                                item.status === 'pending' ? { backgroundColor: `${primaryColor}20` } : (item.status === 'accepted' ? tw`bg-green-100` : tw`bg-red-100`)
+                            ]}
                         >
                             <Text
-                                style={{ color: item.status === 'pending' ? primaryColor : undefined }}
-                                className={`font-bold text-sm uppercase ${item.status === 'pending' ? '' :
-                                        (item.status === 'accepted' ? 'text-green-700' : 'text-red-700')
-                                    }`}
+                                style={[
+                                    tw`font-bold text-sm uppercase`,
+                                    item.status === 'pending' ? { color: primaryColor } : (item.status === 'accepted' ? tw`text-green-700` : tw`text-red-700`)
+                                ]}
                             >
                                 {item.status}
                             </Text>
                         </View>
                     </View>
                 </View>
-                <Text className="text-xl font-bold text-green-600">₹{item.amount}</Text>
+                <Text style={tw`text-xl font-bold text-green-600`}>₹{item.amount}</Text>
             </View>
 
             {item.method === 'UPI' && item.screenshotUrl && (
-                <TouchableOpacity onPress={() => setSelectedImage(item.screenshotUrl)} className="mt-3">
-                    <Image source={{ uri: item.screenshotUrl }} className="w-full h-32 rounded-lg bg-gray-100" resizeMode="cover" />
-                    <Text className="text-center text-xs text-gray-400 mt-1">Tap to view full receipt</Text>
-                </TouchableOpacity>
+                <Pressable
+                    onPress={() => setSelectedImage(item.screenshotUrl)}
+                    style={{ marginTop: 12 }}
+                >
+                    <Image source={{ uri: item.screenshotUrl }} style={tw`w-full h-32 rounded-lg bg-gray-100`} resizeMode="cover" />
+                    <Text style={tw`text-center text-xs text-gray-400 mt-1`}>Tap to view full receipt</Text>
+                </Pressable>
             )}
 
             {item.status === 'pending' && (
-                <View className="flex-row mt-4 space-x-3">
-                    <TouchableOpacity
-                        style={{ backgroundColor: primaryColor }}
-                        className="flex-1 py-3 rounded-lg items-center"
+                <View style={[tw`flex-row mt-4`, { gap: 12 }]}>
+                    <Pressable
                         onPress={() => handleAction(item.id, 'accepted')}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            backgroundColor: primaryColor
+                        }}
                     >
-                        <Text className="text-gray-900 font-bold">Accept</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        className="flex-1 bg-red-50 py-3 rounded-lg items-center border border-red-100"
+                        <Text style={{ color: '#111827', fontWeight: 'bold' }}>Accept</Text>
+                    </Pressable>
+                    <Pressable
                         onPress={() => handleAction(item.id, 'rejected')}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            backgroundColor: '#FEF2F2',
+                            borderWidth: 1,
+                            borderColor: '#FEE2E2'
+                        }}
                     >
-                        <Text className="text-red-600 font-bold">Reject</Text>
-                    </TouchableOpacity>
+                        <Text style={{ color: '#DC2626', fontWeight: 'bold' }}>Reject</Text>
+                    </Pressable>
                 </View>
             )}
         </View>
     );
 
     return (
-        <View className="flex-1 bg-gray-50">
+        <View style={tw`flex-1 bg-gray-50`}>
             <FlatList
                 data={payments}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={{ padding: 16 }}
                 refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchPayments} />}
-                ListEmptyComponent={<Text className="text-center text-gray-400 mt-10">No payment requests found.</Text>}
+                ListEmptyComponent={<Text style={tw`text-center text-gray-400 mt-10`}>No payment requests found.</Text>}
             />
 
             <Modal visible={!!selectedImage} transparent={true} onRequestClose={() => setSelectedImage(null)}>
-                <View className="flex-1 bg-black/90 justify-center items-center relative">
-                    <TouchableOpacity
-                        className="absolute top-10 right-6 z-10 p-2 bg-white/20 rounded-full"
+                <View style={tw`flex-1 bg-black/90 justify-center items-center relative`}>
+                    <Pressable
                         onPress={() => setSelectedImage(null)}
+                        style={{
+                            position: 'absolute',
+                            top: 40,
+                            right: 24,
+                            zIndex: 10,
+                            padding: 8,
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            borderRadius: 999
+                        }}
                     >
-                        <Text className="text-white font-bold text-xl">X</Text>
-                    </TouchableOpacity>
+                        <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 20 }}>X</Text>
+                    </Pressable>
                     {selectedImage && (
                         <Image
                             source={{ uri: selectedImage }}
-                            className="w-full h-4/5"
+                            style={tw`w-full h-4/5`}
                             resizeMode="contain"
                         />
                     )}
