@@ -1,6 +1,8 @@
 import {
     collection,
     addDoc,
+    doc,
+    updateDoc,
     serverTimestamp,
     query,
     where,
@@ -25,13 +27,20 @@ import { db } from '../config/firebase';
  */
 export const placeOrder = async (kitchenId, orderData) => {
     try {
+        if (!kitchenId) throw new Error("kitchenId is mandatory for all orders");
+
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
         const dateId = new Date().toISOString().split('T')[0];
 
         await addDoc(ordersRef, {
             ...orderData,
+            kitchenId,
             dateId,
-            status: 'placed',
+            status: orderData.status || 'placed',
+            isTrial: orderData.isTrial || false,
+            paymentStatus: orderData.paymentStatus || 'pending',
+            paymentMethod: orderData.paymentMethod || 'wallet', // Default to wallet for regular students
+            paymentProofUrl: orderData.paymentProofUrl || null,
             createdAt: serverTimestamp()
         });
         return { success: true };
@@ -66,4 +75,17 @@ export const subscribeToMyOrders = (kitchenId, userId, callback) => {
         console.error("Error fetching my orders:", error);
         callback([]);
     });
+};
+export const updateOrder = async (kitchenId, orderId, updates) => {
+    try {
+        const orderRef = doc(db, 'kitchens', kitchenId, 'orders', orderId);
+        await updateDoc(orderRef, {
+            ...updates,
+            updatedAt: serverTimestamp()
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating order:", error);
+        return { error: error.message };
+    }
 };

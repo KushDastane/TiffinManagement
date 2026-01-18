@@ -12,9 +12,11 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTenant } from "../../contexts/TenantContext";
 import { getMenuDateId, subscribeToMenu } from "../../services/menuService";
 import { placeOrder, subscribeToMyOrders } from "../../services/orderService";
-import { getStudentBalance } from "../../services/paymentService"; // Import ledger service
+import { getStudentBalance } from "../../services/paymentService";
+import { useTheme } from "../../contexts/ThemeContext"; // Import ledger service
 
 const WeekSummary = ({ orders }) => {
+    const { primaryColor } = useTheme();
     // Generate last 7 days including today
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -37,10 +39,15 @@ const WeekSummary = ({ orders }) => {
                     <View key={index} className="items-center">
                         <Text className="text-xs text-gray-400 mb-1">{date.getDate()}</Text>
                         <View
-                            className={`w-8 h-8 rounded-full items-center justify-center ${ordered ? "bg-green-500" : "bg-gray-100"} ${isToday ? "border-2 border-yellow-400" : ""}`}
+                            style={{
+                                backgroundColor: ordered ? primaryColor : '#f3f4f6',
+                                borderColor: isToday ? primaryColor : 'transparent',
+                                borderWidth: isToday ? 2 : 0
+                            }}
+                            className="w-8 h-8 rounded-full items-center justify-center"
                         >
                             <Text
-                                className={`font-bold ${ordered ? "text-white" : "text-gray-300"}`}
+                                className={`font-bold ${ordered ? "text-gray-900" : "text-gray-300"}`}
                             >
                                 {date.toLocaleDateString("en-US", { weekday: "narrow" })}
                             </Text>
@@ -87,6 +94,7 @@ const WalletCard = ({ balance, loading }) => (
 
 // ... SlotCard Component (Same as before) ...
 const SlotCard = ({ slotName, slotData, onOrder }) => {
+    const { primaryColor } = useTheme();
     const [variant, setVariant] = useState("full");
     const [extras, setExtras] = useState({});
     const isActive = slotData.status === "SET";
@@ -160,7 +168,10 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
 
             {type === "ROTI_SABZI" ? (
                 <View>
-                    <Text className="text-lg font-bold text-yellow-700 mb-2">
+                    <Text
+                        style={{ color: primaryColor }}
+                        className="text-lg font-bold mb-2"
+                    >
                         {rotiSabzi.sabzi}
                     </Text>
                     <View className="flex-row mb-4 bg-gray-50 p-1 rounded-lg">
@@ -180,7 +191,7 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
                             }}
                             onPress={() => setVariant("half")}
                         >
-                            <Text className="font-bold">Half</Text>
+                            <Text className="font-bold text-gray-800">Half</Text>
                             <Text className="text-gray-500">₹{rotiSabzi.halfPrice}</Text>
                         </Pressable>
                         <Pressable
@@ -199,7 +210,7 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
                             }}
                             onPress={() => setVariant("full")}
                         >
-                            <Text className="font-bold">Full</Text>
+                            <Text className="font-bold text-gray-800">Full</Text>
                             <Text className="text-gray-500">₹{rotiSabzi.fullPrice}</Text>
                         </Pressable>
                     </View>
@@ -216,7 +227,10 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
                         <Text className="text-lg font-bold text-gray-800">
                             {other.itemName}
                         </Text>
-                        <Text className="text-lg font-bold text-yellow-600">
+                        <Text
+                            style={{ color: primaryColor }}
+                            className="text-lg font-bold"
+                        >
                             ₹{other.price}
                         </Text>
                     </View>
@@ -268,7 +282,7 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
                 <Pressable
                     style={{
                         width: '100%',
-                        backgroundColor: !canOrder ? '#d1d5db' : '#facc15', // bg-gray-300 : bg-yellow-400
+                        backgroundColor: !canOrder ? '#d1d5db' : primaryColor,
                         borderRadius: 8,
                         padding: 16,
                         alignItems: 'center',
@@ -289,6 +303,7 @@ const SlotCard = ({ slotName, slotData, onOrder }) => {
 export const HomeScreen = () => {
     const { user, userProfile } = useAuth();
     const { tenant } = useTenant();
+    const { primaryColor } = useTheme();
     const [menu, setMenu] = useState(null);
     const [balance, setBalance] = useState(0);
     const [myOrders, setMyOrders] = useState([]);
@@ -384,7 +399,10 @@ export const HomeScreen = () => {
             <WeekSummary orders={myOrders} />
 
             <View className="mb-4">
-                <Text className="text-lg font-bold text-gray-800 border-l-4 border-yellow-400 pl-3">
+                <Text
+                    style={{ borderColor: primaryColor }}
+                    className="text-lg font-bold text-gray-800 border-l-4 pl-3"
+                >
                     Today's Menu
                 </Text>
             </View>

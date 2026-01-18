@@ -1,9 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 
+import { useTheme } from '../contexts/ThemeContext';
+
 const { width } = Dimensions.get('window');
 
 export const CustomTabBar = ({ state, descriptors, navigation }) => {
+    const { primaryColor } = useTheme();
+
     return (
         <View className="absolute bottom-6 left-4 right-4 bg-white/90 rounded-2xl flex-row h-16 shadow-lg items-center px-2"
             style={{
@@ -47,19 +51,28 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
                            Icon Logic would go here. For now using Text/Unicode as placeholder if no icons available.
                            Ideally, we pass icons via options.
                         */}
-                        <Text className={`text-2xl ${isFocused ? 'text-yellow-500' : 'text-gray-400'}`}>
+                        <Text
+                            style={{ color: isFocused ? primaryColor : '#9ca3af' }}
+                            className="text-2xl"
+                        >
                             {options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : '•'}
                         </Text>
 
                         {isFocused && (
-                            <Text className="text-[10px] font-bold text-yellow-600 mt-1 capitalize">
+                            <Text
+                                style={{ color: primaryColor }}
+                                className="text-[10px] font-bold mt-1 capitalize"
+                            >
                                 {label}
                             </Text>
                         )}
 
                         {/* Active Indicator Dot */}
                         {isFocused && (
-                            <View className="absolute -bottom-1 w-1 h-1 bg-yellow-500 rounded-full" />
+                            <View
+                                style={{ backgroundColor: primaryColor }}
+                                className="absolute -bottom-1 w-1.5 h-1.5 rounded-full"
+                            />
                         )}
                     </TouchableOpacity>
                 );

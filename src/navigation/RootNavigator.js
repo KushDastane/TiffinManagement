@@ -9,9 +9,9 @@ import { useTenant } from '../contexts/TenantContext';
 import { AuthStack } from './AuthStack';
 import { AdminStack } from './AdminStack';
 import { StudentStack } from './StudentStack';
+import { UnjoinedStudentStack } from './UnjoinedStudentStack';
 import { RoleSelectScreen } from '../screens/RoleSelectScreen';
 import { CreateKitchenScreen } from '../screens/admin/CreateKitchenScreen';
-import { JoinKitchenScreen } from '../screens/student/JoinKitchenScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
 
 const Stack = createNativeStackNavigator();
@@ -36,8 +36,8 @@ export const RootNavigator = () => {
                 )
             ) : (
                 // Student
-                (!userProfile.joinedKitchens || userProfile.joinedKitchens.length === 0) ? (
-                    <Stack.Screen name="JoinKitchen" component={JoinKitchenScreen} options={{ title: 'Join a Kitchen' }} />
+                !userProfile.currentKitchenId ? (
+                    <Stack.Screen name="UnjoinedRoot" component={UnjoinedStudentStack} />
                 ) : (
                     <Stack.Screen name="StudentRoot" component={StudentStack} />
                 )

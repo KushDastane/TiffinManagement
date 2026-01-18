@@ -13,7 +13,7 @@ import { db } from '../config/firebase';
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-const uploadImage = async (uri) => {
+export const uploadImage = async (uri) => {
     if (!uri) return null;
     if (!CLOUDINARY_URL || !UPLOAD_PRESET) {
         console.warn("Cloudinary not configured. Skipping upload.");
@@ -68,7 +68,43 @@ export const requestPayment = async (kitchenId, paymentData) => {
     }
 };
 
-// ... existing functions (getKitchenStudents, recordPayment - rename record to 'adminRecordPayment' if needed or reuse) ...
+// Fetch all students belonging to this kitchen
+export const getKitchenStudents = async (kitchenId) => {
+    try {
+        const usersRef = collection(db, 'users');
+        // Query users where 'joinedKitchens' array contains the kitchenId
+        const q = query(usersRef, where('joinedKitchens', 'array-contains', kitchenId));
+        const querySnapshot = await getDocs(q);
+
+        return querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+    } catch (error) {
+        console.error("Error fetching kitchen students:", error);
+        return [];
+    }
+};
+
+// Record a manual payment (Admin)
+export const recordPayment = async (kitchenId, userId, amount, note = "Manual Entry") => {
+    try {
+        const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
+        await addDoc(paymentsRef, {
+            userId,
+            amount: parseFloat(amount),
+            type: 'credit',
+            method: 'CASH', // Manual entry usually implies Cash handling
+            status: 'accepted', // Admin recorded = Auto accepted
+            note,
+            createdAt: serverTimestamp()
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error recording payment:", error);
+        return { error: error.message };
+    }
+};
 
 export const getStudentBalance = async (kitchenId, userId) => {
     try {
@@ -77,7 +113,7 @@ export const getStudentBalance = async (kitchenId, userId) => {
         // But for MVP, let's include 'placed' as "Tentative Debt" or just all.
         // Let's stick to: Orders = Debit.
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
-        const qOrders = query(ordersRef, where('userId', '==', userId));
+        const qOrders = query(ordersRef, where('userId', '==', userId), where('isTrial', '==', false));
         const ordersSnap = await getDocs(qOrders);
         const totalDebits = ordersSnap.docs.reduce((sum, doc) => sum + (doc.data().totalAmount || 0), 0);
 

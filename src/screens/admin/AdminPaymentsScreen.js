@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert, Modal, RefreshControl } from 'react-native';
 import { useTenant } from '../../contexts/TenantContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
 export const AdminPaymentsScreen = () => {
     const { tenant } = useTenant();
+    const { primaryColor } = useTheme();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState(null);
@@ -19,7 +21,6 @@ export const AdminPaymentsScreen = () => {
                 orderBy('createdAt', 'desc')
             );
             const snapshot = await getDocs(q);
-            // Client side filter or better queries if needed. For now show all.
             const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
             setPayments(data);
         } catch (error) {
@@ -33,7 +34,6 @@ export const AdminPaymentsScreen = () => {
     }, [tenant?.id]);
 
     const handleAction = async (paymentId, action) => {
-        // action: 'accepted' | 'rejected'
         try {
             await updateDoc(doc(db, 'kitchens', tenant.id, 'payments', paymentId), {
                 status: action,
@@ -59,11 +59,21 @@ export const AdminPaymentsScreen = () => {
                         <Text className={`font-bold text-sm uppercase px-2 py-0.5 rounded ${item.method === 'UPI' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                             {item.method}
                         </Text>
-                        <Text className={`ml-2 font-bold text-sm uppercase px-2 py-0.5 rounded ${item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                (item.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')
-                            }`}>
-                            {item.status}
-                        </Text>
+                        <View
+                            style={{ backgroundColor: item.status === 'pending' ? `${primaryColor}20` : undefined }}
+                            className={`ml-2 px-2 py-0.5 rounded ${item.status === 'pending' ? '' :
+                                    (item.status === 'accepted' ? 'bg-green-100' : 'bg-red-100')
+                                }`}
+                        >
+                            <Text
+                                style={{ color: item.status === 'pending' ? primaryColor : undefined }}
+                                className={`font-bold text-sm uppercase ${item.status === 'pending' ? '' :
+                                        (item.status === 'accepted' ? 'text-green-700' : 'text-red-700')
+                                    }`}
+                            >
+                                {item.status}
+                            </Text>
+                        </View>
                     </View>
                 </View>
                 <Text className="text-xl font-bold text-green-600">₹{item.amount}</Text>
@@ -79,13 +89,14 @@ export const AdminPaymentsScreen = () => {
             {item.status === 'pending' && (
                 <View className="flex-row mt-4 space-x-3">
                     <TouchableOpacity
-                        className="flex-1 bg-green-500 py-3 rounded-lg items-center"
+                        style={{ backgroundColor: primaryColor }}
+                        className="flex-1 py-3 rounded-lg items-center"
                         onPress={() => handleAction(item.id, 'accepted')}
                     >
-                        <Text className="text-white font-bold">Accept</Text>
+                        <Text className="text-gray-900 font-bold">Accept</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        className="flex-1 bg-red-100 py-3 rounded-lg items-center"
+                        className="flex-1 bg-red-50 py-3 rounded-lg items-center border border-red-100"
                         onPress={() => handleAction(item.id, 'rejected')}
                     >
                         <Text className="text-red-600 font-bold">Reject</Text>
@@ -106,7 +117,6 @@ export const AdminPaymentsScreen = () => {
                 ListEmptyComponent={<Text className="text-center text-gray-400 mt-10">No payment requests found.</Text>}
             />
 
-            {/* Image Modal */}
             <Modal visible={!!selectedImage} transparent={true} onRequestClose={() => setSelectedImage(null)}>
                 <View className="flex-1 bg-black/90 justify-center items-center relative">
                     <TouchableOpacity

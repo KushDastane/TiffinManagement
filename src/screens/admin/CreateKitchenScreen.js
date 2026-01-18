@@ -6,7 +6,25 @@ import { createKitchen } from '../../services/kitchenService';
 export const CreateKitchenScreen = () => {
     const { user } = useAuth();
     const [name, setName] = useState('');
+    const [address, setAddress] = useState({
+        line1: '',
+        city: '',
+        state: '',
+        pinCode: ''
+    });
+    const [primaryColor, setPrimaryColor] = useState('#FACC15'); // Default Yellow
     const [loading, setLoading] = useState(false);
+
+    // Common Indian states list for simple selection or suggestion (optional, keeping text input for now)
+    // Simplified color options
+    const colors = [
+        { name: 'Yellow', code: '#FACC15' },
+        { name: 'Orange', code: '#F97316' },
+        { name: 'Red', code: '#EF4444' },
+        { name: 'Green', code: '#22C55E' },
+        { name: 'Blue', code: '#3B82F6' },
+        { name: 'Purple', code: '#A855F7' },
+    ];
 
     // Default meal types
     const [mealTypes, setMealTypes] = useState([
@@ -20,58 +38,123 @@ export const CreateKitchenScreen = () => {
             return;
         }
 
+        if (!address.line1.trim() || !address.city.trim() || !address.pinCode.trim()) {
+            Alert.alert("Error", "Address, City and PIN Code are mandatory");
+            return;
+        }
+
         setLoading(true);
         const result = await createKitchen(user.uid, {
             name,
+            address,
             mealTypes,
-            themeColor: '#FACC15' // Default Yellow
+            theme: {
+                primaryColor
+            }
         });
         setLoading(false);
 
         if (result.error) {
             Alert.alert("Error", result.error);
-        } else {
-            // Success! The User/Tenant Context will pick up the change 
-            // and redirect to AdminStack automatically?
-            // Wait, CreateKitchenScreen is usually INSIDE AuthStack or AdminStack?
-            // If user has role 'admin' but no kitchen, RootNavigator needs to decide where to go.
-            // Currently RootNavigator updates: if admin -> AdminStack.
-            // But if AdminStack needs a kitchen, we might need to handle the "Empty State" inside AdminStack.
-            // OR we treat "CreateKitchen" as part of the 'AdminStack' if 'currentKitchenId' is missing.
         }
     };
 
     return (
         <ScrollView className="flex-1 bg-white p-4">
-            <Text className="text-2xl font-bold mb-6 text-gray-800">Setup Your Kitchen</Text>
+            <View className="pt-8 pb-6">
+                <Text className="text-3xl font-extrabold text-gray-800">Setup Your Kitchen</Text>
+                <Text className="text-gray-500">Configure your brand and location.</Text>
+            </View>
 
-            <Text className="text-gray-600 mb-2 font-medium">Kitchen Name</Text>
-            <TextInput
-                className="w-full border border-gray-300 rounded-lg p-3 mb-6 text-lg bg-gray-50 focus:border-yellow-400"
-                placeholder="Aadi's Kitchen"
-                value={name}
-                onChangeText={setName}
-            />
+            <View className="mb-8">
+                <Text className="text-gray-600 mb-2 font-bold uppercase tracking-wider text-xs">General Info</Text>
+                <TextInput
+                    className="w-full border border-gray-200 rounded-xl p-4 mb-4 text-lg bg-gray-50 focus:border-yellow-400"
+                    placeholder="Kitchen Name (e.g. Mavshi's Kitchen)"
+                    value={name}
+                    onChangeText={setName}
+                />
+            </View>
 
-            <Text className="text-gray-600 mb-2 font-medium">Default Meal Settings</Text>
-            <View className="mb-6">
+            <View className="mb-8">
+                <Text className="text-gray-600 mb-2 font-bold uppercase tracking-wider text-xs">Location Details</Text>
+                <TextInput
+                    className="w-full border border-gray-200 rounded-xl p-4 mb-3 bg-gray-50"
+                    placeholder="Address Line (House/Street/Area)"
+                    value={address.line1}
+                    onChangeText={(text) => setAddress({ ...address, line1: text })}
+                />
+                <View className="flex-row space-x-3 mb-3">
+                    <TextInput
+                        className="flex-1 border border-gray-200 rounded-xl p-4 bg-gray-50"
+                        placeholder="City"
+                        value={address.city}
+                        onChangeText={(text) => setAddress({ ...address, city: text })}
+                    />
+                    <TextInput
+                        className="flex-1 border border-gray-200 rounded-xl p-4 bg-gray-50"
+                        placeholder="State"
+                        value={address.state}
+                        onChangeText={(text) => setAddress({ ...address, state: text })}
+                    />
+                </View>
+                <TextInput
+                    className="w-full border border-gray-200 rounded-xl p-4 bg-gray-50"
+                    placeholder="PIN Code"
+                    keyboardType="numeric"
+                    maxLength={6}
+                    value={address.pinCode}
+                    onChangeText={(text) => setAddress({ ...address, pinCode: text })}
+                />
+            </View>
+
+            <View className="mb-8">
+                <Text className="text-gray-600 mb-3 font-bold uppercase tracking-wider text-xs">Brand Branding</Text>
+                <View className="flex-row flex-wrap">
+                    {colors.map((c) => (
+                        <TouchableOpacity
+                            key={c.code}
+                            onPress={() => setPrimaryColor(c.code)}
+                            className="mr-3 mb-3 items-center justify-center"
+                        >
+                            <View
+                                style={{ backgroundColor: c.code }}
+                                className={`w-12 h-12 rounded-full border-4 ${primaryColor === c.code ? 'border-gray-800' : 'border-transparent'}`}
+                            />
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
+            <View className="mb-10">
+                <Text className="text-gray-600 mb-3 font-bold uppercase tracking-wider text-xs">Default Meal Prices</Text>
                 {mealTypes.map((meal, index) => (
-                    <View key={meal.id} className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2 border border-gray-200">
-                        <Text className="font-semibold text-lg">{meal.label}</Text>
-                        <Text className="text-gray-600">₹{meal.price}</Text>
+                    <View key={meal.id} className="flex-row items-center justify-between bg-gray-50 p-4 rounded-xl mb-2 border border-gray-100">
+                        <Text className="font-bold text-gray-700">{meal.label}</Text>
+                        <TextInput
+                            className="font-bold text-green-600 w-20 text-right"
+                            value={String(meal.price)}
+                            keyboardType="numeric"
+                            onChangeText={(text) => {
+                                const newTypes = [...mealTypes];
+                                newTypes[index].price = parseInt(text) || 0;
+                                setMealTypes(newTypes);
+                            }}
+                        />
                     </View>
                 ))}
             </View>
 
             <TouchableOpacity
-                className={`w-full bg-yellow-400 rounded-lg p-4 items-center shadow-sm ${loading ? 'opacity-70' : ''}`}
+                style={{ backgroundColor: primaryColor }}
+                className={`w-full rounded-2xl p-5 items-center shadow-lg mb-10 ${loading ? 'opacity-70' : ''}`}
                 onPress={handleCreate}
                 disabled={loading}
             >
                 {loading ? (
-                    <ActivityIndicator color="black" />
+                    <ActivityIndicator color="white" />
                 ) : (
-                    <Text className="text-black font-bold text-lg">Create Kitchen</Text>
+                    <Text className="text-gray-900 font-extrabold text-xl">Start My Kitchen</Text>
                 )}
             </TouchableOpacity>
         </ScrollView>

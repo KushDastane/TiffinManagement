@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useTenant } from '../../contexts/TenantContext';
-import { subscribeToOrders } from '../../services/orderService';
+import { useTheme } from '../../contexts/ThemeContext';
+import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import { getMenuDateId } from '../../services/menuService';
 
 const StatCard = ({ title, value, type }) => {
+    const { primaryColor } = useTheme();
     let bgClass = "bg-white";
     let textClass = "text-gray-800";
     if (type === 'danger') { bgClass = "bg-red-50"; textClass = "text-red-600"; }
@@ -12,7 +14,10 @@ const StatCard = ({ title, value, type }) => {
     if (type === 'success') { bgClass = "bg-green-50"; textClass = "text-green-700"; }
 
     return (
-        <View className={`flex-1 p-3 rounded-xl m-1 items-center justify-center border border-gray-100 shadow-sm ${bgClass}`}>
+        <View
+            style={{ borderLeftColor: primaryColor }}
+            className={`flex-1 p-3 rounded-xl m-1 items-center justify-center border-l-4 border-y border-r border-gray-100 shadow-sm ${bgClass}`}
+        >
             <Text className={`text-2xl font-bold ${textClass}`}>{value}</Text>
             <Text className="text-gray-500 text-xs text-center">{title}</Text>
         </View>
@@ -21,6 +26,7 @@ const StatCard = ({ title, value, type }) => {
 
 export const OrdersScreen = () => {
     const { tenant } = useTenant();
+    const { primaryColor } = useTheme();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -39,10 +45,16 @@ export const OrdersScreen = () => {
         return () => unsubscribe();
     }, [tenant?.id, dateId]);
 
+    const handleUpdateStatus = async (orderId, updates) => {
+        const result = await updateOrder(tenant.id, orderId, updates);
+        if (result.error) {
+            Alert.alert("Error", result.error);
+        }
+    };
+
     // Stats Logic
     const pendingOrders = orders.filter(o => o.status === 'placed').length;
     const totalOrders = orders.length;
-    // const uniqueStudents = new Set(orders.map(o => o.userId)).size; 
     const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
     const renderItem = ({ item }) => {
@@ -52,13 +64,35 @@ export const OrdersScreen = () => {
             <View className="bg-white p-4 rounded-xl mb-3 border border-gray-100 shadow-sm">
                 <View className="flex-row justify-between items-start mb-2">
                     <View>
-                        <Text className="font-bold text-lg text-gray-800">{item.userDisplayName}</Text>
+                        <View className="flex-row items-center">
+                            <Text className="font-bold text-lg text-gray-800">{item.userDisplayName}</Text>
+                            {item.isTrial && (
+                                <View
+                                    style={{ backgroundColor: `${primaryColor}20` }}
+                                    className="ml-2 px-2 py-0.5 rounded"
+                                >
+                                    <Text
+                                        style={{ color: primaryColor }}
+                                        className="text-[10px] font-bold uppercase"
+                                    >
+                                        Trial
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
                         <Text className="text-xs text-gray-400 capitalize">{item.slot} • {new Date(item.createdAt?.toMillis ? item.createdAt.toMillis() : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                     </View>
-                    <View className={`px-3 py-1 rounded-full ${item.status === 'placed' ? 'bg-yellow-100' : 'bg-green-100'}`}>
-                        <Text className={`font-bold text-xs ${item.status === 'placed' ? 'text-yellow-800' : 'text-green-800'}`}>
-                            {item.status.toUpperCase()}
-                        </Text>
+                    <View className="items-end">
+                        <View className={`px-3 py-1 rounded-full ${item.status === 'placed' ? 'bg-orange-50' : 'bg-green-50'}`}>
+                            <Text className={`font-bold text-xs ${item.status === 'placed' ? 'text-orange-600' : 'text-green-600'}`}>
+                                {item.status.toUpperCase()}
+                            </Text>
+                        </View>
+                        {item.isTrial && (
+                            <Text className={`text-[10px] mt-1 font-bold ${item.paymentStatus === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
+                                {item.paymentMethod?.toUpperCase()} • {item.paymentStatus?.toUpperCase()}
+                            </Text>
+                        )}
                     </View>
                 </View>
 
@@ -95,15 +129,27 @@ export const OrdersScreen = () => {
                     <Text className="font-bold text-gray-800 text-lg">Total: ₹{item.totalAmount}</Text>
                 </View>
 
-                {/* Actions (Confirm) */}
-                {item.status === 'placed' && (
-                    <View className="mt-3">
-                        {/* TODO: Add logic to update status to 'confirmed' */}
-                        <TouchableOpacity className="bg-yellow-400 p-3 rounded-lg items-center">
-                            <Text className="font-bold text-black">Confirm Order</Text>
+                {/* Actions */}
+                <View className="mt-3 flex-row space-x-2">
+                    {item.status === 'placed' && (
+                        <TouchableOpacity
+                            style={{ backgroundColor: primaryColor }}
+                            className="flex-1 p-3 rounded-lg items-center"
+                            onPress={() => handleUpdateStatus(item.id, { status: 'confirmed' })}
+                        >
+                            <Text className="font-bold text-gray-900 text-sm">Confirm Order</Text>
                         </TouchableOpacity>
-                    </View>
-                )}
+                    )}
+                    {item.isTrial && item.paymentStatus !== 'paid' && (
+                        <TouchableOpacity
+                            style={{ backgroundColor: primaryColor }}
+                            className="flex-1 p-3 rounded-lg items-center"
+                            onPress={() => handleUpdateStatus(item.id, { paymentStatus: 'paid' })}
+                        >
+                            <Text className="font-bold text-gray-900 text-sm">Mark Paid</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
         );
     };
@@ -133,21 +179,21 @@ export const OrdersScreen = () => {
             {/* Stats Grid */}
             <View className="p-2 flex-row flex-wrap">
                 <View className="w-1/2"><StatCard title="Pending" value={pendingOrders} type={pendingOrders > 0 ? 'danger' : 'neutral'} /></View>
-                <View className="w-1/2"><StatCard title="Total Orders" value={totalOrders} type="success" /></View>
+                <View className="w-1/2"><StatCard title="Total" value={totalOrders} type="success" /></View>
                 <View className="w-1/2"><StatCard title="Revenue" value={`₹${totalRevenue}`} type="neutral" /></View>
-                {/* <View className="w-1/2"><StatCard title="Active Users" value={uniqueStudents} type="neutral" /></View> */}
             </View>
 
             {loading ? (
                 <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#EAB308" />
+                    <ActivityIndicator size="large" color={primaryColor} />
                 </View>
             ) : (
                 <FlatList
                     data={orders}
                     renderItem={renderItem}
                     keyExtractor={item => item.id}
-                    contentContainerStyle={{ padding: 16 }}
+                    contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+                    showsVerticalScrollIndicator={false}
                     ListEmptyComponent={
                         <View className="items-center justify-center py-10">
                             <Text className="text-gray-400 text-lg">No orders for today</Text>

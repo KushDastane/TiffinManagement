@@ -1,6 +1,7 @@
 import React from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TenantProvider } from "./contexts/TenantContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { NavigationContainer } from "@react-navigation/native";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { StatusBar } from "expo-status-bar";
@@ -12,8 +13,10 @@ export default function App() {
       <SafeAreaProvider>
         <AuthProvider>
           <TenantProvider>
-            <RootNavigator />
-            <StatusBar style="dark" />
+            <ThemeProvider>
+              <RootNavigator />
+              <StatusBar style="dark" />
+            </ThemeProvider>
           </TenantProvider>
         </AuthProvider>
       </SafeAreaProvider>

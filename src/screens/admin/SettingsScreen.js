@@ -1,12 +1,12 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Share } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { logoutUser } from '../../services/authService';
 
 export const SettingsScreen = () => {
     const { userProfile } = useAuth();
     const { tenant } = useTenant();
+    const { primaryColor } = useTheme();
 
     const handleShare = async () => {
         if (!tenant?.joinCode) return;
@@ -29,11 +29,22 @@ export const SettingsScreen = () => {
         <View className="flex-1 bg-gray-50 p-4">
             {/* Kitchen Profile Card */}
             <View className="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100 items-center">
-                <View className="w-20 h-20 bg-yellow-100 rounded-full items-center justify-center mb-4">
-                    <Text className="text-3xl font-bold text-yellow-600">{tenant.name?.[0]}</Text>
+                <View
+                    style={{ backgroundColor: `${primaryColor}20` }}
+                    className="w-20 h-20 rounded-full items-center justify-center mb-4 border-2"
+                >
+                    <Text
+                        style={{ color: primaryColor }}
+                        className="text-4xl font-black"
+                    >
+                        {tenant.name?.[0]}
+                    </Text>
                 </View>
                 <Text className="text-2xl font-bold text-gray-800 mb-1">{tenant.name}</Text>
-                <Text className="text-gray-500">Admin</Text>
+                <View className="flex-row items-center">
+                    <View className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: primaryColor }} />
+                    <Text className="text-gray-500 font-medium">Kitchen Owner</Text>
+                </View>
             </View>
 
             {/* Join Code Section */}
@@ -44,20 +55,21 @@ export const SettingsScreen = () => {
                         {tenant.joinCode}
                     </Text>
                     <TouchableOpacity
-                        className="bg-yellow-400 px-4 py-2 rounded-lg"
+                        style={{ backgroundColor: primaryColor }}
+                        className="px-6 py-3 rounded-xl shadow-sm"
                         onPress={handleShare}
                     >
-                        <Text className="font-bold text-black">Share</Text>
+                        <Text className="font-bold text-gray-900">Share</Text>
                     </TouchableOpacity>
                 </View>
-                <Text className="text-gray-400 text-xs mt-2">
+                <Text className="text-gray-400 text-xs mt-3">
                     Share this code with your students so they can join your kitchen.
                 </Text>
             </View>
 
             {/* Logout Button */}
             <TouchableOpacity
-                className="w-full bg-red-50 border border-red-200 rounded-lg p-4 items-center"
+                className="w-full bg-red-50 border border-red-100 rounded-xl p-5 items-center mt-auto"
                 onPress={handleLogout}
             >
                 <Text className="text-red-600 font-bold text-lg">Logout</Text>

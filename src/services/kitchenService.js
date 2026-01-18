@@ -71,3 +71,29 @@ export const joinKitchen = async (userId, joinCode) => {
         return { error: error.message };
     }
 };
+export const getAllKitchens = async (filter = '') => {
+    try {
+        const kitchensRef = collection(db, 'kitchens');
+        let q = query(kitchensRef, where('status', '==', 'active'));
+
+        const querySnapshot = await getDocs(q);
+        let kitchens = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (filter) {
+            const lowerFilter = filter.toLowerCase();
+            kitchens = kitchens.filter(k =>
+                (k.name && k.name.toLowerCase().includes(lowerFilter)) ||
+                (k.address?.city && k.address.city.toLowerCase().includes(lowerFilter)) ||
+                (k.address?.pinCode && k.address.pinCode.includes(lowerFilter)) ||
+                (k.address?.line1 && k.address.line1.toLowerCase().includes(lowerFilter)) ||
+                (k.area && k.area.toLowerCase().includes(lowerFilter)) ||
+                (k.locality && k.locality.toLowerCase().includes(lowerFilter))
+            );
+        }
+
+        return kitchens;
+    } catch (error) {
+        console.error("Error fetching kitchens:", error);
+        return [];
+    }
+};
