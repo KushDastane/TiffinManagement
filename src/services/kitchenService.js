@@ -55,6 +55,7 @@ export const createKitchen = async (ownerId, kitchenData) => {
                 },
                 overrides: {}
             },
+            kitchenType,
             ...rest
         };
 

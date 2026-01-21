@@ -15,9 +15,28 @@ export const MealConfigScreen = () => {
     const [mealTypes, setMealTypes] = useState(tenant?.mealTypes || []);
 
     // State for Global Food Config
-    const [fixedMealConfig, setFixedMealConfig] = useState(tenant?.fixedMealConfig || {
-        global: { variants: [], optionalComponents: [] },
-        overrides: {}
+    const [fixedMealConfig, setFixedMealConfig] = useState(() => {
+        const config = tenant?.fixedMealConfig || {
+            global: { variants: [], optionalComponents: [] },
+            overrides: {}
+        };
+
+        // Ensure Half Dabba (v1) and Full Dabba (v2) exist and are fixed
+        const variants = config.global.variants || [];
+        const halfDabba = variants.find(v => v.id === 'v1') || { id: 'v1', label: 'Half Dabba', quantities: { roti: 4 }, basePrice: 50 };
+        const fullDabba = variants.find(v => v.id === 'v2') || { id: 'v2', label: 'Full Dabba', quantities: { roti: 6 }, basePrice: 80 };
+
+        return {
+            ...config,
+            global: {
+                ...config.global,
+                variants: [
+                    { ...halfDabba, label: 'Half Dabba' },
+                    { ...fullDabba, label: 'Full Dabba' }
+                ],
+                optionalComponents: config.global.optionalComponents || []
+            }
+        };
     });
 
     const handleSave = async () => {
@@ -65,23 +84,10 @@ export const MealConfigScreen = () => {
         ]);
     };
 
-    // --- Variant Management ---
-    const addVariant = () => {
-        const newId = `v_${Date.now()}`;
-        const newConfig = { ...fixedMealConfig };
-        newConfig.global.variants = [...newConfig.global.variants, { id: newId, label: 'New Size', quantities: { roti: 4 }, basePrice: 0 }];
-        setFixedMealConfig(newConfig);
-    };
-
+    // --- Variant Management (Fixed now) ---
     const updateVariant = (index, updates) => {
         const newConfig = { ...fixedMealConfig };
         newConfig.global.variants[index] = { ...newConfig.global.variants[index], ...updates };
-        setFixedMealConfig(newConfig);
-    };
-
-    const removeVariant = (index) => {
-        const newConfig = { ...fixedMealConfig };
-        newConfig.global.variants = newConfig.global.variants.filter((_, i) => i !== index);
         setFixedMealConfig(newConfig);
     };
 
@@ -114,8 +120,8 @@ export const MealConfigScreen = () => {
                     <Pressable
                         onPress={() => setActiveTab('SCHEDULE')}
                         style={[
-                            tw`pb-2`,
                             {
+                                paddingBottom: 8,
                                 borderBottomWidth: activeTab === 'SCHEDULE' ? 4 : 0,
                                 borderBottomColor: activeTab === 'SCHEDULE' ? primaryColor : 'transparent'
                             }
@@ -129,8 +135,8 @@ export const MealConfigScreen = () => {
                     <Pressable
                         onPress={() => setActiveTab('FOOD_CONFIG')}
                         style={[
-                            tw`pb-2`,
                             {
+                                paddingBottom: 8,
                                 borderBottomWidth: activeTab === 'FOOD_CONFIG' ? 4 : 0,
                                 borderBottomColor: activeTab === 'FOOD_CONFIG' ? primaryColor : 'transparent'
                             }
@@ -182,7 +188,7 @@ export const MealConfigScreen = () => {
                                     />
                                     <Pressable
                                         onPress={() => removeSlot(idx)}
-                                        style={tw`ml-2`}
+                                        style={{ marginLeft: 8 }}
                                     >
                                         <Text style={tw`text-red-500 font-bold`}>Delete</Text>
                                     </Pressable>
@@ -224,79 +230,31 @@ export const MealConfigScreen = () => {
                                 </View>
 
                                 <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-xl`}>
-                                    <View style={tw`flex-row gap-2`}>
-                                        <Pressable
-                                            onPress={() => updateSlot(idx, { mode: 'FIXED' })}
-                                            style={{
-                                                paddingHorizontal: 12,
-                                                paddingVertical: 4,
-                                                borderRadius: 8,
-                                                backgroundColor: m.mode === 'FIXED' ? '#111827' : '#FFFFFF',
-                                                borderWidth: m.mode === 'FIXED' ? 0 : 1,
-                                                borderColor: '#E5E7EB'
-                                            }}
-                                        >
-                                            <Text style={{ fontWeight: 'bold', fontSize: 12, color: m.mode === 'FIXED' ? '#FFFFFF' : '#6B7280' }}>Tiffin (Fixed)</Text>
-                                        </Pressable>
-                                        <Pressable
-                                            onPress={() => updateSlot(idx, { mode: 'MENU' })}
-                                            style={{
-                                                paddingHorizontal: 12,
-                                                paddingVertical: 4,
-                                                borderRadius: 8,
-                                                backgroundColor: m.mode === 'MENU' ? '#111827' : '#FFFFFF',
-                                                borderWidth: m.mode === 'MENU' ? 0 : 1,
-                                                borderColor: '#E5E7EB'
-                                            }}
-                                        >
-                                            <Text style={{ fontWeight: 'bold', fontSize: 12, color: m.mode === 'MENU' ? '#FFFFFF' : '#6B7280' }}>Order (Menu)</Text>
-                                        </Pressable>
-                                    </View>
-
-                                    {m.mode === 'FIXED' && (
-                                        <View style={tw`flex-row items-center border-l border-gray-200 pl-3 ml-2`}>
-                                            <Switch
-                                                value={m.allowCustomization}
-                                                onValueChange={(val) => updateSlot(idx, { allowCustomization: val })}
-                                                thumbColor="#fff"
-                                                trackColor={{ false: '#e5e7eb', true: primaryColor }}
-                                            />
-                                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase ml-1`}>Customizable</Text>
+                                    <View style={tw`flex-row items-center`}>
+                                        <View style={{ backgroundColor: '#111827', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 }}>
+                                            <Text style={{ fontWeight: 'bold', fontSize: 12, color: '#FFFFFF' }}>Tiffin Slot</Text>
                                         </View>
-                                    )}
+                                        <Text style={tw`text-[10px] text-gray-400 font-bold ml-3 uppercase`}>Fixed Structure</Text>
+                                    </View>
                                 </View>
                             </View>
                         ))}
                     </View>
                 ) : (
                     <View>
-                        {/* VARIANTS SECTION */}
+                        {/* VARIANTS SECTION (Fixed Half/Full) */}
                         <View style={tw`bg-white p-4 rounded-2xl mb-6 shadow-sm border border-gray-100`}>
                             <View style={tw`flex-row justify-between items-center mb-4`}>
-                                <Text style={tw`text-xl font-bold text-gray-800`}>Meal Sizes (Variants)</Text>
-                                <Pressable onPress={addVariant}>
-                                    <Text style={[{ color: primaryColor }, tw`font-bold`]}>+ Add Size</Text>
-                                </Pressable>
+                                <Text style={tw`text-xl font-bold text-gray-800`}>Fixed Dabba Sizes</Text>
                             </View>
 
                             {fixedMealConfig.global.variants.map((v, idx) => (
                                 <View key={v.id} style={tw`mb-4 p-4 bg-gray-50 rounded-xl border border-gray-100`}>
-                                    <View style={tw`flex-row justify-between mb-3`}>
-                                        <TextInput
-                                            style={{
-                                                flex: 1,
-                                                fontWeight: 'bold', // font-bold
-                                                color: '#111827', // text-gray-900
-                                                fontSize: 18, // text-lg
-                                                marginRight: 8 // mr-2
-                                            }}
-                                            value={v.label}
-                                            onChangeText={(text) => updateVariant(idx, { label: text })}
-                                            placeholder="e.g. Small"
-                                        />
-                                        <Pressable onPress={() => removeVariant(idx)}>
-                                            <Text style={tw`text-red-500 font-bold`}>X</Text>
-                                        </Pressable>
+                                    <View style={tw`flex-row justify-between mb-3 items-center`}>
+                                        <Text style={tw`font-black text-gray-900 text-lg`}>{v.label}</Text>
+                                        <Text style={tw`text-[10px] text-gray-400 font-bold uppercase`}>
+                                            {v.id === 'v1' ? 'Roti + Sabzi' : 'Roti + Sabzi + Dal + Rice'}
+                                        </Text>
                                     </View>
 
                                     <View style={tw`flex-row gap-4`}>
@@ -304,12 +262,13 @@ export const MealConfigScreen = () => {
                                             <Text style={tw`text-[10px] text-gray-400 mb-1 uppercase font-black`}>Price (₹)</Text>
                                             <TextInput
                                                 style={{
-                                                    backgroundColor: 'white', // bg-white
+                                                    backgroundColor: 'white',
                                                     borderWidth: 1,
-                                                    borderColor: '#f3f4f6', // border-gray-100
-                                                    borderRadius: 8, // rounded-lg
-                                                    padding: 12, // p-3
-                                                    fontWeight: 'bold' // font-bold
+                                                    borderColor: '#f3f4f6',
+                                                    borderRadius: 8,
+                                                    padding: 12,
+                                                    fontWeight: 'bold',
+                                                    color: '#111827'
                                                 }}
                                                 keyboardType="numeric"
                                                 value={String(v.basePrice)}
@@ -320,12 +279,13 @@ export const MealConfigScreen = () => {
                                             <Text style={tw`text-[10px] text-gray-400 mb-1 uppercase font-black`}>Roti Count</Text>
                                             <TextInput
                                                 style={{
-                                                    backgroundColor: 'white', // bg-white
+                                                    backgroundColor: 'white',
                                                     borderWidth: 1,
-                                                    borderColor: '#f3f4f6', // border-gray-100
-                                                    borderRadius: 8, // rounded-lg
-                                                    padding: 12, // p-3
-                                                    fontWeight: 'bold' // font-bold
+                                                    borderColor: '#f3f4f6',
+                                                    borderRadius: 8,
+                                                    padding: 12,
+                                                    fontWeight: 'bold',
+                                                    color: '#111827'
                                                 }}
                                                 keyboardType="numeric"
                                                 value={String(v.quantities?.roti || 0)}
@@ -340,9 +300,12 @@ export const MealConfigScreen = () => {
                         {/* OPTIONAL COMPONENTS SECTION */}
                         <View style={tw`bg-white p-4 rounded-2xl mb-6 shadow-sm border border-gray-100`}>
                             <View style={tw`flex-row justify-between items-center mb-4`}>
-                                <Text style={tw`text-xl font-bold text-gray-800`}>Add-ons (Global)</Text>
-                                <Pressable onPress={addComponent}>
-                                    <Text style={[{ color: primaryColor }, tw`font-bold`]}>+ Add Item</Text>
+                                <Text style={tw`text-xl font-bold text-gray-800`}>Optional Extras</Text>
+                                <Pressable
+                                    onPress={addComponent}
+                                    style={{ padding: 4 }}
+                                >
+                                    <Text style={[{ color: primaryColor }, tw`font-bold`]}>+ Add Extra</Text>
                                 </Pressable>
                             </View>
 
@@ -352,9 +315,9 @@ export const MealConfigScreen = () => {
                                         <TextInput
                                             style={{
                                                 flex: 1,
-                                                fontWeight: 'bold', // font-bold
-                                                color: '#111827', // text-gray-900
-                                                marginRight: 8 // mr-2
+                                                fontWeight: 'bold',
+                                                color: '#111827',
+                                                marginRight: 8
                                             }}
                                             value={c.name}
                                             onChangeText={(text) => updateComponent(idx, { name: text })}
@@ -368,7 +331,7 @@ export const MealConfigScreen = () => {
                                         />
                                         <Pressable
                                             onPress={() => removeComponent(idx)}
-                                            style={tw`ml-2`}
+                                            style={{ marginLeft: 8 }}
                                         >
                                             <Text style={tw`text-red-500 font-bold`}>X</Text>
                                         </Pressable>
@@ -379,12 +342,13 @@ export const MealConfigScreen = () => {
                                             <Text style={tw`text-[10px] text-gray-400 mb-1 uppercase font-black`}>Price (₹)</Text>
                                             <TextInput
                                                 style={{
-                                                    backgroundColor: 'white', // bg-white
+                                                    backgroundColor: 'white',
                                                     borderWidth: 1,
-                                                    borderColor: '#f3f4f6', // border-gray-100
-                                                    borderRadius: 8, // rounded-lg
-                                                    padding: 12, // p-3
-                                                    fontWeight: 'bold' // font-bold
+                                                    borderColor: '#f3f4f6',
+                                                    borderRadius: 8,
+                                                    padding: 12,
+                                                    fontWeight: 'bold',
+                                                    color: '#111827'
                                                 }}
                                                 keyboardType="numeric"
                                                 value={String(c.price)}

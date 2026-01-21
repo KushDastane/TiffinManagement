@@ -1,15 +1,15 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
 import { MenuScreen } from '../screens/admin/MenuScreen';
 import { OrdersScreen } from '../screens/admin/OrdersScreen';
 import { SettingsScreen } from '../screens/admin/SettingsScreen';
 import { StudentsScreen } from '../screens/admin/StudentsScreen';
 import { StudentDetailsScreen } from '../screens/admin/StudentDetailsScreen';
 import { AdminPaymentsScreen } from '../screens/admin/AdminPaymentsScreen';
-import { MealConfigScreen } from '../screens/admin/MealConfigScreen';
+import { DashboardScreen } from '../screens/admin/DashboardScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CustomTabBar } from '../components/CustomTabBar';
+import { Home, Package, Utensils, IndianRupee, Users, Settings as SettingsIcon } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 const StudentStackNav = createNativeStackNavigator();
@@ -26,28 +26,18 @@ const StudentsStack = () => (
         <StudentStackNav.Screen
             name="StudentDetails"
             component={StudentDetailsScreen}
-            options={{ headerShown: true, title: 'Ledger' }}
+            options={{ headerShown: false }}
         />
     </StudentStackNav.Navigator>
 );
 
-/* ---------------- SETTINGS STACK (🔥 FIXED) ---------------- */
-
-// Wrapper stabilizes NativeWind + Stack
-const MealConfigWrapper = (props) => {
-    return <MealConfigScreen {...props} />;
-};
+/* ---------------- SETTINGS STACK ---------------- */
 
 const AdminSettingsStack = () => (
     <SettingsStackNav.Navigator screenOptions={{ headerShown: false }}>
         <SettingsStackNav.Screen
             name="AdminSettingsHome"
             component={SettingsScreen}
-        />
-        <SettingsStackNav.Screen
-            name="MealConfig"
-            component={MealConfigWrapper}
-            options={{ headerShown: true, title: 'Meal Structure' }}
         />
     </SettingsStackNav.Navigator>
 );
@@ -65,10 +55,10 @@ export const AdminStack = () => {
         >
             <Tab.Screen
                 name="Home"
-                component={OrdersScreen}
+                component={DashboardScreen}
                 options={{
                     title: 'Home',
-                    tabBarIcon: ({ focused }) => <Text>{focused ? '🏠' : '📊'}</Text>,
+                    tabBarIcon: ({ focused }) => <Home size={22} color={focused ? '#ca8a04' : '#9ca3af'} />,
                 }}
             />
 
@@ -77,7 +67,7 @@ export const AdminStack = () => {
                 component={OrdersScreen}
                 options={{
                     title: 'Orders',
-                    tabBarIcon: ({ focused }) => <Text>{focused ? '📝' : '📋'}</Text>,
+                    tabBarIcon: ({ focused }) => <Package size={22} color={focused ? '#ca8a04' : '#9ca3af'} />,
                 }}
             />
 
@@ -86,7 +76,7 @@ export const AdminStack = () => {
                 component={MenuScreen}
                 options={{
                     title: 'Menu',
-                    tabBarIcon: ({ focused }) => <Text>{focused ? '🥘' : '🍲'}</Text>,
+                    tabBarIcon: ({ focused }) => <Utensils size={22} color={focused ? '#ca8a04' : '#9ca3af'} />,
                 }}
             />
 
@@ -95,7 +85,7 @@ export const AdminStack = () => {
                 component={AdminPaymentsScreen}
                 options={{
                     title: 'Payments',
-                    tabBarIcon: ({ focused }) => <Text>{focused ? '💰' : '💸'}</Text>,
+                    tabBarIcon: ({ focused }) => <IndianRupee size={22} color={focused ? '#ca8a04' : '#9ca3af'} />,
                 }}
             />
 
@@ -104,7 +94,7 @@ export const AdminStack = () => {
                 component={StudentsStack}
                 options={{
                     title: 'Students',
-                    tabBarIcon: ({ focused }) => <Text>{focused ? '👥' : '👤'}</Text>,
+                    tabBarIcon: ({ focused }) => <Users size={22} color={focused ? '#ca8a04' : '#9ca3af'} />,
                 }}
             />
 
@@ -113,10 +103,11 @@ export const AdminStack = () => {
                 component={AdminSettingsStack}
                 options={{
                     title: 'Settings',
-                    unmountOnBlur: false, // 🔥 IMPORTANT
-                    tabBarIcon: ({ focused }) => <Text>{focused ? '⚙️' : '🔧'}</Text>,
+                    unmountOnBlur: false,
+                    tabBarIcon: ({ focused }) => <SettingsIcon size={22} color={focused ? '#ca8a04' : '#9ca3af'} />,
                 }}
             />
         </Tab.Navigator>
     );
 };
+

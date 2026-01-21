@@ -88,3 +88,24 @@ export const updateOrder = async (kitchenId, orderId, updates) => {
         return { error: error.message };
     }
 };
+export const placeStudentOrder = async (kitchenId, orderData) => {
+    const { studentId, mealType, items } = orderData;
+
+    // Map simplified structure to our existing placeOrder schema
+    const legacyPayload = {
+        userId: studentId,
+        slot: mealType.toLowerCase(),
+        type: items.itemType || 'ROTI_SABZI',
+        mainItem: items.item,
+        quantity: items.quantity,
+        totalAmount: items.totalAmount || 0,
+        componentsSnapshot: Object.entries(items.extras || {}).filter(([_, q]) => q > 0).map(([name, quantity]) => ({
+            name,
+            quantity,
+            price: 0, // In this flow, price is stored in items but simpler to pass total
+            isDailySpecial: true
+        }))
+    };
+
+    return placeOrder(kitchenId, legacyPayload);
+};

@@ -1,228 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Pressable, Alert } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
-import { getMenuDateId } from '../../services/menuService';
+import { getTodayKey } from '../../services/menuService';
 import tw from 'twrnc';
-
-const StatCard = ({ title, value, type }) => {
-    const { primaryColor } = useTheme();
-    let bgClass = "bg-white";
-    let textClass = "text-gray-800";
-    if (type === 'danger') { bgClass = "bg-red-50"; textClass = "text-red-600"; }
-    if (type === 'warning') { bgClass = "bg-yellow-50"; textClass = "text-yellow-700"; }
-    if (type === 'success') { bgClass = "bg-green-50"; textClass = "text-green-700"; }
-
-    return (
-        <View
-            style={[
-                tw`flex-1 p-3 rounded-xl m-1 items-center justify-center border-l-4 border-y border-r border-gray-100 shadow-sm ${bgClass}`,
-                { borderLeftColor: primaryColor }
-            ]}
-        >
-            <Text style={tw`text-2xl font-bold ${textClass}`}>{value}</Text>
-            <Text style={tw`text-gray-500 text-xs text-center`}>{title}</Text>
-        </View>
-    );
-};
+import { Search, Clock, Check, ChevronRight, User, Package, Filter } from 'lucide-react-native';
 
 export const OrdersScreen = () => {
     const { tenant } = useTenant();
-    const { primaryColor } = useTheme();
+
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL"); // ALL | PENDING | CONFIRMED
+    const [refreshing, setRefreshing] = useState(false);
+    const [confirmingId, setConfirmingId] = useState(null);
 
-    const dateId = getMenuDateId(selectedDate);
+    const today = getTodayKey();
 
     useEffect(() => {
         if (!tenant?.id) return;
-
         setLoading(true);
-        const unsubscribe = subscribeToOrders(tenant.id, dateId, (data) => {
-            setOrders(data);
+        const unsub = subscribeToOrders(tenant.id, today, (list) => {
+            setOrders(list);
             setLoading(false);
+            setRefreshing(false);
         });
+        return unsub;
+    }, [tenant?.id, today]);
 
-        return () => unsubscribe();
-    }, [tenant?.id, dateId]);
+    const filteredOrders = useMemo(() => {
+        return orders.filter(o => {
+            const matchesSearch = !searchTerm || (o.userDisplayName || 'Student').toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = statusFilter === 'ALL' ||
+                (statusFilter === 'PENDING' && (o.status === 'placed' || o.status === 'PENDING')) ||
+                (statusFilter === 'CONFIRMED' && o.status === 'CONFIRMED');
+            return matchesSearch && matchesStatus;
+        });
+    }, [orders, searchTerm, statusFilter]);
 
-    const handleUpdateStatus = async (orderId, updates) => {
-        const result = await updateOrder(tenant.id, orderId, updates);
-        if (result.error) {
-            Alert.alert("Error", result.error);
-        }
+    const handleConfirm = async (orderId) => {
+        setConfirmingId(orderId);
+        const result = await updateOrder(tenant.id, orderId, { status: 'CONFIRMED' });
+        setConfirmingId(null);
+        if (result.error) Alert.alert("Error", result.error);
     };
 
-    // Stats Logic
-    const pendingOrders = orders.filter(o => o.status === 'placed').length;
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-    const renderItem = ({ item }) => {
-        const isRotiSabzi = item.type === 'ROTI_SABZI';
-
-        return (
-            <View style={tw`bg-white p-4 rounded-xl mb-3 border border-gray-100 shadow-sm`}>
-                <View style={tw`flex-row justify-between items-start mb-2`}>
-                    <View>
-                        <View style={tw`flex-row items-center`}>
-                            <Text style={tw`font-bold text-lg text-gray-800`}>{item.userDisplayName}</Text>
-                            {item.isTrial && (
-                                <View
-                                    style={[tw`ml-2 px-2 py-0.5 rounded`, { backgroundColor: `${primaryColor}20` }]}
-                                >
-                                    <Text
-                                        style={[tw`text-[10px] font-bold uppercase`, { color: primaryColor }]}
-                                    >
-                                        Trial
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-                        <Text style={tw`text-xs text-gray-400 capitalize`}>{(item.slotLabel || item.slot)} • {new Date(item.createdAt?.toMillis ? item.createdAt.toMillis() : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-                    </View>
-                    <View style={tw`items-end`}>
-                        <View style={tw`px-3 py-1 rounded-full ${item.status === 'placed' ? 'bg-orange-50' : 'bg-green-50'}`}>
-                            <Text style={tw`font-bold text-xs ${item.status === 'placed' ? 'text-orange-600' : 'text-green-600'}`}>
-                                {item.status.toUpperCase()}
-                            </Text>
-                        </View>
-                        {item.isTrial && (
-                            <Text style={tw`text-[10px] mt-1 font-bold ${item.paymentStatus === 'paid' ? 'text-green-600' : 'text-red-500'}`}>
-                                {item.paymentMethod?.toUpperCase()} • {item.paymentStatus?.toUpperCase()}
-                            </Text>
-                        )}
-                    </View>
-                </View>
-
-                {/* Detailed Items */}
-                <View style={tw`bg-gray-50 p-4 rounded-xl`}>
-                    <Text style={tw`font-black text-gray-900 text-lg mb-1`}>
-                        {item.mainItem}
-                    </Text>
-
-                    {/* Snapshot-based Rendering */}
-                    {item.variantSnapshot ? (
-                        <View style={tw`mb-2`}>
-                            <Text style={tw`text-blue-700 font-bold text-xs uppercase tracking-wider`}>
-                                {item.variantSnapshot.label}
-                                {item.variantSnapshot.quantities?.roti ? ` • ${item.variantSnapshot.quantities.roti} Roti` : ''}
-                            </Text>
-                        </View>
-                    ) : (
-                        item.variant && (
-                            <Text style={tw`text-blue-600 font-bold text-xs uppercase mb-1`}>
-                                {item.variant.toUpperCase()} DABBA
-                            </Text>
-                        )
-                    )}
-
-                    {/* Components (Addons/Extras) */}
-                    {(item.componentsSnapshot || item.extras || [])?.length > 0 && (
-                        <View style={tw`mt-2 pt-2 border-t border-gray-200`}>
-                            {(item.componentsSnapshot || []).map((c, i) => (
-                                <View key={i} style={tw`flex-row justify-between mb-1`}>
-                                    <Text style={tw`text-gray-600 text-sm`}>
-                                        + {c.quantity} x {c.name}
-                                    </Text>
-                                    {c.isDailySpecial && <Text style={tw`text-[8px] font-bold text-orange-400 uppercase`}>Special</Text>}
-                                </View>
-                            ))}
-
-                            {/* Old Extras Fallback */}
-                            {!item.componentsSnapshot && item.extras?.map((ex, i) => (
-                                <Text key={i} style={tw`text-gray-600 text-sm`}>
-                                    + {ex.quantity} x {ex.name}
-                                </Text>
-                            ))}
-
-                            {/* Old Addons Fallback */}
-                            {!item.componentsSnapshot && item.addons?.length > 0 && (
-                                <Text style={tw`text-gray-500 text-xs italic`}>
-                                    Includes: {item.addons.join(', ')}
-                                </Text>
-                            )}
-                        </View>
-                    )}
-                </View>
-
-                {/* Total */}
-                <View style={tw`mt-3 flex-row justify-end`}>
-                    <Text style={tw`font-bold text-gray-800 text-lg`}>Total: ₹{item.totalAmount}</Text>
-                </View>
-
-                {/* Actions */}
-                <View style={tw`mt-3 flex-row gap-2`}>
-                    {item.status === 'placed' && (
-                        <Pressable
-                            style={[tw`flex-1 p-3 rounded-lg items-center`, { backgroundColor: primaryColor }]}
-                            onPress={() => handleUpdateStatus(item.id, { status: 'confirmed' })}
-                        >
-                            <Text style={tw`font-bold text-gray-900 text-sm`}>Confirm Order</Text>
-                        </Pressable>
-                    )}
-                    {item.isTrial && item.paymentStatus !== 'paid' && (
-                        <Pressable
-                            style={[tw`flex-1 p-3 rounded-lg items-center`, { backgroundColor: primaryColor }]}
-                            onPress={() => handleUpdateStatus(item.id, { paymentStatus: 'paid' })}
-                        >
-                            <Text style={tw`font-bold text-gray-900 text-sm`}>Mark Paid</Text>
-                        </Pressable>
-                    )}
-                </View>
-            </View>
-        );
+    const onRefresh = () => {
+        setRefreshing(true);
+        setTimeout(() => setRefreshing(false), 1000);
     };
 
-    const changeDate = (days) => {
-        const newDate = new Date(selectedDate);
-        newDate.setDate(newDate.getDate() + days);
-        setSelectedDate(newDate);
-    };
+    if (loading) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
 
     return (
-        <View style={tw`flex-1 bg-gray-50`}>
+        <View style={tw`flex-1 bg-[#faf9f6]`}>
             {/* Header */}
-            <View style={tw`bg-white p-4 pb-2 shadow-sm z-10`}>
-                <Text style={tw`text-gray-500 text-xs font-bold uppercase tracking-widest mb-1`}>Kitchen Operations</Text>
-                <View style={tw`flex-row items-center justify-between`}>
-                    <Pressable onPress={() => changeDate(-1)}>
-                        <Text style={tw`text-2xl font-bold text-gray-400`}>{'<'}</Text>
-                    </Pressable>
-                    <Text style={tw`text-xl font-bold text-gray-800`}>{selectedDate.toDateString()}</Text>
-                    <Pressable onPress={() => changeDate(1)}>
-                        <Text style={tw`text-2xl font-bold text-gray-400`}>{'>'}</Text>
-                    </Pressable>
-                </View>
+            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
+                <Text style={tw`text-2xl font-black text-gray-900`}>Today's Orders</Text>
+                <Text style={tw`text-sm text-gray-500`}>Confirm and manage daily meals</Text>
             </View>
 
-            {/* Stats Grid */}
-            <View style={tw`p-2 flex-row flex-wrap`}>
-                <View style={tw`w-1/2`}><StatCard title="Pending" value={pendingOrders} type={pendingOrders > 0 ? 'danger' : 'neutral'} /></View>
-                <View style={tw`w-1/2`}><StatCard title="Total" value={totalOrders} type="success" /></View>
-                <View style={tw`w-1/2`}><StatCard title="Revenue" value={`₹${totalRevenue}`} type="neutral" /></View>
-            </View>
-
-            {loading ? (
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color={primaryColor} />
+            <View style={tw`p-6`}>
+                {/* Search */}
+                <View style={tw`bg-white rounded-3xl flex-row items-center px-6 shadow-sm border border-gray-100 mb-4`}>
+                    <Search size={20} color="#9ca3af" />
+                    <TextInput
+                        style={tw`flex-1 py-4 ml-3 font-bold text-gray-900`}
+                        placeholder="Search student name..."
+                        value={searchTerm}
+                        onChangeText={setSearchTerm}
+                    />
                 </View>
-            ) : (
-                <FlatList
-                    data={orders}
-                    renderItem={renderItem}
-                    keyExtractor={item => item.id}
-                    contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-                    showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={
-                        <View className="items-center justify-center py-10">
-                            <Text className="text-gray-400 text-lg">No orders for today</Text>
+
+                {/* Filters */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={tw`flex-row mb-6`}>
+                    {['ALL', 'PENDING', 'CONFIRMED'].map(f => (
+                        <Pressable
+                            key={f}
+                            onPress={() => setStatusFilter(f)}
+                            style={[tw`px-6 py-2 rounded-full border mr-2`, statusFilter === f ? tw`bg-yellow-400 border-yellow-400` : tw`bg-white border-gray-200`]}
+                        >
+                            <Text style={[tw`text-xs font-black`, statusFilter === f ? tw`text-gray-900` : tw`text-gray-400`]}>{f}</Text>
+                        </Pressable>
+                    ))}
+                </ScrollView>
+
+                <ScrollView
+                    contentContainerStyle={tw`pb-64`}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                >
+                    {filteredOrders.map(o => {
+                        const isConfirmed = o.status === 'CONFIRMED';
+                        return (
+                            <View key={o.id} style={[tw`bg-white rounded-3xl p-5 shadow-sm border mb-4`, isConfirmed ? tw`border-gray-50` : tw`border-yellow-300`]}>
+                                <View style={tw`flex-row justify-between items-start mb-4`}>
+                                    <View style={tw`flex-row items-center gap-3`}>
+                                        <View style={[tw`w-10 h-10 rounded-2xl items-center justify-center`, isConfirmed ? tw`bg-gray-100` : tw`bg-yellow-100`]}>
+                                            {isConfirmed ? <Check size={18} color="#4b5563" /> : <Clock size={18} color="#ca8a04" />}
+                                        </View>
+                                        <View>
+                                            <Text style={tw`text-base font-black text-gray-900`}>{o.userDisplayName || 'Student'}</Text>
+                                            <View style={tw`flex-row items-center gap-1`}>
+                                                <User size={10} color="#9ca3af" />
+                                                <Text style={tw`text-[10px] font-bold text-gray-400 uppercase`}>{o.slot} • {o.type?.replace('_', ' ')}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                    {!isConfirmed && <View style={tw`bg-yellow-100 px-3 py-1 rounded-full`}><Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>Pending</Text></View>}
+                                </View>
+
+                                <View style={tw`bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-4`}>
+                                    <Text style={tw`text-xs font-black text-gray-900`}>{o.quantity} × {o.mainItem}</Text>
+                                    {o.componentsSnapshot && o.componentsSnapshot.length > 0 && (
+                                        <Text style={tw`text-[10px] text-gray-400 mt-1`}>Extras: {o.componentsSnapshot.map(c => `${c.name} x${c.quantity}`).join(', ')}</Text>
+                                    )}
+                                </View>
+
+                                {!isConfirmed ? (
+                                    <Pressable
+                                        onPress={() => handleConfirm(o.id)}
+                                        disabled={confirmingId === o.id}
+                                        style={tw`bg-yellow-400 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
+                                    >
+                                        {confirmingId === o.id ? <ActivityIndicator color="#111827" size="small" /> : (
+                                            <>
+                                                <Text style={tw`text-gray-900 font-black text-sm uppercase`}>Confirm Order</Text>
+                                                <ChevronRight size={18} color="#111827" />
+                                            </>
+                                        )}
+                                    </Pressable>
+                                ) : (
+                                    <View style={tw`flex-row items-center gap-2 mt-2 w-full justify-center`}>
+                                        <Check size={14} color="#059669" />
+                                        <Text style={tw`text-[10px] font-bold text-emerald-600 uppercase`}>Order Confirmed</Text>
+                                    </View>
+                                )}
+                            </View>
+                        );
+                    })}
+
+                    {filteredOrders.length === 0 && (
+                        <View style={tw`items-center justify-center py-20`}>
+                            <Package size={48} color="#e5e7eb" />
+                            <Text style={tw`text-gray-400 font-black mt-4`}>No orders found</Text>
                         </View>
-                    }
-                />
-            )}
+                    )}
+                </ScrollView>
+            </View>
         </View>
     );
 };

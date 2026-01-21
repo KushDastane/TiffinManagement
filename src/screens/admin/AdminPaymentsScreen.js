@@ -1,159 +1,173 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, Pressable, ActivityIndicator, Image, Alert, Modal, RefreshControl } from 'react-native';
+import { View, Text, FlatList, Pressable, ActivityIndicator, Image, Alert, Modal, RefreshControl, ScrollView } from 'react-native';
 import { useTenant } from '../../contexts/TenantContext';
-import { useTheme } from '../../contexts/ThemeContext';
-import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import tw from 'twrnc';
+import { Check, X, Eye, IndianRupee, Calendar, User, PaymentCard } from 'lucide-react-native';
 
 export const AdminPaymentsScreen = () => {
     const { tenant } = useTenant();
-    const { primaryColor } = useTheme();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
-
-    const fetchPayments = async () => {
-        if (!tenant?.id) return;
-        setLoading(true);
-        try {
-            const q = query(
-                collection(db, 'kitchens', tenant.id, 'payments'),
-                orderBy('createdAt', 'desc')
-            );
-            const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            setPayments(data);
-        } catch (error) {
-            console.error(error);
-        }
-        setLoading(false);
-    };
+    const [processingId, setProcessingId] = useState(null);
 
     useEffect(() => {
-        fetchPayments();
+        if (!tenant?.id) return;
+        setLoading(true);
+        const q = query(
+            collection(db, 'kitchens', tenant.id, 'payments'),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsub = onSnapshot(q, (snap) => {
+            const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setPayments(data);
+            setLoading(false);
+            setRefreshing(false);
+        }, (err) => {
+            console.error(err);
+            setLoading(false);
+            setRefreshing(false);
+        });
+
+        return unsub;
     }, [tenant?.id]);
 
     const handleAction = async (paymentId, action) => {
+        setProcessingId(paymentId);
         try {
             await updateDoc(doc(db, 'kitchens', tenant.id, 'payments', paymentId), {
                 status: action,
                 processedAt: serverTimestamp()
             });
             Alert.alert("Success", `Payment ${action}`);
-            fetchPayments();
         } catch (error) {
             console.error("Error updating payment:", error);
             Alert.alert("Error", "Failed to update payment status");
         }
+        setProcessingId(null);
     };
 
-    const renderItem = ({ item }) => (
-        <View style={tw`bg-white p-4 rounded-xl mb-3 border border-gray-100 shadow-sm`}>
-            <View style={tw`flex-row justify-between`}>
-                <View>
-                    <Text style={tw`font-bold text-gray-800 text-lg`}>{item.userDisplayName}</Text>
-                    <Text style={tw`text-xs text-gray-400`}>
-                        {new Date(item.createdAt?.toMillis ? item.createdAt.toMillis() : Date.now()).toDateString()}
-                    </Text>
-                    <View style={tw`flex-row items-center mt-1`}>
-                        <Text style={tw`font-bold text-sm uppercase px-2 py-0.5 rounded ${item.method === 'UPI' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                            {item.method}
-                        </Text>
-                        <View
-                            style={[
-                                tw`ml-2 px-2 py-0.5 rounded`,
-                                item.status === 'pending' ? { backgroundColor: `${primaryColor}20` } : (item.status === 'accepted' ? tw`bg-green-100` : tw`bg-red-100`)
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    tw`font-bold text-sm uppercase`,
-                                    item.status === 'pending' ? { color: primaryColor } : (item.status === 'accepted' ? tw`text-green-700` : tw`text-red-700`)
-                                ]}
-                            >
-                                {item.status}
-                            </Text>
+    const onRefresh = () => {
+        setRefreshing(true);
+        // Snapshot updates auto
+        setTimeout(() => setRefreshing(false), 1000);
+    };
+
+    const renderItem = ({ item }) => {
+        const isPending = item.status === 'pending';
+        const isAccepted = item.status === 'accepted';
+
+        return (
+            <View style={tw`bg-white rounded-3xl p-5 mb-4 shadow-sm border border-gray-100`}>
+                <View style={tw`flex-row justify-between items-start mb-4`}>
+                    <View style={tw`flex-row items-center gap-3`}>
+                        <View style={tw`w-12 h-12 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}>
+                            <User size={20} color="#4b5563" />
+                        </View>
+                        <View>
+                            <Text style={tw`text-base font-black text-gray-900`}>{item.userDisplayName || 'Student'}</Text>
+                            <View style={tw`flex-row items-center gap-1 mt-0.5`}>
+                                <Calendar size={10} color="#9ca3af" />
+                                <Text style={tw`text-[10px] font-bold text-gray-400`}>
+                                    {new Date(item.createdAt?.toMillis ? item.createdAt.toMillis() : Date.now()).toLocaleDateString()}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                    <View style={tw`items-end`}>
+                        <Text style={tw`text-xl font-black text-emerald-600`}>₹{item.amount}</Text>
+                        <View style={[tw`px-2 py-0.5 rounded-full mt-1`, isPending ? tw`bg-yellow-100` : (isAccepted ? tw`bg-emerald-100` : tw`bg-red-100`)]}>
+                            <Text style={[tw`text-[10px] font-black uppercase`, isPending ? tw`text-yellow-800` : (isAccepted ? tw`text-emerald-800` : tw`text-red-800`)]}>{item.status}</Text>
                         </View>
                     </View>
                 </View>
-                <Text style={tw`text-xl font-bold text-green-600`}>₹{item.amount}</Text>
-            </View>
 
-            {item.method === 'UPI' && item.screenshotUrl && (
-                <Pressable
-                    onPress={() => setSelectedImage(item.screenshotUrl)}
-                    style={{ marginTop: 12 }}
-                >
-                    <Image source={{ uri: item.screenshotUrl }} style={tw`w-full h-32 rounded-lg bg-gray-100`} resizeMode="cover" />
-                    <Text style={tw`text-center text-xs text-gray-400 mt-1`}>Tap to view full receipt</Text>
-                </Pressable>
-            )}
-
-            {item.status === 'pending' && (
-                <View style={[tw`flex-row mt-4`, { gap: 12 }]}>
-                    <Pressable
-                        onPress={() => handleAction(item.id, 'accepted')}
-                        style={{
-                            flex: 1,
-                            paddingVertical: 12,
-                            borderRadius: 8,
-                            alignItems: 'center',
-                            backgroundColor: primaryColor
-                        }}
-                    >
-                        <Text style={{ color: '#111827', fontWeight: 'bold' }}>Accept</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={() => handleAction(item.id, 'rejected')}
-                        style={{
-                            flex: 1,
-                            paddingVertical: 12,
-                            borderRadius: 8,
-                            alignItems: 'center',
-                            backgroundColor: '#FEF2F2',
-                            borderWidth: 1,
-                            borderColor: '#FEE2E2'
-                        }}
-                    >
-                        <Text style={{ color: '#DC2626', fontWeight: 'bold' }}>Reject</Text>
-                    </Pressable>
+                <View style={tw`flex-row gap-2 mb-4`}>
+                    <View style={tw`bg-gray-50 px-3 py-1 rounded-lg border border-gray-100`}><Text style={tw`text-[10px] font-bold text-gray-500 uppercase`}>{item.method}</Text></View>
+                    {item.utr && <View style={tw`bg-gray-50 px-3 py-1 rounded-lg border border-gray-100`}><Text style={tw`text-[10px] font-bold text-gray-500 uppercase`}>UTR: {item.utr}</Text></View>}
                 </View>
-            )}
-        </View>
-    );
+
+                {item.method === 'UPI' && item.screenshotUrl && (
+                    <Pressable
+                        onPress={() => setSelectedImage(item.screenshotUrl)}
+                        style={tw`w-full h-40 rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden mb-4 relative`}
+                    >
+                        <Image source={{ uri: item.screenshotUrl }} style={tw`w-full h-full`} resizeMode="cover" />
+                        <View style={tw`absolute inset-0 bg-black/5 items-center justify-center`}>
+                            <View style={tw`bg-white/90 px-3 py-1.5 rounded-xl flex-row items-center gap-2 shadow-sm`}>
+                                <Eye size={14} color="#111827" />
+                                <Text style={tw`text-[10px] font-black text-gray-900`}>VIEW RECEIPT</Text>
+                            </View>
+                        </View>
+                    </Pressable>
+                )}
+
+                {isPending && (
+                    <View style={tw`flex-row gap-3 mt-2`}>
+                        <Pressable
+                            disabled={processingId === item.id}
+                            onPress={() => handleAction(item.id, 'accepted')}
+                            style={tw`flex-1 bg-yellow-400 rounded-2xl py-4 items-center justify-center flex-row gap-2`}
+                        >
+                            {processingId === item.id ? <ActivityIndicator size="small" color="#111827" /> : (
+                                <>
+                                    <Check size={18} color="#111827" />
+                                    <Text style={tw`text-gray-900 font-black text-sm uppercase`}>Accept</Text>
+                                </>
+                            )}
+                        </Pressable>
+                        <Pressable
+                            disabled={processingId === item.id}
+                            onPress={() => handleAction(item.id, 'rejected')}
+                            style={tw`bg-red-50 rounded-2xl py-4 px-6 items-center justify-center border border-red-100`}
+                        >
+                            <X size={18} color="#b91c1c" />
+                        </Pressable>
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    if (loading && !refreshing) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
 
     return (
-        <View style={tw`flex-1 bg-gray-50`}>
+        <View style={tw`flex-1 bg-[#faf9f6]`}>
+            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
+                <Text style={tw`text-2xl font-black text-gray-900`}>Payments</Text>
+                <Text style={tw`text-sm text-gray-500`}>Review and approve wallet top-ups</Text>
+            </View>
+
             <FlatList
                 data={payments}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
-                contentContainerStyle={{ padding: 16 }}
-                refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchPayments} />}
-                ListEmptyComponent={<Text style={tw`text-center text-gray-400 mt-10`}>No payment requests found.</Text>}
+                contentContainerStyle={tw`p-6 pb-32`}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                ListEmptyComponent={
+                    <View style={tw`items-center justify-center py-20`}>
+                        <IndianRupee size={48} color="#e5e7eb" />
+                        <Text style={tw`text-gray-400 font-black mt-4`}>No payments found</Text>
+                    </View>
+                }
             />
 
-            <Modal visible={!!selectedImage} transparent={true} onRequestClose={() => setSelectedImage(null)}>
-                <View style={tw`flex-1 bg-black/90 justify-center items-center relative`}>
+            <Modal visible={!!selectedImage} transparent={true} animationType="fade" onRequestClose={() => setSelectedImage(null)}>
+                <View style={tw`flex-1 bg-black/95 justify-center items-center`}>
                     <Pressable
                         onPress={() => setSelectedImage(null)}
-                        style={{
-                            position: 'absolute',
-                            top: 40,
-                            right: 24,
-                            zIndex: 10,
-                            padding: 8,
-                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                            borderRadius: 999
-                        }}
+                        style={tw`absolute top-14 right-6 w-12 h-12 bg-white/20 rounded-2xl items-center justify-center z-10`}
                     >
-                        <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 20 }}>X</Text>
+                        <X size={24} color="white" />
                     </Pressable>
                     {selectedImage && (
                         <Image
                             source={{ uri: selectedImage }}
-                            style={tw`w-full h-4/5`}
+                            style={{ width: '90%', height: '80%' }}
                             resizeMode="contain"
                         />
                     )}
@@ -162,3 +176,4 @@ export const AdminPaymentsScreen = () => {
         </View>
     );
 };
+

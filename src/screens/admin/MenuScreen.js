@@ -1,248 +1,414 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Alert, Switch } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { useTheme } from '../../contexts/ThemeContext';
-import { getMenuDateId, saveMenu, subscribeToMenu } from '../../services/menuService';
+import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, isAfterResetTime } from '../../services/menuService';
 import tw from 'twrnc';
+import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun } from 'lucide-react-native';
 
-const MealForm = ({ slotConfig, data, onChange }) => {
-    const { primaryColor } = useTheme();
-    const { label, mode } = slotConfig;
-
-    const updateField = (field, value) => {
-        onChange({ ...data, [field]: value });
-    };
-
-    const addListItem = (field) => {
-        const newList = [...(data[field] || []), { name: '', price: '' }];
-        updateField(field, newList);
-    };
-
-    const updateListItem = (field, index, subField, value) => {
-        const newList = [...(data[field] || [])];
-        newList[index][subField] = value;
-        updateField(field, newList);
-    };
-
-    const removeListItem = (field, index) => {
-        const newList = data[field].filter((_, i) => i !== index);
-        updateField(field, newList);
-    };
-
-    const isActive = data.status === 'SET';
-
-    return (
-        <View style={tw`mb-6 border border-gray-200 rounded-2xl p-5 bg-white shadow-sm`}>
-            <View style={tw`flex-row justify-between items-center mb-4`}>
-                <View>
-                    <Text style={tw`text-2xl font-black text-gray-900`}>{label}</Text>
-                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>
-                        {mode === 'FIXED' ? '🍱 Tiffin / Fixed' : '🍔 Canteen / Menu'}
-                    </Text>
-                </View>
-                <View style={tw`flex-row items-center bg-gray-50 px-3 py-1 rounded-full`}>
-                    <Text style={[tw`mr-2 text-[10px] font-black uppercase`, { color: isActive ? '#16a34a' : '#9ca3af' }]}>
-                        {isActive ? 'Active' : 'Closed'}
-                    </Text>
-                    <Switch
-                        value={isActive}
-                        onValueChange={(val) => updateField('status', val ? 'SET' : 'NOT_SET')}
-                        trackColor={{ false: '#e5e7eb', true: primaryColor }}
-                        thumbColor="#fff"
-                    />
-                </View>
-            </View>
-
-            {isActive && (
-                <>
-                    {mode === 'FIXED' ? (
-                        <View style={tw`bg-gray-50 p-4 rounded-xl border border-gray-100`}>
-                            <Text style={tw`text-gray-400 mb-2 font-black uppercase tracking-widest text-[10px]`}>Today's Main Sabzi</Text>
-                            <TextInput
-                                style={tw`bg-white border-2 border-gray-100 rounded-xl p-4 font-bold text-lg text-gray-800`}
-                                placeholder="e.g. Aloo Matar"
-                                value={data.mainDish || ''}
-                                onChangeText={(val) => updateField('mainDish', val)}
-                            />
-                            <Text style={tw`text-[10px] text-blue-500 mt-2 font-bold italic`}>
-                                * Pricing and variants are pulled from your Food Setup settings.
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={tw`bg-gray-50 p-4 rounded-xl border border-gray-100`}>
-                            <Text style={tw`text-gray-400 mb-2 font-black uppercase tracking-widest text-[10px]`}>Today's Special Menu</Text>
-                            {(data.menuItems || []).map((item, index) => (
-                                <View key={index} style={tw`flex-row gap-2 mb-2 items-center`}>
-                                    <TextInput
-                                        style={tw`flex-[2] bg-white border border-gray-100 rounded-lg p-3 font-bold`}
-                                        placeholder="Item e.g. Burger"
-                                        value={item.name}
-                                        onChangeText={(val) => updateListItem('menuItems', index, 'name', val)}
-                                    />
-                                    <TextInput
-                                        style={tw`flex-1 bg-white border border-gray-100 rounded-lg p-3 font-bold text-center`}
-                                        placeholder="₹"
-                                        keyboardType="numeric"
-                                        value={String(item.price)}
-                                        onChangeText={(val) => updateListItem('menuItems', index, 'price', val)}
-                                    />
-                                    <Pressable onPress={() => removeListItem('menuItems', index)} style={tw`p-2`}>
-                                        <Text style={tw`text-red-500 font-bold`}>X</Text>
-                                    </Pressable>
-                                </View>
-                            ))}
-                            <Pressable onPress={() => addListItem('menuItems')} style={tw`mt-1`}>
-                                <Text style={[{ color: primaryColor }, tw`font-bold text-xs uppercase tracking-widest`]}>+ Add Item</Text>
-                            </Pressable>
-                        </View>
-                    )}
-
-                    <View style={tw`mt-6 pt-4 border-t border-gray-100`}>
-                        <Text style={tw`text-gray-400 mb-3 font-black uppercase tracking-widest text-[10px]`}>Today's Optional Extras (One-off)</Text>
-                        {(data.extras || []).map((extra, index) => (
-                            <View key={index} style={tw`flex-row gap-2 mb-2 items-center`}>
-                                <TextInput
-                                    style={tw`flex-[2] bg-gray-100 border border-gray-200 rounded-lg p-2 font-medium`}
-                                    placeholder="e.g. Buttermilk"
-                                    value={extra.name}
-                                    onChangeText={(val) => updateListItem('extras', index, 'name', val)}
-                                />
-                                <TextInput
-                                    style={tw`flex-1 bg-gray-100 border border-gray-200 rounded-lg p-2 text-center font-medium`}
-                                    placeholder="Price"
-                                    keyboardType="numeric"
-                                    value={String(extra.price)}
-                                    onChangeText={(val) => updateListItem('extras', index, 'price', val)}
-                                />
-                                <Pressable onPress={() => removeListItem('extras', index)} style={tw`p-2`}>
-                                    <Text style={tw`text-gray-400 font-bold`}>X</Text>
-                                </Pressable>
-                            </View>
-                        ))}
-                        <Pressable onPress={() => addListItem('extras')} style={tw`mt-1`}>
-                            <Text style={[{ color: primaryColor }, tw`font-black text-[10px] uppercase tracking-tighter opacity-70`]}>+ Add One-off Extra</Text>
-                        </Pressable>
-                    </View>
-                </>
-            )}
-        </View>
-    );
-};
+const OTHER_SUGGESTIONS = ["Misal Pav", "Pav Bhaji", "Thalipeeth"];
+const FULL_ADDON_SUGGESTIONS = ["Dal Rice", "Kadhi Rice", "Biryani"];
+const FREE_ADDONS = ["Chatni", "Pickle", "Dahi", "Sweet"];
 
 export const MenuScreen = () => {
     const { tenant } = useTenant();
-    const { primaryColor } = useTheme();
-    const [menuData, setMenuData] = useState({});
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date());
 
-    const dateId = getMenuDateId(selectedDate);
-    const mealTypes = tenant?.mealTypes || [];
+    // UI State
+    const [viewMode, setViewMode] = useState('summary'); // summary | edit
+    const [editingSlot, setEditingSlot] = useState(null); // lunch | dinner
+
+    // Data State
+    const [todayMenuData, setTodayMenuData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    // Form State
+    const [mealType, setMealType] = useState('ROTI_SABZI'); // ROTI_SABZI | OTHER
+    const [sabzi, setSabzi] = useState("");
+    const [halfPrice, setHalfPrice] = useState("50");
+    const [fullPrice, setFullPrice] = useState("80");
+    const [fullAddon, setFullAddon] = useState("");
+    const [customFullAddon, setCustomFullAddon] = useState("");
+    const [showCustomAddon, setShowCustomAddon] = useState(false);
+    const [freeAddons, setFreeAddons] = useState([]);
+
+    const [otherName, setOtherName] = useState("");
+    const [otherPrice, setOtherPrice] = useState("");
+    const [showOtherInput, setShowOtherInput] = useState(false);
+
+    const [extras, setExtras] = useState([{ name: "Roti", price: "7" }]);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const dateId = useMemo(() => isAfterResetTime() ? getTomorrowKey() : getTodayKey(), []);
 
     useEffect(() => {
         if (!tenant?.id) return;
-
         setLoading(true);
-        const unsubscribe = subscribeToMenu(tenant.id, dateId, (data) => {
-            const merged = {};
-            mealTypes.forEach(m => {
-                const slotData = (data || {})[m.id];
-                merged[m.id] = slotData || { status: 'NOT_SET', mainDish: '', menuItems: [], extras: [] };
-            });
-            setMenuData(merged);
+        const unsub = subscribeToMenu(tenant.id, dateId, (data) => {
+            setTodayMenuData(data);
             setLoading(false);
         });
+        return unsub;
+    }, [tenant?.id, dateId]);
 
-        return () => unsubscribe();
-    }, [tenant?.id, dateId, mealTypes.length]);
+    const startEditing = (slot) => {
+        setEditingSlot(slot);
+        const existing = todayMenuData?.[slot];
+
+        if (existing) {
+            setMealType(existing.type || 'ROTI_SABZI');
+            if (existing.type === 'ROTI_SABZI' && existing.rotiSabzi) {
+                setSabzi(existing.rotiSabzi.sabzi || "");
+                setHalfPrice(String(existing.rotiSabzi.half?.price || "50"));
+                setFullPrice(String(existing.rotiSabzi.full?.price || "80"));
+                setFreeAddons(existing.rotiSabzi.freeAddons || []);
+
+                const fullAdd = existing.rotiSabzi.full?.items?.find(i => !i.includes("Chapati") && !i.includes("Sabzi")) || "";
+                if (FULL_ADDON_SUGGESTIONS.includes(fullAdd)) {
+                    setFullAddon(fullAdd);
+                    setShowCustomAddon(false);
+                } else if (fullAdd) {
+                    setFullAddon("");
+                    setCustomFullAddon(fullAdd);
+                    setShowCustomAddon(true);
+                }
+            } else if (existing.type === 'OTHER' && existing.other) {
+                setOtherName(existing.other.name || "");
+                setOtherPrice(String(existing.other.price || ""));
+                setShowOtherInput(!OTHER_SUGGESTIONS.includes(existing.other.name));
+            }
+            setExtras(existing.extras?.map(e => ({ name: e.name, price: String(e.price) })) || [{ name: "Roti", price: "7" }]);
+        } else {
+            // Defaults
+            setMealType('ROTI_SABZI');
+            setSabzi("");
+            setHalfPrice("50");
+            setFullPrice("80");
+            setFullAddon("");
+            setCustomFullAddon("");
+            setShowCustomAddon(false);
+            setFreeAddons([]);
+            setOtherName("");
+            setOtherPrice("");
+            setExtras([{ name: "Roti", price: "7" }]);
+        }
+        setViewMode('edit');
+    };
 
     const handleSave = async () => {
-        setSaving(true);
-        const result = await saveMenu(tenant.id, dateId, menuData);
-        setSaving(false);
+        if (!mealType) return Alert.alert("Error", "Select meal type");
+        setIsSaving(true);
+
+        const payload = {
+            type: mealType,
+            extras: extras.filter(e => e.name && e.price).map(e => ({ name: e.name, price: Number(e.price) })),
+        };
+
+        if (mealType === 'ROTI_SABZI') {
+            payload.rotiSabzi = {
+                sabzi,
+                half: {
+                    items: ["4 Chapati", sabzi && `${sabzi} Sabzi`].filter(Boolean),
+                    price: Number(halfPrice)
+                },
+                full: {
+                    items: ["4 Chapati", sabzi && `${sabzi} Sabzi`, fullAddon || customFullAddon].filter(Boolean),
+                    price: Number(fullPrice)
+                },
+                freeAddons
+            };
+        } else {
+            if (!otherName || !otherPrice) {
+                setIsSaving(false);
+                return Alert.alert("Error", "Enter item name and price");
+            }
+            payload.other = { name: otherName, price: Number(otherPrice) };
+        }
+
+        const result = await saveMenu(tenant.id, dateId, { [editingSlot]: payload });
+        setIsSaving(false);
         if (result.success) {
-            Alert.alert("Success", "Menu updated successfully!");
+            setViewMode('summary');
         } else {
             Alert.alert("Error", result.error);
         }
     };
 
-    const changeDate = (days) => {
-        const newDate = new Date(selectedDate);
-        newDate.setDate(newDate.getDate() + days);
-        setSelectedDate(newDate);
+    const toggleFreeAddon = (a) => {
+        setFreeAddons(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
     };
 
-    if (loading) {
+    if (loading) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
+
+    if (viewMode === 'summary') {
         return (
-            <View style={tw`flex-1 items-center justify-center bg-gray-50`}>
-                <ActivityIndicator size="large" color={primaryColor} />
+            <View style={tw`flex-1 bg-[#faf9f6]`}>
+                <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
+                    <Text style={tw`text-2xl font-black text-gray-900`}>Daily Menu</Text>
+                    <Text style={tw`text-sm text-gray-500`}>Setup meals for {dateId}</Text>
+                </View>
+
+                <ScrollView contentContainerStyle={tw`p-6`}>
+                    {['lunch', 'dinner'].map(slot => {
+                        const data = todayMenuData?.[slot];
+                        const Icon = slot === 'lunch' ? Sun : Moon;
+                        const accent = slot === 'lunch' ? 'yellow-400' : 'amber-500';
+
+                        return (
+                            <View key={slot} style={tw`mb-8`}>
+                                <View style={tw`flex-row items-center gap-2 mb-4`}>
+                                    <View style={tw`w-1 h-4 bg-${accent} rounded-full`} />
+                                    <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest`}>{slot}</Text>
+                                </View>
+
+                                {data ? (
+                                    <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100`}>
+                                        <View style={tw`flex-row justify-between items-start mb-4`}>
+                                            <View>
+                                                <Text style={tw`text-base font-black text-gray-900`}>{data.type === 'ROTI_SABZI' ? `Roti - ${data.rotiSabzi?.sabzi || 'Sabzi'}` : data.other?.name}</Text>
+                                                <Text style={tw`text-xs text-gray-400 font-bold uppercase`}>{data.type.replace('_', ' ')}</Text>
+                                            </View>
+                                            <Pressable
+                                                onPress={() => startEditing(slot)}
+                                                style={tw`w-10 h-10 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}
+                                            >
+                                                <PenTool size={18} color="#4b5563" />
+                                            </Pressable>
+                                        </View>
+
+                                        {data.type === 'ROTI_SABZI' ? (
+                                            <View style={tw`gap-3`}>
+                                                <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
+                                                    <View>
+                                                        <Text style={tw`text-xs font-bold text-gray-900`}>Half Dabba</Text>
+                                                        <Text style={tw`text-[10px] text-gray-400`}>{data.rotiSabzi.half.items.join(', ')}</Text>
+                                                    </View>
+                                                    <Text style={tw`font-black text-gray-900`}>₹{data.rotiSabzi.half.price}</Text>
+                                                </View>
+                                                <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
+                                                    <View>
+                                                        <Text style={tw`text-xs font-bold text-gray-900`}>Full Dabba</Text>
+                                                        <Text style={tw`text-[10px] text-gray-400`}>{data.rotiSabzi.full.items.join(', ')}</Text>
+                                                    </View>
+                                                    <Text style={tw`font-black text-gray-900`}>₹{data.rotiSabzi.full.price}</Text>
+                                                </View>
+                                            </View>
+                                        ) : (
+                                            <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
+                                                <Text style={tw`text-xs font-bold text-gray-900`}>Standard Price</Text>
+                                                <Text style={tw`font-black text-gray-900`}>₹{data.other?.price}</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                ) : (
+                                    <Pressable
+                                        onPress={() => startEditing(slot)}
+                                        style={tw`bg-white rounded-3xl p-8 border-2 border-dashed border-gray-200 items-center justify-center`}
+                                    >
+                                        <Plus size={32} color="#9ca3af" />
+                                        <Text style={tw`text-gray-400 font-bold mt-2 uppercase text-xs tracking-widest`}>Set {slot} Menu</Text>
+                                    </Pressable>
+                                )}
+                            </View>
+                        );
+                    })}
+                </ScrollView>
             </View>
         );
     }
 
+    // Edit View
     return (
-        <View style={tw`flex-1 bg-gray-50`}>
-            <View style={tw`bg-white p-4 pb-2 shadow-sm z-10`}>
-                <Text style={tw`text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1`}>Today's Kitchen Menu</Text>
-                <View style={tw`flex-row items-center justify-between`}>
-                    <Pressable
-                        onPress={() => changeDate(-1)}
-                        style={tw`p-2`}
-                    >
-                        <Text style={tw`text-2xl font-black text-gray-300`}>{'<'}</Text>
-                    </Pressable>
-                    <View style={tw`items-center`}>
-                        <Text style={tw`text-xl font-black text-gray-900`}>{selectedDate.toDateString()}</Text>
-                        <Text style={tw`text-[10px] text-gray-400 font-bold`}>Tap to change date</Text>
-                    </View>
-                    <Pressable
-                        onPress={() => changeDate(1)}
-                        style={tw`p-2`}
-                    >
-                        <Text style={tw`text-2xl font-black text-gray-300`}>{'>'}</Text>
-                    </Pressable>
+        <View style={tw`flex-1 bg-[#faf9f6]`}>
+            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100 flex-row items-center gap-4`}>
+                <Pressable onPress={() => setViewMode('summary')} style={tw`w-10 h-10 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}>
+                    <ChevronLeft size={24} color="#111827" />
+                </Pressable>
+                <View>
+                    <Text style={tw`text-xl font-black text-gray-900 uppercase`}>Set {editingSlot}</Text>
+                    <Text style={tw`text-xs text-gray-400 font-bold tracking-widest uppercase`}>Configuring Meal</Text>
                 </View>
             </View>
 
-            <ScrollView style={tw`flex-1 p-4 pt-6`} showsVerticalScrollIndicator={false}>
-                {mealTypes.map((slot) => (
-                    <MealForm
-                        key={slot.id}
-                        slotConfig={slot}
-                        data={menuData[slot.id] || {}}
-                        onChange={(newData) => {
-                            setMenuData({ ...menuData, [slot.id]: newData });
-                        }}
-                    />
-                ))}
+            <ScrollView contentContainerStyle={tw`p-6 pb-32`}>
+                {/* Meal Type Toggle */}
+                <View style={tw`flex-row gap-3 mb-6`}>
+                    {[{ label: "Roti-Sabzi", value: "ROTI_SABZI" }, { label: "Other", value: "OTHER" }].map(opt => (
+                        <Pressable
+                            key={opt.value}
+                            onPress={() => setMealType(opt.value)}
+                            style={[tw`flex-1 py-4 rounded-3xl items-center border-2`, mealType === opt.value ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-100`]}
+                        >
+                            <Text style={[tw`font-black text-sm`, mealType === opt.value ? tw`text-yellow-800` : tw`text-gray-400`]}>{opt.label}</Text>
+                        </Pressable>
+                    ))}
+                </View>
 
+                {mealType === 'ROTI_SABZI' ? (
+                    <View>
+                        {/* Sabzi */}
+                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Sabzi</Text>
+                        <TextInput
+                            style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
+                            placeholder="e.g. Gobi / Paneer"
+                            value={sabzi}
+                            onChangeText={setSabzi}
+                        />
+
+                        {/* Prices */}
+                        <View style={tw`flex-row gap-4 mb-4`}>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Half Price</Text>
+                                <TextInput
+                                    style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 font-bold text-gray-900`}
+                                    keyboardType="numeric"
+                                    value={halfPrice}
+                                    onChangeText={setHalfPrice}
+                                />
+                            </View>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Price</Text>
+                                <TextInput
+                                    style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 font-bold text-gray-900`}
+                                    keyboardType="numeric"
+                                    value={fullPrice}
+                                    onChangeText={setFullPrice}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Add-ons */}
+                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Dabba Add-on</Text>
+                        <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
+                            {FULL_ADDON_SUGGESTIONS.map(a => (
+                                <Pressable
+                                    key={a}
+                                    onPress={() => { setFullAddon(a); setShowCustomAddon(false); }}
+                                    style={[tw`px-4 py-2 rounded-full border`, fullAddon === a ? tw`bg-emerald-100 border-emerald-400` : tw`bg-white border-gray-200`]}
+                                >
+                                    <Text style={[tw`text-[10px] font-bold`, fullAddon === a ? tw`text-emerald-700` : tw`text-gray-500`]}>+ {a}</Text>
+                                </Pressable>
+                            ))}
+                            <Pressable
+                                onPress={() => { setFullAddon(""); setShowCustomAddon(true); }}
+                                style={[tw`px-4 py-2 rounded-full border`, showCustomAddon ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
+                            >
+                                <Text style={tw`text-[10px] font-bold text-gray-500`}>+ Other</Text>
+                            </Pressable>
+                        </View>
+
+                        {showCustomAddon && (
+                            <TextInput
+                                style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
+                                placeholder="Custom Add-on"
+                                value={customFullAddon}
+                                onChangeText={setCustomFullAddon}
+                            />
+                        )}
+
+                        {/* Free Add-ons */}
+                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Free Add-ons</Text>
+                        <View style={tw`flex-row flex-wrap gap-2 mb-6`}>
+                            {FREE_ADDONS.map(a => (
+                                <Pressable
+                                    key={a}
+                                    onPress={() => toggleFreeAddon(a)}
+                                    style={[tw`px-4 py-2 rounded-full border`, freeAddons.includes(a) ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                >
+                                    <Text style={[tw`text-[10px] font-bold`, freeAddons.includes(a) ? tw`text-yellow-700` : tw`text-gray-500`]}>{a}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    </View>
+                ) : (
+                    <View>
+                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Meal Name</Text>
+                        <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
+                            {OTHER_SUGGESTIONS.map(o => (
+                                <Pressable
+                                    key={o}
+                                    onPress={() => { setOtherName(o); setShowOtherInput(false); }}
+                                    style={[tw`px-4 py-2 rounded-full border`, otherName === o ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                >
+                                    <Text style={[tw`text-[10px] font-bold`, otherName === o ? tw`text-yellow-700` : tw`text-gray-500`]}>{o}</Text>
+                                </Pressable>
+                            ))}
+                            <Pressable
+                                onPress={() => { setOtherName(""); setShowOtherInput(true); }}
+                                style={[tw`px-4 py-2 rounded-full border`, showOtherInput ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
+                            >
+                                <Text style={tw`text-[10px] font-bold text-gray-500`}>+ Other</Text>
+                            </Pressable>
+                        </View>
+
+                        {showOtherInput && (
+                            <TextInput
+                                style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
+                                placeholder="Custom Meal Name"
+                                value={otherName}
+                                onChangeText={setOtherName}
+                            />
+                        )}
+
+                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Price</Text>
+                        <TextInput
+                            style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
+                            keyboardType="numeric"
+                            placeholder="₹"
+                            value={otherPrice}
+                            onChangeText={setOtherPrice}
+                        />
+                    </View>
+                )}
+
+                {/* Extras */}
+                <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Extras</Text>
+                {extras.map((e, i) => (
+                    <View key={i} style={tw`flex-row gap-2 mb-2`}>
+                        <TextInput
+                            style={tw`flex-2 bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 font-bold text-gray-900 text-xs`}
+                            placeholder="Extra Item"
+                            value={e.name}
+                            onChangeText={(val) => {
+                                const copy = [...extras];
+                                copy[i].name = val;
+                                setExtras(copy);
+                            }}
+                        />
+                        <TextInput
+                            style={tw`flex-1 bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 font-bold text-gray-900 text-xs`}
+                            placeholder="Price"
+                            keyboardType="numeric"
+                            value={e.price}
+                            onChangeText={(val) => {
+                                const copy = [...extras];
+                                copy[i].price = val;
+                                setExtras(copy);
+                            }}
+                        />
+                        <Pressable
+                            onPress={() => setExtras(extras.filter((_, idx) => idx !== i))}
+                            style={tw`w-10 bg-red-50 rounded-2xl items-center justify-center border border-red-100`}
+                        >
+                            <X size={16} color="#b91c1c" />
+                        </Pressable>
+                    </View>
+                ))}
                 <Pressable
-                    onPress={handleSave}
-                    disabled={saving}
-                    style={{
-                        width: '100%',
-                        backgroundColor: primaryColor,
-                        borderRadius: 16,
-                        padding: 20,
-                        alignItems: 'center',
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 6,
-                        elevation: 4,
-                        marginBottom: 40
-                    }}
+                    onPress={() => setExtras([...extras, { name: "", price: "" }])}
+                    style={tw`bg-gray-50 rounded-2xl py-3 items-center border border-gray-100 mt-2`}
                 >
-                    {saving ? (
-                        <ActivityIndicator color="black" />
-                    ) : (
-                        <Text style={tw`text-black font-black text-xl`}>Save Menu</Text>
-                    )}
+                    <Text style={tw`text-xs font-bold text-gray-500 uppercase tracking-widest`}>+ Add Extra</Text>
                 </Pressable>
 
-                <View style={tw`h-20`} />
+                {/* Save Button */}
+                <Pressable
+                    onPress={handleSave}
+                    disabled={isSaving}
+                    style={[tw`bg-yellow-600 rounded-3xl py-5 shadow-lg mt-10 items-center justify-center`, isSaving && tw`opacity-70`]}
+                >
+                    {isSaving ? <ActivityIndicator color="white" /> : <Text style={tw`text-white font-black text-base uppercase tracking-widest`}>Save {editingSlot} Menu</Text>}
+                </Pressable>
+
             </ScrollView>
         </View>
     );

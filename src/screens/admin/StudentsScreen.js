@@ -1,95 +1,106 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
-import { useTenant } from '../../contexts/TenantContext';
-import { getKitchenStudents, getStudentBalance } from '../../services/paymentService';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { db } from '../../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import tw from 'twrnc';
+import { Search, Users, ChevronRight, Phone } from 'lucide-react-native';
 
 export const StudentsScreen = ({ navigation }) => {
-    const { tenant } = useTenant();
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [refreshing, setRefreshing] = useState(false);
 
-    const fetchStudents = async () => {
-        if (!tenant?.id) return;
-        setLoading(true);
+    useEffect(() => {
+        const q = query(
+            collection(db, 'users'),
+            where('role', '==', 'student')
+        );
 
-        try {
-            const users = await getKitchenStudents(tenant.id);
-
-            // Calc balance for each (Parallel/Promise.all)
-            const studentsWithBalance = await Promise.all(users.map(async (u) => {
-                const ledger = await getStudentBalance(tenant.id, u.id);
-                return { ...u, balance: ledger.balance || 0 };
-            }));
-
-            setStudents(studentsWithBalance);
-        } catch (error) {
-            console.error(error);
-        } finally {
+        const unsub = onSnapshot(q, (snap) => {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setStudents(list);
             setLoading(false);
-        }
+            setRefreshing(false);
+        });
+
+        return unsub;
+    }, []);
+
+    const filteredStudents = useMemo(() => {
+        return students.filter(s =>
+            (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (s.phoneNumber || '').includes(searchTerm)
+        );
+    }, [students, searchTerm]);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        setTimeout(() => setRefreshing(false), 1000);
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            fetchStudents();
-        }, [tenant?.id])
-    );
-
-    const renderItem = ({ item }) => (
-        <Pressable
-            onPress={() => navigation.navigate('StudentDetails', { student: item })}
-            style={{
-                backgroundColor: '#FFFFFF',
-                padding: 16,
-                borderRadius: 12,
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: '#F3F4F6',
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 2,
-                elevation: 1
-            }}
-        >
-            <View>
-                <Text style={tw`font-bold text-lg text-gray-800`}>{item.phoneNumber || item.email}</Text>
-                <Text style={tw`text-gray-500 text-sm`}>Tap to view ledger</Text>
-            </View>
-            <View>
-                <Text style={tw`font-bold text-lg ${item.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {item.balance > 0 ? `Due: ₹${item.balance}` : `Adv: ₹${Math.abs(item.balance)}`}
-                </Text>
-            </View>
-        </Pressable>
-    );
+    if (loading) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
 
     return (
-        <View style={tw`flex-1 bg-gray-50 p-4`}>
-            {loading ? (
-                <View style={tw`flex-1 items-center justify-center`}>
-                    <ActivityIndicator size="large" color="#EAB308" />
+        <View style={tw`flex-1 bg-[#faf9f6]`}>
+            {/* Header */}
+            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
+                <Text style={tw`text-2xl font-black text-gray-900`}>Students</Text>
+                <View style={tw`flex-row items-center gap-2 mt-2 bg-yellow-50 self-start px-3 py-1 rounded-full border border-yellow-100`}>
+                    <Users size={12} color="#ca8a04" />
+                    <Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>{students.length} Registered</Text>
                 </View>
-            ) : (
-                <FlatList
-                    data={students}
-                    renderItem={renderItem}
-                    keyExtractor={item => item.id}
-                    refreshControl={
-                        <RefreshControl refreshing={loading} onRefresh={fetchStudents} />
-                    }
-                    ListEmptyComponent={
+            </View>
+
+            <View style={tw`p-6`}>
+                {/* Search */}
+                <View style={tw`bg-white rounded-3xl flex-row items-center px-6 shadow-sm border border-gray-100 mb-6`}>
+                    <Search size={20} color="#9ca3af" />
+                    <TextInput
+                        style={tw`flex-1 py-4 ml-3 font-bold text-gray-900`}
+                        placeholder="Search student name or phone..."
+                        value={searchTerm}
+                        onChangeText={setSearchTerm}
+                    />
+                </View>
+
+                <ScrollView
+                    contentContainerStyle={tw`pb-64`}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                >
+                    {filteredStudents.map(s => (
+                        <Pressable
+                            key={s.id}
+                            onPress={() => navigation.navigate('StudentDetails', { studentId: s.id })}
+                            style={({ pressed }) => [
+                                tw`bg-white rounded-3xl p-4 mb-3 flex-row items-center justify-between border border-gray-100 shadow-sm`,
+                                pressed && tw`opacity-70 scale-98`
+                            ]}
+                        >
+                            <View style={tw`flex-row items-center gap-4`}>
+                                <View style={tw`w-12 h-12 rounded-2xl bg-yellow-100 items-center justify-center`}>
+                                    <Text style={tw`text-lg font-black text-yellow-800`}>{(s.name || 'S')[0]}</Text>
+                                </View>
+                                <View>
+                                    <Text style={tw`text-base font-bold text-gray-900`}>{s.name || 'Unnamed Student'}</Text>
+                                    <View style={tw`flex-row items-center gap-1 mt-0.5`}>
+                                        <Phone size={10} color="#9ca3af" />
+                                        <Text style={tw`text-[10px] font-bold text-gray-400`}>{s.phoneNumber || 'No phone'}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                            <ChevronRight size={20} color="#d1d5db" />
+                        </Pressable>
+                    ))}
+
+                    {filteredStudents.length === 0 && (
                         <View style={tw`items-center justify-center py-20`}>
-                            <Text style={tw`text-gray-400 text-lg`}>No students joined yet.</Text>
+                            <Users size={48} color="#e5e7eb" />
+                            <Text style={tw`text-gray-400 font-bold mt-4`}>No students found</Text>
                         </View>
-                    }
-                />
-            )}
+                    )}
+                </ScrollView>
+            </View>
         </View>
     );
 };
