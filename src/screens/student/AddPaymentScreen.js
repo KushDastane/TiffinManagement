@@ -221,7 +221,7 @@ export const AddPaymentScreen = () => {
               <CreditCard size={24} color="#ca8a04" />
               <Text style={tw`text-base font-black text-gray-900 mt-2`}>Cash Payment</Text>
               <Text style={tw`text-xs text-gray-500 text-center mt-1 leading-4`}>
-                Hand over <Text style={tw`text-gray-900 font-bold`}>₹{amount}</Text> to admin.{"\n"}Refills your wallet instantly.
+                Hand over <Text style={tw`text-gray-900 font-bold`}>₹{amount}</Text> to admin.{"\n"}Refills your wallet once confirmed by Admin.
               </Text>
             </View>
           )}
@@ -242,7 +242,7 @@ export const AddPaymentScreen = () => {
             )}
           </Pressable>
           <Text style={tw`text-center text-[8px] font-black text-gray-300 mt-4 uppercase tracking-widest`}>
-            Hand-verified by the aadis team
+            Hand-verified by Kitchen Admin
           </Text>
         </View>
       )}
