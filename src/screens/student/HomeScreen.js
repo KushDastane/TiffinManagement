@@ -291,7 +291,7 @@ export const HomeScreen = () => {
 
                     {todaysOrder && (
                         <Pressable
-                            onPress={() => navigation.navigate("Order")} // Or OrderDetails?
+                            onPress={() => navigation.navigate("History")}
                             style={tw`bg-gray-100 rounded-xl py-3 flex-row items-center justify-center gap-2`}
                         >
                             <Text style={tw`text-gray-900 font-bold text-base`}>View Order</Text>
