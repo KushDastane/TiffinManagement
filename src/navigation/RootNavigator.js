@@ -1,4 +1,4 @@
-// TiffinCRM Root Navigator
+// DabbaMe Root Navigator
 import React from 'react';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';

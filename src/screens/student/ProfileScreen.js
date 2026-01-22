@@ -100,7 +100,7 @@ export const ProfileScreen = () => {
                     <Text style={tw`text-red-500 font-black text-[11px] uppercase tracking-widest`}>Sign Out Account</Text>
                 </Pressable>
 
-                <Text style={tw`text-center text-xs text-gray-300 mt-8`}>v1.0.0 • TiffinCRM</Text>
+                <Text style={tw`text-center text-xs text-gray-300 mt-8`}>v1.0.0 • DabbaMe</Text>
             </ScrollView>
         </View>
     );

@@ -1,23 +1,53 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, Pressable, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+    useAnimatedStyle,
+    withSpring,
+    useSharedValue,
+    FadeIn,
+    FadeOut
+} from 'react-native-reanimated';
+import tw from 'twrnc';
 
-import { useTheme } from '../contexts/ThemeContext';
-
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const CustomTabBar = ({ state, descriptors, navigation }) => {
-    const { primaryColor } = useTheme();
+    const insets = useSafeAreaInsets();
+
+    // Each tab gets equal width of the screen
+    const tabWidth = SCREEN_WIDTH / state.routes.length;
+
+    // Animated value for the yellow indicator's position
+    const translateX = useSharedValue(state.index * tabWidth);
+
+    useEffect(() => {
+        translateX.value = withSpring(state.index * tabWidth, {
+            damping: 20,
+            stiffness: 150,
+        });
+    }, [state.index, tabWidth]);
+
+    const slidingIndicatorStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }],
+    }));
 
     return (
-        <View className="absolute bottom-6 left-4 right-4 bg-white/90 rounded-2xl flex-row h-16 shadow-lg items-center px-2"
-            style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                elevation: 5
-            }}
-        >
+        <View style={[
+            tw`absolute bottom-0 left-0 right-0 bg-white flex-row border-t border-gray-100 items-center`,
+            { height: 65 + insets.bottom, paddingBottom: insets.bottom }
+        ]}>
+            {/* Smooth Sliding Background Indicator */}
+            <Animated.View
+                style={[
+                    slidingIndicatorStyle,
+                    tw`absolute top-2 items-center justify-center`,
+                    { width: tabWidth, height: 42 }
+                ]}
+            >
+                <View style={tw`w-12 h-10 bg-yellow-400 rounded-xl shadow-sm`} />
+            </Animated.View>
+
             {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
                 const label =
@@ -42,39 +72,29 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
                 };
 
                 return (
-                    <TouchableOpacity
+                    <Pressable
                         key={index}
                         onPress={onPress}
-                        className={`flex-1 items-center justify-center h-full ${isFocused ? '' : ''}`}
+                        style={tw`flex-1 items-center justify-center h-full pt-1`}
                     >
-                        {/* 
-                           Icon Logic would go here. For now using Text/Unicode as placeholder if no icons available.
-                           Ideally, we pass icons via options.
-                        */}
-                        <Text
-                            style={{ color: isFocused ? primaryColor : '#9ca3af' }}
-                            className="text-2xl"
-                        >
-                            {options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : '•'}
-                        </Text>
+                        <View style={tw`w-10 h-10 items-center justify-center mb-0.5`}>
+                            {options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : (
+                                <Text style={tw`${isFocused ? 'text-black font-black' : 'text-gray-400'}`}>•</Text>
+                            )}
+                        </View>
 
-                        {isFocused && (
-                            <Text
-                                style={{ color: primaryColor }}
-                                className="text-[10px] font-bold mt-1 capitalize"
-                            >
-                                {label}
-                            </Text>
-                        )}
-
-                        {/* Active Indicator Dot */}
-                        {isFocused && (
-                            <View
-                                style={{ backgroundColor: primaryColor }}
-                                className="absolute -bottom-1 w-1.5 h-1.5 rounded-full"
-                            />
-                        )}
-                    </TouchableOpacity>
+                        <View style={tw`h-3 justify-center`}>
+                            {isFocused && (
+                                <Animated.Text
+                                    entering={FadeIn.duration(200)}
+                                    exiting={FadeOut.duration(200)}
+                                    style={tw`text-[7px] font-black uppercase tracking-widest text-gray-900 text-center`}
+                                >
+                                    {label}
+                                </Animated.Text>
+                            )}
+                        </View>
+                    </Pressable>
                 );
             })}
         </View>

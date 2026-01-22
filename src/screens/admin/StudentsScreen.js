@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert,
 import { db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import tw from 'twrnc';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Search, Users, ChevronRight, Phone } from 'lucide-react-native';
 
 export const StudentsScreen = ({ navigation }) => {
@@ -43,22 +44,30 @@ export const StudentsScreen = ({ navigation }) => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Header */}
-            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
-                <Text style={tw`text-2xl font-black text-gray-900`}>Students</Text>
-                <View style={tw`flex-row items-center gap-2 mt-2 bg-yellow-50 self-start px-3 py-1 rounded-full border border-yellow-100`}>
+            {/* Creative Header - Continuity */}
+            <LinearGradient
+                colors={['#fff', '#faf9f6']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+            >
+                <Text style={tw`text-2xl font-black text-gray-900`}>Student Directory</Text>
+                <View style={tw`flex-row items-center gap-2 bg-yellow-50 self-start px-3 py-1 rounded-xl border border-yellow-100`}>
                     <Users size={12} color="#ca8a04" />
                     <Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>{students.length} Registered</Text>
                 </View>
-            </View>
+            </LinearGradient>
 
-            <View style={tw`p-6`}>
-                {/* Search */}
-                <View style={tw`bg-white rounded-3xl flex-row items-center px-6 shadow-sm border border-gray-100 mb-6`}>
-                    <Search size={20} color="#9ca3af" />
+            <View style={tw`p-6 pt-6`}>
+                {/* Search - Premium Glassy Look */}
+                <View style={tw`bg-white rounded-[24px] flex-row items-center px-6 shadow-sm border border-gray-100 mb-8`}>
+                    <View style={tw`w-10 h-10 items-center justify-center`}>
+                        <Search size={18} color="#9ca3af" strokeWidth={2.5} />
+                    </View>
                     <TextInput
-                        style={tw`flex-1 py-4 ml-3 font-bold text-gray-900`}
-                        placeholder="Search student name or phone..."
+                        style={tw`flex-1 py-4 ml-2 font-bold text-gray-900`}
+                        placeholder="Search student identity..."
+                        placeholderTextColor="#9ca3af"
                         value={searchTerm}
                         onChangeText={setSearchTerm}
                     />
@@ -69,28 +78,30 @@ export const StudentsScreen = ({ navigation }) => {
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 >
                     {filteredStudents.map(s => (
-                        <Pressable
-                            key={s.id}
-                            onPress={() => navigation.navigate('StudentDetails', { studentId: s.id })}
-                            style={({ pressed }) => [
-                                tw`bg-white rounded-3xl p-4 mb-3 flex-row items-center justify-between border border-gray-100 shadow-sm`,
-                                pressed && tw`opacity-70 scale-98`
-                            ]}
-                        >
-                            <View style={tw`flex-row items-center gap-4`}>
-                                <View style={tw`w-12 h-12 rounded-2xl bg-yellow-100 items-center justify-center`}>
-                                    <Text style={tw`text-lg font-black text-yellow-800`}>{(s.name || 'S')[0]}</Text>
-                                </View>
-                                <View>
-                                    <Text style={tw`text-base font-bold text-gray-900`}>{s.name || 'Unnamed Student'}</Text>
-                                    <View style={tw`flex-row items-center gap-1 mt-0.5`}>
-                                        <Phone size={10} color="#9ca3af" />
-                                        <Text style={tw`text-[10px] font-bold text-gray-400`}>{s.phoneNumber || 'No phone'}</Text>
+                        <View key={s.id} style={tw`mb-2`}>
+                            <Pressable
+                                onPress={() => navigation.navigate('StudentDetails', { studentId: s.id })}
+                                style={({ pressed }) => [
+                                    pressed && tw`opacity-70 scale-[0.98]`
+                                ]}
+                            >
+                                <View style={tw`bg-white rounded-2xl p-4 flex-row items-center justify-between border border-gray-100 shadow-sm`}>
+                                    <View style={tw`flex-row items-center flex-1`}>
+                                        <View style={tw`w-12 h-12 rounded-xl bg-yellow-100 items-center justify-center mr-4`}>
+                                            <Text style={tw`text-lg font-black text-yellow-800 uppercase`}>{(s.name || 'S')[0]}</Text>
+                                        </View>
+                                        <View style={tw`flex-1`}>
+                                            <Text style={tw`text-base font-bold text-gray-900`}>{s.name || 'Unnamed Student'}</Text>
+                                            <View style={tw`flex-row items-center gap-1.5 mt-0.5`}>
+                                                <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />
+                                                <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>{s.phoneNumber || 'NO PHONE'}</Text>
+                                            </View>
+                                        </View>
                                     </View>
+                                    <ChevronRight size={18} color="#d1d5db" strokeWidth={2.5} />
                                 </View>
-                            </View>
-                            <ChevronRight size={20} color="#d1d5db" />
-                        </Pressable>
+                            </Pressable>
+                        </View>
                     ))}
 
                     {filteredStudents.length === 0 && (

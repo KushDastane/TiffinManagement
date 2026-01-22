@@ -26,15 +26,16 @@ const StatCard = ({ icon: Icon, label, value, variant, onPress }) => {
         <Pressable
             onPress={onPress}
             style={({ pressed }) => [
-                tw`w-[47%] mb-4 bg-white rounded-3xl p-5 border border-gray-100 shadow-sm shadow-black/5`,
+                tw`w-[47%] mb-4 bg-white rounded-[30px] p-6 border border-gray-100 shadow-sm overflow-hidden`,
                 pressed && tw`scale-95 opacity-90`
             ]}
         >
-            <View style={[tw`w-12 h-12 rounded-2xl items-center justify-center mb-4`, { backgroundColor: style.iconBg }]}>
+            <View style={[tw`absolute -top-6 -right-6 w-16 h-16 opacity-10 rounded-full`, { backgroundColor: style.text }]} />
+            <View style={[tw`w-12 h-12 rounded-2xl items-center justify-center mb-6 shadow-sm`, { backgroundColor: style.iconBg }]}>
                 <Icon size={22} color={style.text} />
             </View>
-            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{label}</Text>
-            <Text style={tw`text-2xl font-black text-gray-900 mt-1`}>{value}</Text>
+            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1`}>{label}</Text>
+            <Text style={tw`text-2xl font-black text-gray-900`}>{value}</Text>
         </Pressable>
     );
 };
@@ -124,54 +125,70 @@ export const DashboardScreen = ({ navigation }) => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Header */}
+            {/* Creative Header - Premium Hook */}
             <LinearGradient
-                colors={['#fffde7', '#fefce8', '#faf9f6']}
-                style={tw`px-6 pt-16 pb-8`}
+                colors={['#fef9c3', '#faf9f6']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={tw`pt-16 pb-10 px-6 rounded-b-[45px] shadow-sm`}
             >
                 <View style={tw`flex-row justify-between items-start`}>
                     <View>
-                        <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>{todayStr}</Text>
-                        <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>Kitchen{"\n"}Operations</Text>
-                        <Text style={tw`text-sm font-bold text-gray-400 mt-1`}>Monitor orders and activity</Text>
+                        <View style={tw`flex-row items-center gap-2 mb-2`}>
+                            <View style={tw`w-2 h-2 rounded-full bg-yellow-400 shadow-sm shadow-yellow-200`} />
+                            <Text style={tw`text-[10px] font-black text-gray-500 uppercase tracking-widest`}>{todayStr}</Text>
+                        </View>
+                        <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
+                            Kitchen{"\n"}
+                            <Text style={tw`text-yellow-600`}>Operations</Text>
+                        </Text>
                     </View>
-                    <View style={tw`bg-white/80 p-3 rounded-2xl border border-white shadow-sm`}>
+                    <View style={tw`w-14 h-14 rounded-[20px] bg-white items-center justify-center shadow-lg shadow-yellow-100 border border-white`}>
                         <Activity size={24} color="#eab308" />
                     </View>
                 </View>
-                <View style={tw`mt-4 flex-row items-center gap-2`}>
-                    <View style={tw`bg-white/60 px-3 py-1.5 rounded-full border border-white shadow-sm`}>
-                        <Text style={tw`text-[11px] font-bold text-gray-600`}>{greeting}</Text>
+                <View style={tw`mt-6 flex-row items-center gap-2`}>
+                    <View style={tw`bg-white/60 px-4 py-2 rounded-xl border border-white shadow-sm`}>
+                        <Text style={tw`text-[11px] font-black text-gray-700 uppercase tracking-tight`}>{greeting}</Text>
                     </View>
                 </View>
             </LinearGradient>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pt-0 pb-24`}
+                contentContainerStyle={tw`p-6 pb-32`}
+                style={tw`flex-1`}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                showsVerticalScrollIndicator={false}
             >
-                {/* Cooking Summary Banner */}
+                {/* Cooking Summary Banner - High Contrast */}
                 {cookingSummary && (
-                    <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-8`}>
-                        <View style={tw`flex-row items-center gap-2 mb-6`}>
-                            <Activity size={18} color="#eab308" />
-                            <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest`}>Cooking Breakdown ({slot?.toUpperCase()})</Text>
+                    <View style={tw`bg-white rounded-[35px] p-8 shadow-sm border border-gray-100 mb-8 overflow-hidden`}>
+                        <View style={tw`absolute -top-10 -right-10 w-32 h-32 bg-yellow-50 rounded-full opacity-40`} />
+
+                        <View style={tw`flex-row items-center gap-3 mb-8`}>
+                            <View style={tw`w-10 h-10 rounded-xl bg-gray-900 items-center justify-center shadow-lg shadow-gray-200`}>
+                                <Activity size={18} color="white" />
+                            </View>
+                            <View>
+                                <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-0.5`}>Live Production</Text>
+                                <Text style={tw`text-lg font-black text-gray-900`}>Cooking Breakdown</Text>
+                            </View>
                         </View>
 
-                        <View style={tw`flex-row justify-between items-center`}>
-                            <View style={tw`flex-1 items-center`}>
+                        <View style={tw`flex-row justify-between items-center bg-gray-50/50 p-6 rounded-3xl border border-gray-50`}>
+                            <View style={tw`items-center`}>
                                 <Text style={tw`text-2xl font-black text-gray-900`}>{cookingSummary.halfDabba}</Text>
-                                <Text style={tw`text-[10px] font-bold text-gray-400 tracking-tighter mt-1`}>HALF DABBA</Text>
+                                <Text style={tw`text-[9px] font-black text-gray-400 tracking-widest mt-1 uppercase`}>Half</Text>
                             </View>
-                            <View style={tw`w-[1px] h-8 bg-gray-50`} />
-                            <View style={tw`flex-1 items-center`}>
+                            <View style={tw`w-[1px] h-10 bg-gray-200/50`} />
+                            <View style={tw`items-center`}>
                                 <Text style={tw`text-2xl font-black text-gray-900`}>{cookingSummary.fullDabba}</Text>
-                                <Text style={tw`text-[10px] font-bold text-gray-400 tracking-tighter mt-1`}>FULL DABBA</Text>
+                                <Text style={tw`text-[9px] font-black text-gray-400 tracking-widest mt-1 uppercase`}>Full</Text>
                             </View>
-                            <View style={tw`w-[1px] h-8 bg-gray-50`} />
-                            <View style={tw`flex-1 items-center`}>
+                            <View style={tw`w-[1px] h-10 bg-gray-200/50`} />
+                            <View style={tw`items-center`}>
                                 <Text style={tw`text-2xl font-black text-gray-900`}>{cookingSummary.extraRoti}</Text>
-                                <Text style={tw`text-[10px] font-bold text-gray-400 tracking-tighter mt-1`}>EXT ROTI</Text>
+                                <Text style={tw`text-[9px] font-black text-gray-400 tracking-widest mt-1 uppercase`}>Roti</Text>
                             </View>
                         </View>
                     </View>

@@ -4,6 +4,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { collection, query, where, onSnapshot, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import tw from 'twrnc';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Check, X, Eye, IndianRupee, Calendar, User, PaymentCard } from 'lucide-react-native';
 
 export const AdminPaymentsScreen = () => {
@@ -62,7 +63,7 @@ export const AdminPaymentsScreen = () => {
         const isAccepted = item.status === 'accepted';
 
         return (
-            <View style={tw`bg-white rounded-3xl p-5 mb-4 shadow-sm border border-gray-100`}>
+            <View style={tw`bg-white rounded-[30px] p-6 mb-4 shadow-sm border border-gray-100/50`}>
                 <View style={tw`flex-row justify-between items-start mb-4`}>
                     <View style={tw`flex-row items-center gap-3`}>
                         <View style={tw`w-12 h-12 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}>
@@ -137,16 +138,23 @@ export const AdminPaymentsScreen = () => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
-                <Text style={tw`text-2xl font-black text-gray-900`}>Payments</Text>
-                <Text style={tw`text-sm text-gray-500`}>Review and approve wallet top-ups</Text>
-            </View>
+            {/* Creative Header - Continuity */}
+            <LinearGradient
+                colors={['#fff', '#faf9f6']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+            >
+                <Text style={tw`text-2xl font-black text-gray-900`}>Financial Ledger</Text>
+                <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Review & Approve Top-ups</Text>
+            </LinearGradient>
 
             <FlatList
                 data={payments}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
-                contentContainerStyle={tw`p-6 pb-32`}
+                style={tw`flex-1`}
+                contentContainerStyle={tw`p-6 pt-8 pb-32`}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={
                     <View style={tw`items-center justify-center py-20`}>

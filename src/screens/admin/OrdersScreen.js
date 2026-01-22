@@ -5,6 +5,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import { getTodayKey } from '../../services/menuService';
 import tw from 'twrnc';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Search, Clock, Check, ChevronRight, User, Package, Filter } from 'lucide-react-native';
 
 export const OrdersScreen = () => {
@@ -56,11 +57,16 @@ export const OrdersScreen = () => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Header */}
-            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
-                <Text style={tw`text-2xl font-black text-gray-900`}>Today's Orders</Text>
-                <Text style={tw`text-sm text-gray-500`}>Confirm and manage daily meals</Text>
-            </View>
+            {/* Creative Header - Continuity */}
+            <LinearGradient
+                colors={['#fff', '#faf9f6']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+            >
+                <Text style={tw`text-2xl font-black text-gray-900`}>Daily Orders</Text>
+                <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Confirm & Batch Production</Text>
+            </LinearGradient>
 
             <View style={tw`p-6`}>
                 {/* Search */}
@@ -94,8 +100,8 @@ export const OrdersScreen = () => {
                     {filteredOrders.map(o => {
                         const isConfirmed = o.status === 'CONFIRMED';
                         return (
-                            <View key={o.id} style={[tw`bg-white rounded-3xl p-5 shadow-sm border mb-4`, isConfirmed ? tw`border-gray-50` : tw`border-yellow-300`]}>
-                                <View style={tw`flex-row justify-between items-start mb-4`}>
+                            <View key={o.id} style={[tw`bg-white rounded-[30px] p-6 shadow-sm border mb-4`, isConfirmed ? tw`border-gray-50` : tw`border-yellow-200/50`]}>
+                                <View style={tw`flex-row justify-between items-start mb-6`}>
                                     <View style={tw`flex-row items-center gap-3`}>
                                         <View style={[tw`w-10 h-10 rounded-2xl items-center justify-center`, isConfirmed ? tw`bg-gray-100` : tw`bg-yellow-100`]}>
                                             {isConfirmed ? <Check size={18} color="#4b5563" /> : <Clock size={18} color="#ca8a04" />}

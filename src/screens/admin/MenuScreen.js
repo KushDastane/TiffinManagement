@@ -5,6 +5,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, isAfterResetTime } from '../../services/menuService';
 import tw from 'twrnc';
 import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const OTHER_SUGGESTIONS = ["Misal Pav", "Pav Bhaji", "Thalipeeth"];
 const FULL_ADDON_SUGGESTIONS = ["Dal Rice", "Kadhi Rice", "Biryani"];
@@ -142,12 +143,22 @@ export const MenuScreen = () => {
     if (viewMode === 'summary') {
         return (
             <View style={tw`flex-1 bg-[#faf9f6]`}>
-                <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100`}>
+                {/* Creative Header - Continuity */}
+                <LinearGradient
+                    colors={['#fff', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+                >
                     <Text style={tw`text-2xl font-black text-gray-900`}>Daily Menu</Text>
-                    <Text style={tw`text-sm text-gray-500`}>Setup meals for {dateId}</Text>
-                </View>
+                    <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Meals for {dateId}</Text>
+                </LinearGradient>
 
-                <ScrollView contentContainerStyle={tw`p-6`}>
+                <ScrollView
+                    contentContainerStyle={tw`p-6 pt-8 pb-32`}
+                    style={tw`flex-1`}
+                    showsVerticalScrollIndicator={false}
+                >
                     {['lunch', 'dinner'].map(slot => {
                         const data = todayMenuData?.[slot];
                         const Icon = slot === 'lunch' ? Sun : Moon;
@@ -219,17 +230,27 @@ export const MenuScreen = () => {
     // Edit View
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100 flex-row items-center gap-4`}>
-                <Pressable onPress={() => setViewMode('summary')} style={tw`w-10 h-10 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}>
-                    <ChevronLeft size={24} color="#111827" />
+            {/* Creative Header - Edit Mode */}
+            <LinearGradient
+                colors={['#fff', '#faf9f6']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm flex-row items-center gap-4 border-b border-gray-100/50`}
+            >
+                <Pressable onPress={() => setViewMode('summary')} style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100`}>
+                    <ChevronLeft size={20} color="#111827" />
                 </Pressable>
                 <View>
-                    <Text style={tw`text-xl font-black text-gray-900 uppercase`}>Set {editingSlot}</Text>
-                    <Text style={tw`text-xs text-gray-400 font-bold tracking-widest uppercase`}>Configuring Meal</Text>
+                    <Text style={tw`text-2xl font-black text-gray-900`}>Set {editingSlot}</Text>
+                    <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Configuring Daily Meal</Text>
                 </View>
-            </View>
+            </LinearGradient>
 
-            <ScrollView contentContainerStyle={tw`p-6 pb-32`}>
+            <ScrollView
+                contentContainerStyle={tw`p-6 pt-8 pb-32`}
+                style={tw`flex-1`}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Meal Type Toggle */}
                 <View style={tw`flex-row gap-3 mb-6`}>
                     {[{ label: "Roti-Sabzi", value: "ROTI_SABZI" }, { label: "Other", value: "OTHER" }].map(opt => (

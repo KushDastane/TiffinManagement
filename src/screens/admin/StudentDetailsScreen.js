@@ -6,15 +6,16 @@ import { getStudentBalance } from '../../services/paymentService'; // Reusing se
 import { subscribeToMyOrders } from '../../services/orderService';
 import { useTenant } from '../../contexts/TenantContext';
 import tw from 'twrnc';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Calendar, User, CreditCard, History, AlertCircle } from 'lucide-react-native';
 
 const StatCard = ({ label, value, icon: Icon, highlight }) => (
-    <View style={tw`flex-1 bg-white rounded-3xl p-5 shadow-sm border border-gray-100`}>
-        <View style={tw`w-8 h-8 rounded-xl bg-gray-50 items-center justify-center mb-3`}>
-            <Icon size={16} color={highlight ? "#ca8a04" : "#9ca3af"} />
+    <View style={tw`flex-1 bg-white rounded-2xl p-5 shadow-sm border border-gray-100/50`}>
+        <View style={[tw`w-10 h-10 rounded-xl items-center justify-center mb-3 shadow-sm`, highlight ? tw`bg-yellow-100 shadow-yellow-100` : tw`bg-gray-50`]}>
+            <Icon size={16} color={highlight ? "#ca8a04" : "#111827"} strokeWidth={2.5} />
         </View>
-        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{label}</Text>
-        <Text style={[tw`text-lg font-black mt-1`, highlight ? tw`text-yellow-700` : tw`text-gray-900`]}>{value}</Text>
+        <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>{label}</Text>
+        <Text style={[tw`text-lg font-black`, highlight ? tw`text-yellow-700` : tw`text-gray-900`]}>{value}</Text>
     </View>
 );
 
@@ -56,38 +57,52 @@ export const StudentDetailsScreen = ({ route, navigation }) => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Header */}
-            <View style={tw`px-6 pt-14 pb-6 bg-white border-b border-gray-100 flex-row items-center gap-4`}>
-                <Pressable onPress={() => navigation.goBack()} style={tw`w-10 h-10 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}>
-                    <ChevronLeft size={24} color="#111827" />
+            {/* Creative Header - Continuity */}
+            <LinearGradient
+                colors={['#fff', '#faf9f6']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={tw`px-6 pt-14 pb-12 rounded-b-[45px] shadow-sm border-b border-gray-100/50 flex-row items-center gap-4`}
+            >
+                <Pressable onPress={() => navigation.goBack()} style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100`}>
+                    <ChevronLeft size={20} color="#111827" />
                 </Pressable>
                 <View>
-                    <Text style={tw`text-xl font-black text-gray-900`}>Student Profile</Text>
-                    <Text style={tw`text-xs text-gray-400 font-bold uppercase`}>Ledger & History</Text>
+                    <Text style={tw`text-2xl font-black text-gray-900`}>Student Profile</Text>
+                    <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Ledger & History</Text>
                 </View>
-            </View>
+            </LinearGradient>
 
-            <ScrollView contentContainerStyle={tw`p-6 pb-32`}>
+            <ScrollView
+                contentContainerStyle={tw`p-6 pt-8 pb-32`}
+                style={tw`flex-1`}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Profile Brief */}
-                <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-6 flex-row items-center gap-4`}>
-                    <View style={tw`w-16 h-16 rounded-2xl bg-yellow-100 items-center justify-center`}>
-                        <Text style={tw`text-2xl font-black text-yellow-800`}>{(student.name || 'S')[0]}</Text>
-                    </View>
-                    <View>
-                        <Text style={tw`text-xl font-black text-gray-900`}>{student.name || 'Student'}</Text>
-                        <Text style={tw`text-sm text-gray-500 font-bold`}>{student.phoneNumber || 'No phone'}</Text>
+                <View style={tw`bg-white rounded-[28px] p-6 shadow-sm border border-gray-100/50 mb-6`}>
+                    <View style={tw`flex-row items-center gap-5`}>
+                        <View style={tw`w-16 h-16 rounded-[22px] bg-yellow-100 items-center justify-center border-2 border-white shadow-sm shadow-yellow-100`}>
+                            <Text style={tw`text-2xl font-black text-yellow-800`}>{(student.name || 'S')[0]}</Text>
+                        </View>
+                        <View style={tw`flex-1`}>
+                            <Text style={tw`text-xl font-black text-gray-900 leading-tight`}>{student.name || 'Student'}</Text>
+                            <View style={tw`flex-row items-center gap-1.5 mt-1`}>
+                                <View style={tw`w-1.5 h-1.5 rounded-full bg-emerald-500`} />
+                                <Text style={tw`text-[10px] text-gray-500 font-bold uppercase tracking-widest`}>{student.phoneNumber || 'No phone verified'}</Text>
+                            </View>
+                        </View>
                     </View>
                 </View>
 
                 {/* Tabs */}
-                <View style={tw`flex-row bg-gray-100 p-1.5 rounded-3xl mb-6`}>
+                <View style={tw`flex-row bg-white rounded-2xl p-1.5 mb-6 border border-gray-100 shadow-sm`}>
                     {['OVERVIEW', 'ORDERS', 'PAYMENTS'].map(t => (
                         <Pressable
                             key={t}
                             onPress={() => setActiveTab(t)}
-                            style={[tw`flex-1 py-2.5 rounded-2xl items-center`, activeTab === t ? tw`bg-white shadow-sm` : tw`bg-transparent`]}
+                            style={[tw`flex-1 py-3 rounded-xl items-center`, activeTab === t ? tw`bg-yellow-400 shadow-sm` : tw`bg-transparent`]}
                         >
-                            <Text style={[tw`text-[10px] font-black`, activeTab === t ? tw`text-gray-900` : tw`text-gray-400`]}>{t}</Text>
+                            <Text style={[tw`text-[9px] font-black tracking-widest uppercase`, activeTab === t ? tw`text-gray-900` : tw`text-gray-400`]}>{t}</Text>
                         </Pressable>
                     ))}
                 </View>
@@ -111,36 +126,42 @@ export const StudentDetailsScreen = ({ route, navigation }) => {
                 {activeTab === 'ORDERS' && (
                     <View>
                         {orders.map(o => (
-                            <View key={o.id} style={tw`bg-white rounded-3xl p-5 border border-gray-100 mb-3 shadow-sm`}>
-                                <View style={tw`flex-row justify-between items-start mb-2`}>
+                            <View key={o.id} style={tw`bg-white rounded-2xl p-5 border border-gray-100 mb-3 shadow-sm`}>
+                                <View style={tw`flex-row justify-between items-center mb-3`}>
                                     <View>
-                                        <Text style={tw`text-sm font-black text-gray-900 uppercase`}>{o.mealType || o.slot}</Text>
-                                        <Text style={tw`text-[10px] font-bold text-gray-400`}>{o.createdAt?.toDate?.().toLocaleString() || 'N/A'}</Text>
+                                        <Text style={tw`text-sm font-black text-gray-900`}>{o.mealType || o.slot}</Text>
+                                        <Text style={tw`text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5`}>{o.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}</Text>
                                     </View>
-                                    <Text style={tw`text-lg font-black text-gray-900`}>₹{o.totalAmount || 0}</Text>
+                                    <View style={tw`items-end`}>
+                                        <Text style={tw`text-lg font-black text-gray-900`}>₹{o.totalAmount || 0}</Text>
+                                        <View style={tw`bg-yellow-100 px-2 py-0.5 rounded-full mt-1`}>
+                                            <Text style={tw`text-[8px] font-black text-yellow-800 uppercase tracking-widest`}>{o.status}</Text>
+                                        </View>
+                                    </View>
                                 </View>
-                                <View style={tw`bg-yellow-50 self-start px-3 py-1 rounded-full`}><Text style={tw`text-[10px] font-bold text-yellow-800 uppercase`}>{o.status}</Text></View>
                             </View>
                         ))}
-                        {orders.length === 0 && <Text style={tw`text-center text-gray-400 font-bold mt-10`}>No orders recorded</Text>}
+                        {orders.length === 0 && <Text style={tw`text-center text-gray-400 font-bold mt-10 p-8 bg-white rounded-2xl border border-dashed border-gray-200 uppercase text-[9px] tracking-widest`}>No orders recorded</Text>}
                     </View>
                 )}
 
                 {activeTab === 'PAYMENTS' && (
                     <View>
                         {balanceData?.payments?.map(p => (
-                            <View key={p.id} style={tw`bg-white rounded-3xl p-5 border border-gray-100 mb-3 shadow-sm`}>
-                                <View style={tw`flex-row justify-between items-center mb-2`}>
+                            <View key={p.id} style={tw`bg-white rounded-2xl p-5 border border-gray-100 mb-3 shadow-sm`}>
+                                <View style={tw`flex-row justify-between items-center`}>
                                     <View>
-                                        <Text style={tw`text-lg font-black text-emerald-700`}>₹{p.amount}</Text>
-                                        <Text style={tw`text-[10px] font-bold text-gray-400`}>{p.createdAt?.toDate?.().toLocaleString() || 'N/A'}</Text>
+                                        <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>{p.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}</Text>
+                                        <Text style={tw`text-xl font-black text-emerald-700`}>₹{p.amount}</Text>
+                                        <Text style={tw`text-[9px] font-black text-gray-900 uppercase tracking-widest mt-1`}>via {p.paymentMode}</Text>
                                     </View>
-                                    <View style={tw`bg-emerald-50 px-3 py-1 rounded-full`}><Text style={tw`text-[10px] font-bold text-emerald-800 uppercase`}>{p.status}</Text></View>
+                                    <View style={tw`bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100`}>
+                                        <Text style={tw`text-[8px] font-black text-emerald-800 uppercase tracking-widest`}>{p.status}</Text>
+                                    </View>
                                 </View>
-                                <Text style={tw`text-[10px] font-bold text-gray-500 uppercase tracking-widest`}>via {p.paymentMode}</Text>
                             </View>
                         ))}
-                        {(!balanceData?.payments || balanceData.payments.length === 0) && <Text style={tw`text-center text-gray-400 font-bold mt-10`}>No payments recorded</Text>}
+                        {(!balanceData?.payments || balanceData.payments.length === 0) && <Text style={tw`text-center text-gray-400 font-bold mt-10 p-8 bg-white rounded-2xl border border-dashed border-gray-200 uppercase text-[9px] tracking-widest`}>No payments recorded</Text>}
                     </View>
                 )}
             </ScrollView>

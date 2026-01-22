@@ -100,8 +100,8 @@ const WeekSummary = ({ orders }) => {
     };
 
     return (
-        <View style={tw`bg-white rounded-[35px] p-7 shadow-sm border border-gray-100 mb-6`}>
-            <View style={tw`flex-row justify-between items-center mb-10`}>
+        <View style={tw`bg-white rounded-[35px] px-5 py-7 shadow-sm border border-gray-100 mb-6`}>
+            <View style={tw`flex-row justify-between items-center mb-10 px-2`}>
                 <View>
                     <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>Meal Schedule</Text>
                     <Text style={tw`font-black text-gray-900 text-xl`}>Weekly Planner</Text>
@@ -122,13 +122,13 @@ const WeekSummary = ({ orders }) => {
                     return (
                         <View key={index} style={tw`items-center gap-3`}>
                             <View style={[
-                                tw`w-11 h-11 rounded-2xl items-center justify-center border`,
+                                tw`w-10 h-10 rounded-2xl items-center justify-center border`,
                                 ordered
                                     ? tw`bg-gray-900 border-gray-900 shadow-lg shadow-gray-200`
                                     : (isToday ? tw`bg-yellow-400 border-yellow-400 shadow-lg shadow-yellow-100` : tw`bg-gray-50 border-gray-50`)
                             ]}>
                                 <Text style={[
-                                    tw`text-[11px] font-black uppercase`,
+                                    tw`text-[10px] font-black uppercase`,
                                     ordered ? tw`text-white` : (isToday ? tw`text-gray-900` : tw`text-gray-400`)
                                 ]}>
                                     {date.toLocaleDateString("en-US", { weekday: "narrow" })}
@@ -248,7 +248,7 @@ export const HomeScreen = () => {
                 contentContainerStyle={tw`pb-32`}
             >
                 {/* Today's Meal Status Card - Creative Refresh */}
-                <View style={tw`bg-white rounded-[35px] p-7 shadow-sm border border-gray-100 mb-6 overflow-hidden`}>
+                <View style={tw`bg-white rounded-[35px] p-7 shadow-sm border border-gray-100 mt-10 mb-6 overflow-hidden`}>
                     <View style={tw`absolute -top-10 -right-10 w-32 h-32 bg-yellow-50 rounded-full opacity-40`} />
 
                     <View style={tw`flex-row justify-between items-center mb-8`}>

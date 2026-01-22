@@ -1,59 +1,23 @@
-import React from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, Pressable, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     Home,
-    UtensilsCrossed, // For 'Order' - generic bowl/food icon
+    UtensilsCrossed,
     History,
-    CreditCard, // For 'Khata'
+    CreditCard,
     User
 } from 'lucide-react-native';
 import Animated, {
     useAnimatedStyle,
     withSpring,
-    withTiming,
     useSharedValue,
     FadeIn,
     FadeOut
 } from 'react-native-reanimated';
 import tw from 'twrnc';
 
-const TabIcon = ({ icon: Icon, active, label, onPress }) => {
-    // Simple spring animation for active state could be added here
-    // keeping it simple first matching the structure
-
-    return (
-        <Pressable
-            onPress={onPress}
-            style={tw`flex-1 items-center justify-center py-2`}
-        >
-            <View style={tw`items-center`}>
-                <Icon
-                    size={24}
-                    color={active ? '#1f2937' : '#9ca3af'} // gray-800 vs gray-400
-                    strokeWidth={active ? 2.5 : 2}
-                />
-
-                {active && (
-                    <Animated.Text
-                        entering={FadeIn.duration(200)}
-                        exiting={FadeOut.duration(200)}
-                        style={tw`text-[10px] font-bold text-gray-800 mt-1`}
-                    >
-                        {label}
-                    </Animated.Text>
-                )}
-
-                {active && (
-                    <Animated.View
-                        layout={withSpring}
-                        style={tw`absolute -bottom-2 w-1 h-1 rounded-full bg-yellow-400`}
-                    />
-                )}
-            </View>
-        </Pressable>
-    );
-};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const StudentTabBar = ({ state, descriptors, navigation }) => {
     const insets = useSafeAreaInsets();
@@ -66,51 +30,92 @@ export const StudentTabBar = ({ state, descriptors, navigation }) => {
         Profile: User
     };
 
+    // Each tab gets equal width of the screen
+    const tabWidth = SCREEN_WIDTH / state.routes.length;
+
+    // Animated value for the yellow indicator's position
+    const translateX = useSharedValue(state.index * tabWidth);
+
+    useEffect(() => {
+        translateX.value = withSpring(state.index * tabWidth, {
+            damping: 20,
+            stiffness: 150,
+        });
+    }, [state.index, tabWidth]);
+
+    const slidingIndicatorStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }],
+    }));
+
     return (
         <View style={[
-            tw`absolute left-4 right-4`,
-            { bottom: insets.bottom + 10 } // Floating effect
+            tw`absolute bottom-0 left-0 right-0 bg-white flex-row border-t border-gray-100 items-center`,
+            { height: 65 + insets.bottom, paddingBottom: insets.bottom }
         ]}>
-            <View style={[
-                tw`flex-row bg-white/95 rounded-2xl shadow-lg border border-gray-100 p-1`,
-                { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 }
-            ]}>
-                {state.routes.map((route, index) => {
-                    const { options } = descriptors[route.key];
-                    const label =
-                        options.tabBarLabel !== undefined
-                            ? options.tabBarLabel
-                            : options.title !== undefined
-                                ? options.title
-                                : route.name;
+            {/* Smooth Sliding Background Indicator */}
+            <Animated.View
+                style={[
+                    slidingIndicatorStyle,
+                    tw`absolute top-2 items-center justify-center`,
+                    { width: tabWidth, height: 42 }
+                ]}
+            >
+                <View style={tw`w-12 h-10 bg-yellow-400 rounded-xl shadow-sm`} />
+            </Animated.View>
 
-                    const isFocused = state.index === index;
+            {state.routes.map((route, index) => {
+                const { options } = descriptors[route.key];
+                const label =
+                    options.tabBarLabel !== undefined
+                        ? options.tabBarLabel
+                        : options.title !== undefined
+                            ? options.title
+                            : route.name;
 
-                    const onPress = () => {
-                        const event = navigation.emit({
-                            type: 'tabPress',
-                            target: route.key,
-                            canPreventDefault: true,
-                        });
+                const isFocused = state.index === index;
 
-                        if (!isFocused && !event.defaultPrevented) {
-                            navigation.navigate(route.name);
-                        }
-                    };
+                const onPress = () => {
+                    const event = navigation.emit({
+                        type: 'tabPress',
+                        target: route.key,
+                        canPreventDefault: true,
+                    });
 
-                    const IconComponent = icons[route.name] || Home;
+                    if (!isFocused && !event.defaultPrevented) {
+                        navigation.navigate(route.name);
+                    }
+                };
 
-                    return (
-                        <TabIcon
-                            key={route.key}
-                            icon={IconComponent}
-                            label={label}
-                            active={isFocused}
-                            onPress={onPress}
-                        />
-                    );
-                })}
-            </View>
+                const IconComponent = icons[route.name] || Home;
+
+                return (
+                    <Pressable
+                        key={index}
+                        onPress={onPress}
+                        style={tw`flex-1 items-center justify-center h-full pt-1`}
+                    >
+                        <View style={tw`w-10 h-10 items-center justify-center mb-0.5`}>
+                            <IconComponent
+                                size={22}
+                                color={isFocused ? '#000' : '#9ca3af'}
+                                strokeWidth={isFocused ? 2.5 : 2}
+                            />
+                        </View>
+
+                        <View style={tw`h-3 justify-center`}>
+                            {isFocused && (
+                                <Animated.Text
+                                    entering={FadeIn.duration(200)}
+                                    exiting={FadeOut.duration(200)}
+                                    style={tw`text-[7px] font-black uppercase tracking-widest text-gray-900 text-center`}
+                                >
+                                    {label}
+                                </Animated.Text>
+                            )}
+                        </View>
+                    </Pressable>
+                );
+            })}
         </View>
     );
 };
