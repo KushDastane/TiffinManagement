@@ -36,39 +36,44 @@ const WalletCard = ({ balance, loading }) => {
     return (
         <View style={tw`mb-6`}>
             <LinearGradient
-                colors={['#1c1c1c', '#2b2b2b']}
+                colors={['#111827', '#1f2937']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={tw`rounded-3xl p-8 shadow-lg`}
+                style={tw`rounded-[35px] p-8 shadow-2xl border border-gray-800`}
             >
-                <View style={tw`flex-row items-center gap-2 mb-6`}>
-                    <CreditCard size={20} color="#9ca3af" />
-                    <Text style={tw`text-sm text-gray-400 font-medium`}>Your Wallet Balance</Text>
+                <View style={tw`flex-row justify-between items-center mb-10`}>
+                    <View style={tw`w-10 h-10 rounded-xl bg-white/5 items-center justify-center border border-white/10`}>
+                        <CreditCard size={18} color="#9ca3af" />
+                    </View>
+                    <View style={tw`bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20`}>
+                        <Text style={tw`text-[8px] font-black text-yellow-500 uppercase tracking-widest`}>Premium Wallet</Text>
+                    </View>
                 </View>
 
                 {loading ? <ActivityIndicator color="white" /> : (
-                    <View>
-                        <Text style={tw`text-4xl font-bold text-white mb-2`}>
+                    <View style={tw`mb-10`}>
+                        <Text style={tw`text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1`}>Available Balance</Text>
+                        <Text style={tw`text-5xl font-black text-white tracking-tighter`}>
                             ₹{balance?.toFixed(0) || 0}
                         </Text>
-                        {balance < 0 ? (
-                            <Text style={tw`text-sm text-red-400 mb-8 font-medium`}>
-                                Please pay your dues soon
+                        <View style={tw`flex-row items-center gap-2 mt-3`}>
+                            <View style={[tw`w-1.5 h-1.5 rounded-full`, balance < 0 ? tw`bg-red-500` : tw`bg-yellow-400`]} />
+                            <Text style={tw`text-[9px] font-black uppercase tracking-widest ${balance < 0 ? 'text-red-400' : 'text-yellow-400/80'}`}>
+                                {balance < 0 ? "Action Required" : "Credit Status: Good"}
                             </Text>
-                        ) : (
-                            <Text style={tw`text-sm text-green-400 mb-8 font-medium`}>
-                                Enough for approx. {Math.floor((balance || 0) / 50)} meals
-                            </Text>
-                        )}
+                        </View>
                     </View>
                 )}
 
                 <Pressable
                     onPress={() => navigation.navigate('Khata')}
-                    style={tw`w-full bg-yellow-400 rounded-xl py-3 flex-row items-center justify-center gap-2 shadow-sm`}
+                    style={({ pressed }) => [
+                        tw`w-full bg-yellow-400 rounded-2xl py-4 flex-row items-center justify-center gap-2 shadow-lg`,
+                        pressed && tw`opacity-90 scale-[0.98]`
+                    ]}
                 >
-                    <Plus size={18} color="black" strokeWidth={2.5} />
-                    <Text style={tw`text-black font-bold text-base`}>Add Money</Text>
+                    <Plus size={16} color="black" strokeWidth={3} />
+                    <Text style={tw`text-black font-black text-[11px] uppercase tracking-widest`}>Add Money</Text>
                 </Pressable>
             </LinearGradient>
         </View>
@@ -79,15 +84,11 @@ const WeekSummary = ({ orders }) => {
     const navigation = useNavigation();
     const { primaryColor } = useTheme();
 
-    // Generate last 7 days including today
     const days = useMemo(() => {
         const d = [];
         for (let i = 0; i < 7; i++) {
             const date = new Date();
-            date.setDate(date.getDate() + i); // Showing COMING week or PAST week? Web app shows "This Week's Meals". Let's show next 7 days for planning. 
-            // WAIT, logic from web app: creates dates. 
-            // `weekDates` usually implies current week. 
-            // Let's stick to "Next 7 Days" as it's more useful for planning.
+            date.setDate(date.getDate() + i);
             d.push(date);
         }
         return d;
@@ -95,39 +96,48 @@ const WeekSummary = ({ orders }) => {
 
     const hasOrder = (date) => {
         const dateStr = date.toISOString().split("T")[0];
-        // naive check against orders list (assuming orders have dateId YYYY-MM-DD or similar)
-        // Adjust based on actual data structure of 'orders'
         return orders.some((o) => o.dateId === dateStr || o.orderDate === dateStr);
     };
 
     return (
-        <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-6`}>
-            <View style={tw`flex-row justify-between items-center mb-6`}>
-                <Text style={tw`font-bold text-gray-900 text-lg`}>This Week</Text>
-                <Pressable onPress={() => navigation.navigate("History")}>
-                    <Text style={tw`text-sm text-yellow-600 font-bold`}>Full Menu</Text>
+        <View style={tw`bg-white rounded-[35px] p-7 shadow-sm border border-gray-100 mb-6`}>
+            <View style={tw`flex-row justify-between items-center mb-10`}>
+                <View>
+                    <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>Meal Schedule</Text>
+                    <Text style={tw`font-black text-gray-900 text-xl`}>Weekly Planner</Text>
+                </View>
+                <Pressable
+                    onPress={() => navigation.navigate("History")}
+                    style={tw`w-10 h-10 rounded-xl bg-gray-50 items-center justify-center border border-gray-100`}
+                >
+                    <ArrowRight size={14} color="#9ca3af" />
                 </Pressable>
             </View>
 
-            <View style={tw`flex-row justify-between`}>
+            <View style={tw`flex-row justify-between px-1`}>
                 {days.map((date, index) => {
                     const ordered = hasOrder(date);
                     const isToday = index === 0;
 
                     return (
-                        <View key={index} style={tw`items-center gap-2`}>
+                        <View key={index} style={tw`items-center gap-3`}>
                             <View style={[
-                                tw`w-10 h-10 rounded-xl items-center justify-center`,
-                                ordered ? tw`bg-green-100` : (isToday ? tw`bg-yellow-100 border border-yellow-200` : tw`bg-gray-100`)
+                                tw`w-11 h-11 rounded-2xl items-center justify-center border`,
+                                ordered
+                                    ? tw`bg-gray-900 border-gray-900 shadow-lg shadow-gray-200`
+                                    : (isToday ? tw`bg-yellow-400 border-yellow-400 shadow-lg shadow-yellow-100` : tw`bg-gray-50 border-gray-50`)
                             ]}>
                                 <Text style={[
-                                    tw`text-xs font-bold`,
-                                    ordered ? tw`text-green-700` : (isToday ? tw`text-yellow-700` : tw`text-gray-400`)
+                                    tw`text-[11px] font-black uppercase`,
+                                    ordered ? tw`text-white` : (isToday ? tw`text-gray-900` : tw`text-gray-400`)
                                 ]}>
                                     {date.toLocaleDateString("en-US", { weekday: "narrow" })}
                                 </Text>
                             </View>
-                            {ordered && <View style={tw`w-1.5 h-1.5 rounded-full bg-green-500`} />}
+                            <View style={[
+                                tw`w-1.5 h-1.5 rounded-full`,
+                                ordered ? tw`bg-yellow-400` : (isToday ? tw`bg-gray-200` : tw`bg-transparent`)
+                            ]} />
                         </View>
                     );
                 })}
@@ -173,7 +183,6 @@ export const HomeScreen = () => {
 
         const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, (data) => {
             setMyOrders(data);
-            // Find today's order
             const today = data.find(o => o.dateId === dateId && o.slot === activeSlot);
             setTodaysOrder(today);
         });
@@ -189,113 +198,106 @@ export const HomeScreen = () => {
         setRefreshing(false);
     };
 
-    // Derived State
     const kitchenOpen = activeSlot && (
         (activeSlot === 'lunch' && new Date().getHours() < 15) ||
         (activeSlot === 'dinner' && new Date().getHours() < 21)
     );
 
     return (
-        <View style={tw`flex-1 bg-[#fffaf2]`}>
-            {/* Header / Gradient Background */}
+        <View style={tw`flex-1 bg-[#faf9f6]`}>
+            {/* Creative Header - Soft Hook */}
             <LinearGradient
-                colors={['#fef9c3', '#fffaf2']} // Yellow-100 to cream
-                style={tw`pt-14 pb-8 px-6 rounded-b-3xl`}
+                colors={['#fef9c3', '#faf9f6']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={tw`pt-14 pb-12 px-6 rounded-b-[45px] shadow-sm`}
             >
-                <View style={tw`flex-row justify-between items-start mb-6`}>
+                <View style={tw`flex-row justify-between items-start`}>
                     <View>
-                        <Text style={tw`text-xs uppercase tracking-wide text-gray-500 font-bold mb-1`}>
-                            {new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" })}
-                        </Text>
-                        <Text style={tw`text-2xl font-bold text-gray-900`}>
-                            {getGreeting()}, <Text style={tw`text-yellow-600`}>{userProfile?.name?.split(' ')[0] || 'User'}</Text>
-                        </Text>
-                        <Text style={tw`text-gray-600 text-sm font-medium mt-1`}>
-                            Plan your {activeSlot ? activeSlot.charAt(0).toUpperCase() + activeSlot.slice(1) : 'Meal'}!
+                        <View style={tw`flex-row items-center gap-2 mb-2`}>
+                            <View style={tw`w-2 h-2 rounded-full bg-yellow-400`} />
+                            <Text style={tw`text-[9px] font-black text-gray-500 uppercase tracking-widest`}>
+                                {new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" })}
+                            </Text>
+                        </View>
+                        <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
+                            {getGreeting()},{"\n"}
+                            <Text style={tw`text-yellow-600 font-black`}>{userProfile?.name?.split(' ')[0] || 'User'}</Text>
                         </Text>
                     </View>
 
-                    <View style={[
-                        tw`px-3 py-1 rounded-full border`,
-                        kitchenOpen
-                            ? tw`bg-green-100 border-green-200`
-                            : tw`bg-gray-100 border-gray-200`
-                    ]}>
-                        <Text style={[
-                            tw`text-xs font-bold`,
-                            kitchenOpen ? tw`text-green-800` : tw`text-gray-600`
+                    <View style={tw`items-end gap-4`}>
+                        <View style={[
+                            tw`px-3 py-1.5 rounded-xl border border-white bg-white/60`,
                         ]}>
-                            {kitchenOpen ? 'Kitchen Open' : 'Closed'}
-                        </Text>
+                            <Text style={[tw`text-[9px] font-black uppercase tracking-widest`, kitchenOpen ? tw`text-green-600` : tw`text-gray-400`]}>
+                                {kitchenOpen ? 'Kitchen Open' : 'Closed'}
+                            </Text>
+                        </View>
+                        <View style={tw`w-14 h-14 rounded-[20px] bg-white items-center justify-center shadow-lg shadow-yellow-100 border border-white`}>
+                            <Text style={tw`text-2xl`}>🍛</Text>
+                        </View>
                     </View>
                 </View>
             </LinearGradient>
 
             <ScrollView
-                style={tw`flex-1 px-6 -mt-4`}
+                style={tw`flex-1 px-6 -mt-6`}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 contentContainerStyle={tw`pb-32`}
             >
-                {/* Today's Meal Status Card */}
-                <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-6`}>
-                    <View style={tw`flex-row justify-between items-start mb-4`}>
-                        <View style={tw`flex-row items-center gap-3`}>
-                            <View style={tw`w-10 h-10 rounded-xl bg-yellow-100 items-center justify-center`}>
-                                <Text style={tw`text-lg`}>
-                                    {!todaysOrder ? "🍱" :
-                                        (todaysOrder.status === 'CONFIRMED' ? "👩‍🍳" : "⌛")}
+                {/* Today's Meal Status Card - Creative Refresh */}
+                <View style={tw`bg-white rounded-[35px] p-7 shadow-sm border border-gray-100 mb-6 overflow-hidden`}>
+                    <View style={tw`absolute -top-10 -right-10 w-32 h-32 bg-yellow-50 rounded-full opacity-40`} />
+
+                    <View style={tw`flex-row justify-between items-center mb-8`}>
+                        <View style={tw`flex-row items-center gap-4`}>
+                            <View style={tw`w-14 h-14 rounded-2xl bg-gray-900 items-center justify-center shadow-lg shadow-gray-200`}>
+                                <Text style={tw`text-2xl`}>
+                                    {!todaysOrder ? "🍱" : (todaysOrder.status === 'CONFIRMED' ? "�" : "⏳")}
                                 </Text>
                             </View>
-                            <View style={tw`bg-yellow-100 px-3 py-1 rounded-full`}>
-                                <Text style={tw`text-[10px] font-bold text-yellow-800 uppercase`}>
-                                    TODAY'S {activeSlot?.toUpperCase() || 'MEAL'}
+                            <View>
+                                <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>
+                                    Dashboard • {activeSlot?.toUpperCase() || 'Meal'}
+                                </Text>
+                                <Text style={tw`text-xl font-black text-gray-900`}>
+                                    {!todaysOrder ? "Thali Empty" : (todaysOrder.status === 'CONFIRMED' ? "Order Ready" : "Verifying...")}
                                 </Text>
                             </View>
                         </View>
-                        {todaysOrder ? (
-                            todaysOrder.status === 'CONFIRMED' ? (
-                                <CheckCircle size={28} color="#16a34a" fill="#dcfce7" />
-                            ) : (
-                                <Clock size={28} color="#eab308" fill="#fef9c3" />
-                            )
-                        ) : (
-                            <Clock size={28} color="#9ca3af" fill="#f3f4f6" />
-                        )}
                     </View>
 
-                    <Text style={tw`text-xl font-bold text-gray-900 mb-2`}>
-                        {!todaysOrder ? "No Order Placed" :
-                            (todaysOrder.status === 'CONFIRMED' ? "Meal Confirmed" : "Waiting to confirm")}
-                    </Text>
-
-                    <Text style={tw`text-gray-500 font-medium text-sm mb-6 leading-5`}>
-                        {!todaysOrder ? (
-                            kitchenOpen ? "Place your order before the cutoff time." : "Ordering is currently closed."
-                        ) : (
-                            todaysOrder.status === 'CONFIRMED' ?
-                                "Your meal is being prepared with love. You will be informed once it's ready." :
-                                "If it's taking longer to confirm try calling admin."
-                        )}
-                    </Text>
+                    <View style={tw`bg-gray-50 p-5 rounded-2xl mb-8 border border-gray-100/50`}>
+                        <Text style={tw`text-[12px] font-bold text-gray-500 leading-5 uppercase tracking-tighter`}>
+                            {!todaysOrder ? (
+                                kitchenOpen ? "The kitchen is buzzing! Secure your homemade meal before the doors close." : "Kitchen shifts have ended. Make sure to check back tomorrow morning!"
+                            ) : (
+                                todaysOrder.status === 'CONFIRMED' ?
+                                    "Your meal is being crafted by our best chefs. Standard delivery protocols active." :
+                                    "Patience is a virtue! We are currently synchronizing your order with the kitchen."
+                            )}
+                        </Text>
+                    </View>
 
                     {kitchenOpen && !todaysOrder && (
                         <Pressable
                             onPress={() => navigation.navigate("Order")}
-                            style={tw`bg-yellow-400 rounded-xl py-3 flex-row items-center justify-center gap-2`}
+                            style={tw`bg-gray-900 rounded-2xl py-5 flex-row items-center justify-center gap-3 shadow-xl shadow-gray-300`}
                         >
-                            <Text style={tw`text-black font-bold text-base`}>Place Order</Text>
-                            <ArrowRight size={18} color="black" strokeWidth={2.5} />
+                            <Text style={tw`text-white font-black text-[11px] uppercase tracking-widest`}>Craft My Thali</Text>
+                            <ArrowRight size={16} color="white" />
                         </Pressable>
                     )}
 
                     {todaysOrder && (
                         <Pressable
                             onPress={() => navigation.navigate("History")}
-                            style={tw`bg-gray-100 rounded-xl py-3 flex-row items-center justify-center gap-2`}
+                            style={tw`bg-white rounded-2xl py-5 flex-row items-center justify-center gap-3 border border-gray-200 shadow-sm`}
                         >
-                            <Text style={tw`text-gray-900 font-bold text-base`}>View Order</Text>
-                            <ArrowRight size={18} color="#111827" strokeWidth={2.5} />
+                            <Text style={tw`text-gray-900 font-black text-[11px] uppercase tracking-widest`}>View Details</Text>
+                            <ArrowRight size={16} color="#111827" />
                         </Pressable>
                     )}
                 </View>
