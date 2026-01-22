@@ -11,34 +11,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-const StatCard = ({ icon: Icon, label, value, variant, onPress }) => {
-    const variants = {
-        danger: { bg: '#fef2f2', text: '#ef4444', iconBg: '#fee2e2' },
-        warning: { bg: '#fffbeb', text: '#f59e0b', iconBg: '#fef3c7' },
-        success: { bg: '#f0fdf4', text: '#10b981', iconBg: '#dcfce7' },
-        info: { bg: '#f0f9ff', text: '#0ea5e9', iconBg: '#e0f2fe' },
-        normal: { bg: '#f9fafb', text: '#6b7280', iconBg: '#f3f4f6' }
-    };
-
-    const style = variants[variant] || variants.normal;
-
-    return (
-        <Pressable
-            onPress={onPress}
-            style={({ pressed }) => [
-                tw`w-[47%] mb-4 bg-white rounded-[30px] p-6 border border-gray-100 shadow-sm overflow-hidden`,
-                pressed && tw`scale-95 opacity-90`
-            ]}
-        >
-            <View style={[tw`absolute -top-6 -right-6 w-16 h-16 opacity-10 rounded-full`, { backgroundColor: style.text }]} />
-            <View style={[tw`w-12 h-12 rounded-2xl items-center justify-center mb-6 shadow-sm`, { backgroundColor: style.iconBg }]}>
-                <Icon size={22} color={style.text} />
-            </View>
-            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1`}>{label}</Text>
-            <Text style={tw`text-2xl font-black text-gray-900`}>{value}</Text>
-        </Pressable>
-    );
-};
 
 export const DashboardScreen = ({ navigation }) => {
     const { user } = useAuth();
@@ -123,146 +95,171 @@ export const DashboardScreen = ({ navigation }) => {
 
     console.log("Admin Dashboard Render: nextPendingOrder ID:", nextPendingOrder?.id);
 
+    const menuStatus = useMemo(() => {
+        if (!slot) return { label: "Off Hours", color: "gray", subLabel: "Kitchen is resting" };
+        const slotData = menuData?.[slot];
+        if (!slotData) return { label: `${slot.toUpperCase()} Menu Not Set`, color: "red", subLabel: "Action Required" };
+        return { label: "Ready to Serve", color: "yellow", subLabel: slotData.mainItem };
+    }, [menuData, slot]);
+
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Creative Header - Premium Hook */}
-            <LinearGradient
-                colors={['#fef9c3', '#faf9f6']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={tw`pt-16 pb-10 px-6 rounded-b-[45px] shadow-sm`}
-            >
-                <View style={tw`flex-row justify-between items-start`}>
-                    <View>
-                        <View style={tw`flex-row items-center gap-2 mb-2`}>
-                            <View style={tw`w-2 h-2 rounded-full bg-yellow-400 shadow-sm shadow-yellow-200`} />
-                            <Text style={tw`text-[10px] font-black text-gray-500 uppercase tracking-widest`}>{todayStr}</Text>
+            {/* 1. Creative Absolute Header - Fixed & Sticky */}
+            <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
+                <LinearGradient
+                    colors={['#fffbeb', '#fef9c3', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`pt-16 pb-14 px-6 rounded-b-[50px] shadow-sm`}
+                >
+                    <View style={tw`flex-row justify-between items-start mb-8`}>
+                        <View>
+                            <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-[0.2em] mb-1`}>{todayStr}</Text>
+                            <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
+                                Kitchen{"\n"}
+                                <Text style={tw`text-yellow-600`}>Terminal</Text>
+                            </Text>
                         </View>
-                        <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
-                            Kitchen{"\n"}
-                            <Text style={tw`text-yellow-600`}>Operations</Text>
-                        </Text>
+                        <View style={tw`w-14 h-14 rounded-[22px] bg-white items-center justify-center shadow-lg shadow-yellow-200 border border-white`}>
+                            <Activity size={26} color="#ca8a04" />
+                        </View>
                     </View>
-                    <View style={tw`w-14 h-14 rounded-[20px] bg-white items-center justify-center shadow-lg shadow-yellow-100 border border-white`}>
-                        <Activity size={24} color="#eab308" />
+
+                    {/* Live Status Card - Integrated & World Class */}
+                    <View style={tw`bg-white rounded-[28px] p-5 shadow-xl shadow-yellow-600/10 border border-yellow-100/50 flex-row items-center justify-between`}>
+                        <View style={tw`flex-row items-center gap-4`}>
+                            <View style={tw`w-11 h-11 rounded-2xl bg-${menuStatus.color}-50 items-center justify-center`}>
+                                <View style={tw`w-2 h-2 rounded-full bg-${menuStatus.color}-500`} />
+                            </View>
+                            <View>
+                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5`}>{menuStatus.subLabel}</Text>
+                                <Text style={tw`text-sm font-black text-gray-900`}>{menuStatus.label}</Text>
+                            </View>
+                        </View>
+                        <Pressable
+                            onPress={() => navigation.navigate('Menu')}
+                            style={tw`bg-${menuStatus.color === 'red' ? 'red' : 'gray'}-900 px-4 py-2 rounded-xl`}
+                        >
+                            <Text style={tw`text-[10px] font-black text-white uppercase`}>Manage</Text>
+                        </Pressable>
                     </View>
-                </View>
-                <View style={tw`mt-6 flex-row items-center gap-2`}>
-                    <View style={tw`bg-white/60 px-4 py-2 rounded-xl border border-white shadow-sm`}>
-                        <Text style={tw`text-[11px] font-black text-gray-700 uppercase tracking-tight`}>{greeting}</Text>
-                    </View>
-                </View>
-            </LinearGradient>
+                </LinearGradient>
+            </View>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pb-32`}
+                contentContainerStyle={tw`p-6 pt-90 pb-32`}
                 style={tw`flex-1`}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Cooking Summary Banner - High Contrast */}
+                {/* 2. Cooking Summary - The LIVE Pulse */}
                 {cookingSummary && (
-                    <View style={tw`bg-white rounded-[35px] p-8 shadow-sm border border-gray-100 mb-8 overflow-hidden`}>
-                        <View style={tw`absolute -top-10 -right-10 w-32 h-32 bg-yellow-50 rounded-full opacity-40`} />
+                    <View style={tw`bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 mb-6 overflow-hidden`}>
+                        <View style={tw`absolute -top-10 -right-10 w-40 h-40 bg-gray-50 rounded-full opacity-60`} />
 
-                        <View style={tw`flex-row items-center gap-3 mb-8`}>
-                            <View style={tw`w-10 h-10 rounded-xl bg-gray-900 items-center justify-center shadow-lg shadow-gray-200`}>
-                                <Activity size={18} color="white" />
-                            </View>
+                        <View style={tw`flex-row justify-between items-center mb-10`}>
                             <View>
-                                <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-0.5`}>Live Production</Text>
-                                <Text style={tw`text-lg font-black text-gray-900`}>Cooking Breakdown</Text>
+                                <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>Production Volume</Text>
+                                <Text style={tw`text-2xl font-black text-gray-900`}>Live Breakdown</Text>
+                            </View>
+                            <View style={tw`bg-yellow-100/50 p-2 rounded-xl`}>
+                                <Package size={20} color="#ca8a04" />
                             </View>
                         </View>
 
-                        <View style={tw`flex-row justify-between items-center bg-gray-50/50 p-6 rounded-3xl border border-gray-50`}>
-                            <View style={tw`items-center`}>
-                                <Text style={tw`text-2xl font-black text-gray-900`}>{cookingSummary.halfDabba}</Text>
-                                <Text style={tw`text-[9px] font-black text-gray-400 tracking-widest mt-1 uppercase`}>Half</Text>
+                        <View style={tw`flex-row justify-between items-center`}>
+                            <View style={tw`items-center flex-1`}>
+                                <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary.halfDabba}</Text>
+                                <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Half</Text>
                             </View>
-                            <View style={tw`w-[1px] h-10 bg-gray-200/50`} />
-                            <View style={tw`items-center`}>
-                                <Text style={tw`text-2xl font-black text-gray-900`}>{cookingSummary.fullDabba}</Text>
-                                <Text style={tw`text-[9px] font-black text-gray-400 tracking-widest mt-1 uppercase`}>Full</Text>
+                            <View style={tw`w-[1px] h-12 bg-gray-100`} />
+                            <View style={tw`items-center flex-1`}>
+                                <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary.fullDabba}</Text>
+                                <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Full</Text>
                             </View>
-                            <View style={tw`w-[1px] h-10 bg-gray-200/50`} />
-                            <View style={tw`items-center`}>
-                                <Text style={tw`text-2xl font-black text-gray-900`}>{cookingSummary.extraRoti}</Text>
-                                <Text style={tw`text-[9px] font-black text-gray-400 tracking-widest mt-1 uppercase`}>Roti</Text>
+                            <View style={tw`w-[1px] h-12 bg-gray-100`} />
+                            <View style={tw`items-center flex-1`}>
+                                <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary.extraRoti}</Text>
+                                <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Extras</Text>
                             </View>
                         </View>
                     </View>
                 )}
 
-                {/* Stats Grid */}
-                <View style={tw`flex-row flex-wrap justify-between`}>
-                    <StatCard
-                        icon={Clock}
-                        label="Pending Orders"
-                        value={stats.pendingOrders}
-                        variant={stats.pendingOrders > 0 ? "danger" : "normal"}
+                {/* 3. High Impact Navigation Stats */}
+                <View style={tw`flex-row justify-between mb-2`}>
+                    <Pressable
                         onPress={() => navigation.navigate('Orders')}
-                    />
-                    <StatCard
-                        icon={IndianRupee}
-                        label="Pend. Payments"
-                        value={stats.pendingPayments}
-                        variant={stats.pendingPayments > 0 ? "warning" : "normal"}
+                        style={tw`flex-1 bg-white rounded-[32px] p-6 border border-gray-100 mr-2 shadow-sm`}
+                    >
+                        <View style={tw`w-10 h-10 rounded-2xl bg-orange-50 items-center justify-center mb-4`}>
+                            <Clock size={18} color="#f97316" />
+                        </View>
+                        <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>Pending Orders</Text>
+                        <Text style={tw`text-2xl font-black text-gray-900`}>{stats.pendingOrders}</Text>
+                    </Pressable>
+
+                    <Pressable
                         onPress={() => navigation.navigate('Payments')}
-                    />
+                        style={tw`flex-1 bg-white rounded-[32px] p-6 border border-gray-100 ml-2 shadow-sm`}
+                    >
+                        <View style={tw`w-10 h-10 rounded-2xl bg-emerald-50 items-center justify-center mb-4`}>
+                            <IndianRupee size={18} color="#10b981" />
+                        </View>
+                        <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>Wait Approvals</Text>
+                        <Text style={tw`text-2xl font-black text-gray-900`}>{stats.pendingPayments}</Text>
+                    </Pressable>
                 </View>
 
-                {/* Quick Confirm Section */}
-                {nextPendingOrder ? (
-                    <View style={tw`mt-4 bg-white rounded-3xl p-6 shadow-sm border border-yellow-100`}>
-                        <View style={tw`flex-row items-center justify-between mb-4`}>
-                            <View style={tw`flex-row items-center gap-2`}>
-                                <Clock size={16} color="#eab308" />
-                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Next Order to Confirm</Text>
+                {/* 4. The Action Center: Quick Confirm */}
+                {nextPendingOrder && (
+                    <View style={tw`mt-4 bg-gray-900 rounded-[40px] p-8 shadow-xl overflow-hidden`}>
+                        <View style={tw`absolute -bottom-10 -left-10 w-40 h-40 bg-white/5 rounded-full`} />
+
+                        <View style={tw`flex-row items-center justify-between mb-6`}>
+                            <View style={tw`flex-row items-center gap-2.5`}>
+                                <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Action Required</Text>
                             </View>
-                            <Pressable onPress={() => navigation.navigate('Orders')}>
-                                <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest`}>See All</Text>
-                            </Pressable>
+                            <View style={tw`bg-white/10 px-3 py-1 rounded-full`}>
+                                <Text style={tw`text-[9px] font-black text-white uppercase`}>Latest Order</Text>
+                            </View>
                         </View>
 
-                        <View style={tw`bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-100`}>
-                            <Text style={tw`text-base font-black text-gray-900`}>{nextPendingOrder.userDisplayName || 'Student'}</Text>
-                            <Text style={tw`text-xs font-bold text-gray-400 uppercase mt-1`}>{nextPendingOrder.quantity} × {nextPendingOrder.mainItem}</Text>
+                        <View style={tw`mb-8`}>
+                            <Text style={tw`text-xl font-black text-white`}>{nextPendingOrder.userDisplayName || 'Student'}</Text>
+                            <Text style={tw`text-sm font-bold text-gray-400 mt-1`}>
+                                {nextPendingOrder.quantity} × {nextPendingOrder.mainItem} • <Text style={tw`text-yellow-400/80 font-black`}>{nextPendingOrder.slot?.toUpperCase()}</Text>
+                            </Text>
                         </View>
 
                         <Pressable
                             onPress={() => handleQuickConfirm(nextPendingOrder.id)}
                             disabled={confirmingId === nextPendingOrder.id}
-                            style={tw`bg-yellow-400 rounded-2xl py-4 items-center justify-center flex-row gap-2 shadow-lg shadow-yellow-500/20`}
+                            style={({ pressed }) => [
+                                tw`bg-yellow-400 rounded-3xl py-5 items-center justify-center flex-row gap-3`,
+                                pressed && tw`scale-98 opacity-90`
+                            ]}
                         >
                             {confirmingId === nextPendingOrder.id ? (
                                 <ActivityIndicator color="#111827" size="small" />
                             ) : (
                                 <>
-                                    <Check size={20} color="#111827" />
-                                    <Text style={tw`text-gray-900 font-black text-sm uppercase`}>Confirm & Next</Text>
+                                    <Check size={20} color="#111827" strokeWidth={3} />
+                                    <Text style={tw`text-[#111827] font-black text-base uppercase tracking-tight`}>Confirm Order</Text>
                                 </>
                             )}
                         </Pressable>
                     </View>
-                ) : (
-                    <Pressable
-                        onPress={() => navigation.navigate('Orders')}
-                        style={tw`mt-4 bg-white rounded-3xl p-6 flex-row items-center justify-between shadow-sm border border-gray-100`}
-                    >
-                        <View style={tw`flex-row items-center gap-4`}>
-                            <View style={tw`bg-gray-100 p-3 rounded-2xl`}>
-                                <Package size={24} color="#6b7280" />
-                            </View>
-                            <View>
-                                <Text style={tw`text-lg font-black text-gray-900`}>All Orders</Text>
-                                <Text style={tw`text-xs font-bold text-gray-400`}>No pending orders to confirm</Text>
-                            </View>
-                        </View>
-                        <ChevronRight size={24} color="#9ca3af" />
-                    </Pressable>
                 )}
 
+                {/* Footer Link */}
+                <Pressable
+                    onPress={() => navigation.navigate('Orders')}
+                    style={tw`mt-8 items-center py-4`}
+                >
+                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]`}>View All Activity ➔</Text>
+                </Pressable>
             </ScrollView>
         </View>
     );

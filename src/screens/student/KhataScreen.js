@@ -154,20 +154,22 @@ export const KhataScreen = () => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Header - Continuity */}
-            <LinearGradient
-                colors={['#fff', '#faf9f6']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={tw`px-6 pt-14 pb-8 rounded-b-[40px] shadow-sm border-b border-gray-100/50`}
-            >
-                <Text style={tw`text-2xl font-black text-gray-900`}>My Ledger</Text>
-                <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Transaction History & Dues</Text>
-            </LinearGradient>
+            {/* Absolute Header - Continuity */}
+            <View style={tw`absolute top-0 left-0 right-0 z-10`}>
+                <LinearGradient
+                    colors={['#fff', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`px-6 pt-14 pb-8 rounded-b-[40px] shadow-sm border-b border-gray-100/50`}
+                >
+                    <Text style={tw`text-2xl font-black text-gray-900`}>My Ledger</Text>
+                    <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Transaction History & Dues</Text>
+                </LinearGradient>
+            </View>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pb-32`}
-                style={tw`flex-1 -mt-4`}
+                contentContainerStyle={tw`p-6 pt-44 pb-32`}
+                style={tw`flex-1`}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}
             >

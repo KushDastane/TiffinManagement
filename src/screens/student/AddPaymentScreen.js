@@ -110,23 +110,25 @@ export const AddPaymentScreen = () => {
 
   return (
     <View style={tw`flex-1 bg-[#faf9f6]`}>
-      {/* Header - Continuity */}
-      <LinearGradient
-        colors={['#fff', '#faf9f6']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={tw`px-6 pt-14 pb-8 rounded-b-[40px] shadow-sm flex-row items-center border-b border-gray-100/50`}
-      >
-        <Pressable onPress={() => navigation.goBack()} style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100 mr-4`}>
-          <ArrowLeft size={18} color="#111827" />
-        </Pressable>
-        <View>
-          <Text style={tw`text-2xl font-black text-gray-900`}>Add Payment</Text>
-          <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Secure Wallet Refill</Text>
-        </View>
-      </LinearGradient>
+      {/* Absolute Header - Continuity */}
+      <View style={tw`absolute top-0 left-0 right-0 z-10`}>
+        <LinearGradient
+          colors={['#fff', '#faf9f6']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={tw`px-6 pt-14 pb-8 rounded-b-[40px] shadow-sm flex-row items-center border-b border-gray-100/50`}
+        >
+          <Pressable onPress={() => navigation.goBack()} style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100 mr-4`}>
+            <ArrowLeft size={18} color="#111827" />
+          </Pressable>
+          <View>
+            <Text style={tw`text-2xl font-black text-gray-900`}>Add Payment</Text>
+            <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Secure Wallet Refill</Text>
+          </View>
+        </LinearGradient>
+      </View>
 
-      <ScrollView contentContainerStyle={tw`p-6 pb-20`} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={tw`p-6 pt-44 pb-20`} showsVerticalScrollIndicator={false}>
         {/* 1. Amount Input - Minimalist & Consistent */}
         <View style={tw`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6`}>
           <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3`}>Enter Amount</Text>

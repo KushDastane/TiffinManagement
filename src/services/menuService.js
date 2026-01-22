@@ -21,8 +21,10 @@ export const getTomorrowKey = () => {
 
 export const isAfterResetTime = () => {
     const now = new Date();
-    // Default reset at 9:00 PM
-    return now.getHours() >= 21;
+    const currentHour = now.getHours();
+    // After 9 PM (21:00) until 6 AM next day, show tomorrow's menu
+    // This handles: 21, 22, 23, 0, 1, 2, 3, 4, 5
+    return currentHour >= 21 || currentHour < 6;
 };
 
 /**

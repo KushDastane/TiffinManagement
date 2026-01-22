@@ -59,18 +59,21 @@ export const SettingsScreen = () => {
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
             {/* Creative Header - Continuity */}
-            <LinearGradient
-                colors={['#fff', '#faf9f6']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
-            >
-                <Text style={tw`text-2xl font-black text-gray-900`}>Admin Settings</Text>
-                <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Kitchen & Account preferences</Text>
-            </LinearGradient>
+            {/* Absolute Header - Summary View */}
+            <View style={tw`absolute top-0 left-0 right-0 z-10`}>
+                <LinearGradient
+                    colors={['#fff', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+                >
+                    <Text style={tw`text-2xl font-black text-gray-900`}>Admin Settings</Text>
+                    <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Kitchen & Account preferences</Text>
+                </LinearGradient>
+            </View>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pt-8 pb-32`}
+                contentContainerStyle={tw`p-6 pt-48 pb-32`}
                 style={tw`flex-1`}
                 showsVerticalScrollIndicator={false}
             >

@@ -205,47 +205,49 @@ export const HomeScreen = () => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Creative Header - Soft Hook */}
-            <LinearGradient
-                colors={['#fef9c3', '#faf9f6']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={tw`pt-14 pb-12 px-6 rounded-b-[45px] shadow-sm`}
-            >
-                <View style={tw`flex-row justify-between items-start`}>
-                    <View>
-                        <View style={tw`flex-row items-center gap-2 mb-2`}>
-                            <View style={tw`w-2 h-2 rounded-full bg-yellow-400`} />
-                            <Text style={tw`text-[9px] font-black text-gray-500 uppercase tracking-widest`}>
-                                {new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" })}
+            {/* Absolute Creative Header - Premium Hook */}
+            <View style={tw`absolute top-0 left-0 right-0 z-10`}>
+                <LinearGradient
+                    colors={['#fef9c3', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`pt-14 pb-12 px-6 rounded-b-[45px] shadow-sm`}
+                >
+                    <View style={tw`flex-row justify-between items-start`}>
+                        <View>
+                            <View style={tw`flex-row items-center gap-2 mb-2`}>
+                                <View style={tw`w-2 h-2 rounded-full bg-yellow-400`} />
+                                <Text style={tw`text-[9px] font-black text-gray-500 uppercase tracking-widest`}>
+                                    {new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" })}
+                                </Text>
+                            </View>
+                            <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
+                                {getGreeting()},{"\n"}
+                                <Text style={tw`text-yellow-600 font-black`}>{userProfile?.name?.split(' ')[0] || 'User'}</Text>
                             </Text>
                         </View>
-                        <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
-                            {getGreeting()},{"\n"}
-                            <Text style={tw`text-yellow-600 font-black`}>{userProfile?.name?.split(' ')[0] || 'User'}</Text>
-                        </Text>
-                    </View>
 
-                    <View style={tw`items-end gap-4`}>
-                        <View style={[
-                            tw`px-3 py-1.5 rounded-xl border border-white bg-white/60`,
-                        ]}>
-                            <Text style={[tw`text-[9px] font-black uppercase tracking-widest`, kitchenOpen ? tw`text-green-600` : tw`text-gray-400`]}>
-                                {kitchenOpen ? 'Kitchen Open' : 'Closed'}
-                            </Text>
-                        </View>
-                        <View style={tw`w-14 h-14 rounded-[20px] bg-white items-center justify-center shadow-lg shadow-yellow-100 border border-white`}>
-                            <Text style={tw`text-2xl`}>🍛</Text>
+                        <View style={tw`items-end gap-4`}>
+                            <View style={[
+                                tw`px-3 py-1.5 rounded-xl border border-white bg-white/60`,
+                            ]}>
+                                <Text style={[tw`text-[9px] font-black uppercase tracking-widest`, kitchenOpen ? tw`text-green-600` : tw`text-gray-400`]}>
+                                    {kitchenOpen ? 'Kitchen Open' : 'Closed'}
+                                </Text>
+                            </View>
+                            <View style={tw`w-14 h-14 rounded-[20px] bg-white items-center justify-center shadow-lg shadow-yellow-100 border border-white`}>
+                                <Text style={tw`text-2xl`}>🍛</Text>
+                            </View>
                         </View>
                     </View>
-                </View>
-            </LinearGradient>
+                </LinearGradient>
+            </View>
 
             <ScrollView
-                style={tw`flex-1 px-6 -mt-6`}
+                style={tw`flex-1`}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                contentContainerStyle={tw`pb-32`}
+                contentContainerStyle={tw`p-6 pt-72 pb-32`}
             >
                 {/* Today's Meal Status Card - Creative Refresh */}
                 <View style={tw`bg-white rounded-[35px] p-7 shadow-sm border border-gray-100 mt-10 mb-6 overflow-hidden`}>

@@ -46,7 +46,7 @@ export const CreateKitchenScreen = () => {
     };
 
     return (
-        <ScrollView className="flex-1 bg-white p-6">
+        <ScrollView className="flex-1 bg-white p-6" showsVerticalScrollIndicator={false}>
             <View className="pt-8 pb-6">
                 <Text className="text-4xl font-black text-gray-900 leading-tight">Create Your Kitchen</Text>
                 <Text className="text-gray-500 font-medium text-lg">Setup your brand in seconds.</Text>

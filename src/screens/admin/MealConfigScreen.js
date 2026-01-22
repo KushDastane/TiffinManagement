@@ -113,8 +113,8 @@ export const MealConfigScreen = () => {
 
     return (
         <View style={tw`flex-1 bg-gray-50`}>
-            {/* Tab Header */}
-            <View style={tw`bg-white pt-10 px-4 border-b border-gray-100`}>
+            {/* Absolute Tab Header */}
+            <View style={[tw`absolute top-0 left-0 right-0 z-10 bg-white pt-10 px-4 border-b border-gray-100`]}>
                 <Text style={tw`text-3xl font-black text-gray-900 mb-4`}>Food Setup</Text>
                 <View style={tw`flex-row gap-6 mb-2`}>
                     <Pressable
@@ -152,7 +152,8 @@ export const MealConfigScreen = () => {
 
             <ScrollView
                 style={{ flex: 1 }}
-                contentContainerStyle={{ padding: 16 }}
+                contentContainerStyle={{ padding: 16, paddingTop: 140, paddingBottom: 100 }}
+                showsVerticalScrollIndicator={false}
             >
 
                 {activeTab === 'SCHEDULE' ? (

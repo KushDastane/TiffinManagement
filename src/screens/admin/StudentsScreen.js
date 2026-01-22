@@ -44,74 +44,80 @@ export const StudentsScreen = ({ navigation }) => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Creative Header - Continuity */}
-            <LinearGradient
-                colors={['#fff', '#faf9f6']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
-            >
-                <Text style={tw`text-2xl font-black text-gray-900`}>Student Directory</Text>
-                <View style={tw`flex-row items-center gap-2 bg-yellow-50 self-start px-3 py-1 rounded-xl border border-yellow-100`}>
-                    <Users size={12} color="#ca8a04" />
-                    <Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>{students.length} Registered</Text>
-                </View>
-            </LinearGradient>
-
-            <View style={tw`p-6 pt-6`}>
-                {/* Search - Premium Glassy Look */}
-                <View style={tw`bg-white rounded-[24px] flex-row items-center px-6 shadow-sm border border-gray-100 mb-8`}>
-                    <View style={tw`w-10 h-10 items-center justify-center`}>
-                        <Search size={18} color="#9ca3af" strokeWidth={2.5} />
-                    </View>
-                    <TextInput
-                        style={tw`flex-1 py-4 ml-2 font-bold text-gray-900`}
-                        placeholder="Search student identity..."
-                        placeholderTextColor="#9ca3af"
-                        value={searchTerm}
-                        onChangeText={setSearchTerm}
-                    />
-                </View>
-
-                <ScrollView
-                    contentContainerStyle={tw`pb-64`}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            {/* 1. Absolute Creative Header - Fixed & Sticky */}
+            <View style={tw`absolute top-0 left-0 right-0 z-10`}>
+                <LinearGradient
+                    colors={['#fff', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`px-6 pt-16 pb-6 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
                 >
-                    {filteredStudents.map(s => (
-                        <View key={s.id} style={tw`mb-2`}>
-                            <Pressable
-                                onPress={() => navigation.navigate('StudentDetails', { studentId: s.id })}
-                                style={({ pressed }) => [
-                                    pressed && tw`opacity-70 scale-[0.98]`
-                                ]}
-                            >
-                                <View style={tw`bg-white rounded-2xl p-4 flex-row items-center justify-between border border-gray-100 shadow-sm`}>
-                                    <View style={tw`flex-row items-center flex-1`}>
-                                        <View style={tw`w-12 h-12 rounded-xl bg-yellow-100 items-center justify-center mr-4`}>
-                                            <Text style={tw`text-lg font-black text-yellow-800 uppercase`}>{(s.name || 'S')[0]}</Text>
-                                        </View>
-                                        <View style={tw`flex-1`}>
-                                            <Text style={tw`text-base font-bold text-gray-900`}>{s.name || 'Unnamed Student'}</Text>
-                                            <View style={tw`flex-row items-center gap-1.5 mt-0.5`}>
-                                                <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />
-                                                <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>{s.phoneNumber || 'NO PHONE'}</Text>
-                                            </View>
+                    <View style={tw`flex-row justify-between items-center mb-4`}>
+                        <View>
+                            <Text style={tw`text-2xl font-black text-gray-900`}>Student Directory</Text>
+                            <View style={tw`flex-row items-center gap-2 bg-yellow-50 self-start px-2 py-0.5 rounded-lg border border-yellow-100 mt-1`}>
+                                <Users size={10} color="#ca8a04" />
+                                <Text style={tw`text-[9px] font-black text-yellow-800 uppercase`}>{students.length} Registered</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Search - Sticky in Header */}
+                    <View style={tw`bg-white rounded-2xl flex-row items-center px-4 shadow-sm border border-gray-100`}>
+                        <Search size={16} color="#9ca3af" strokeWidth={2.5} />
+                        <TextInput
+                            style={tw`flex-1 py-3 ml-2 font-bold text-gray-900 text-sm`}
+                            placeholder="Search student identity..."
+                            placeholderTextColor="#9ca3af"
+                            value={searchTerm}
+                            onChangeText={setSearchTerm}
+                        />
+                    </View>
+                </LinearGradient>
+            </View>
+
+            {/* 2. Full Screen Scroll */}
+            <ScrollView
+                style={tw`flex-1`}
+                contentContainerStyle={tw`p-6 pt-58 pb-64`}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                showsVerticalScrollIndicator={false}
+            >
+
+                {filteredStudents.map(s => (
+                    <View key={s.id} style={tw`mb-2`}>
+                        <Pressable
+                            onPress={() => navigation.navigate('StudentDetails', { studentId: s.id })}
+                            style={({ pressed }) => [
+                                pressed && tw`opacity-70 scale-[0.98]`
+                            ]}
+                        >
+                            <View style={tw`bg-white rounded-2xl p-4 flex-row items-center justify-between border border-gray-100 shadow-sm`}>
+                                <View style={tw`flex-row items-center flex-1`}>
+                                    <View style={tw`w-12 h-12 rounded-xl bg-yellow-100 items-center justify-center mr-4`}>
+                                        <Text style={tw`text-lg font-black text-yellow-800 uppercase`}>{(s.name || 'S')[0]}</Text>
+                                    </View>
+                                    <View style={tw`flex-1`}>
+                                        <Text style={tw`text-base font-bold text-gray-900`}>{s.name || 'Unnamed Student'}</Text>
+                                        <View style={tw`flex-row items-center gap-1.5 mt-0.5`}>
+                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />
+                                            <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>{s.phoneNumber || 'NO PHONE'}</Text>
                                         </View>
                                     </View>
-                                    <ChevronRight size={18} color="#d1d5db" strokeWidth={2.5} />
                                 </View>
-                            </Pressable>
-                        </View>
-                    ))}
+                                <ChevronRight size={18} color="#d1d5db" strokeWidth={2.5} />
+                            </View>
+                        </Pressable>
+                    </View>
+                ))}
 
-                    {filteredStudents.length === 0 && (
-                        <View style={tw`items-center justify-center py-20`}>
-                            <Users size={48} color="#e5e7eb" />
-                            <Text style={tw`text-gray-400 font-bold mt-4`}>No students found</Text>
-                        </View>
-                    )}
-                </ScrollView>
-            </View>
+                {filteredStudents.length === 0 && (
+                    <View style={tw`items-center justify-center py-20`}>
+                        <Users size={48} color="#e5e7eb" />
+                        <Text style={tw`text-gray-400 font-bold mt-4`}>No students found</Text>
+                    </View>
+                )}
+            </ScrollView>
         </View>
     );
 };

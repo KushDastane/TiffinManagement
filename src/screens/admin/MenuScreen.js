@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Animated } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, isAfterResetTime } from '../../services/menuService';
@@ -17,6 +17,8 @@ export const MenuScreen = () => {
     // UI State
     const [viewMode, setViewMode] = useState('summary'); // summary | edit
     const [editingSlot, setEditingSlot] = useState(null); // lunch | dinner
+    const slideAnim = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(1)).current;
 
     // Data State
     const [todayMenuData, setTodayMenuData] = useState(null);
@@ -92,7 +94,15 @@ export const MenuScreen = () => {
             setOtherPrice("");
             setExtras([{ name: "Roti", price: "7" }]);
         }
-        setViewMode('edit');
+
+        // Animate transition
+        Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: 1, duration: 300, useNativeDriver: true })
+        ]).start(() => {
+            setViewMode('edit');
+            fadeAnim.setValue(1);
+        });
     };
 
     const handleSave = async () => {
@@ -128,7 +138,13 @@ export const MenuScreen = () => {
         const result = await saveMenu(tenant.id, dateId, { [editingSlot]: payload });
         setIsSaving(false);
         if (result.success) {
-            setViewMode('summary');
+            // Animate back to summary
+            Animated.parallel([
+                Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+                Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true })
+            ]).start(() => {
+                setViewMode('summary');
+            });
         } else {
             Alert.alert("Error", result.error);
         }
@@ -142,20 +158,22 @@ export const MenuScreen = () => {
 
     if (viewMode === 'summary') {
         return (
-            <View style={tw`flex-1 bg-[#faf9f6]`}>
-                {/* Creative Header - Continuity */}
-                <LinearGradient
-                    colors={['#fff', '#faf9f6']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
-                >
-                    <Text style={tw`text-2xl font-black text-gray-900`}>Daily Menu</Text>
-                    <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Meals for {dateId}</Text>
-                </LinearGradient>
+            <Animated.View style={[tw`flex-1 bg-[#faf9f6]`, { opacity: fadeAnim }]}>
+                {/* Absolute Header - Summary View */}
+                <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
+                    <LinearGradient
+                        colors={['#fff', '#faf9f6']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+                    >
+                        <Text style={tw`text-2xl font-black text-gray-900`}>Daily Menu</Text>
+                        <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Meals for {dateId}</Text>
+                    </LinearGradient>
+                </View>
 
                 <ScrollView
-                    contentContainerStyle={tw`p-6 pt-8 pb-32`}
+                    contentContainerStyle={tw`p-6 pt-48 pb-32`}
                     style={tw`flex-1`}
                     showsVerticalScrollIndicator={false}
                 >
@@ -223,31 +241,48 @@ export const MenuScreen = () => {
                         );
                     })}
                 </ScrollView>
-            </View>
+            </Animated.View>
         );
     }
 
     // Edit View
+    const translateX = slideAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [400, 0]
+    });
+
     return (
-        <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Creative Header - Edit Mode */}
-            <LinearGradient
-                colors={['#fff', '#faf9f6']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm flex-row items-center gap-4 border-b border-gray-100/50`}
-            >
-                <Pressable onPress={() => setViewMode('summary')} style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100`}>
-                    <ChevronLeft size={20} color="#111827" />
-                </Pressable>
-                <View>
-                    <Text style={tw`text-2xl font-black text-gray-900`}>Set {editingSlot}</Text>
-                    <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Configuring Daily Meal</Text>
-                </View>
-            </LinearGradient>
+        <Animated.View style={[tw`flex-1 bg-[#faf9f6]`, { transform: [{ translateX }] }]}>
+            {/* Absolute Header - Edit Mode */}
+            <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
+                <LinearGradient
+                    colors={['#fff', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+                >
+                    <View style={tw`flex-row items-center gap-4`}>
+                        <Pressable
+                            onPress={() => {
+                                Animated.parallel([
+                                    Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+                                    Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true })
+                                ]).start(() => setViewMode('summary'));
+                            }}
+                            style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100`}
+                        >
+                            <ChevronLeft size={20} color="#111827" />
+                        </Pressable>
+                        <View>
+                            <Text style={tw`text-2xl font-black text-gray-900 capitalize`}>Set {editingSlot}</Text>
+                            <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Configuring Daily Meal</Text>
+                        </View>
+                    </View>
+                </LinearGradient>
+            </View>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pt-8 pb-32`}
+                contentContainerStyle={tw`p-6 pt-48 pb-32`}
                 style={tw`flex-1`}
                 showsVerticalScrollIndicator={false}
             >
@@ -257,9 +292,9 @@ export const MenuScreen = () => {
                         <Pressable
                             key={opt.value}
                             onPress={() => setMealType(opt.value)}
-                            style={[tw`flex-1 py-4 rounded-3xl items-center border-2`, mealType === opt.value ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-100`]}
+                            style={[tw`flex-1 py-3.5 rounded-2xl items-center border`, mealType === opt.value ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-100`]}
                         >
-                            <Text style={[tw`font-black text-sm`, mealType === opt.value ? tw`text-yellow-800` : tw`text-gray-400`]}>{opt.label}</Text>
+                            <Text style={[tw`font-black text-xs uppercase tracking-wider`, mealType === opt.value ? tw`text-yellow-800` : tw`text-gray-400`]}>{opt.label}</Text>
                         </Pressable>
                     ))}
                 </View>
@@ -267,30 +302,35 @@ export const MenuScreen = () => {
                 {mealType === 'ROTI_SABZI' ? (
                     <View>
                         {/* Sabzi */}
-                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Sabzi</Text>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Sabzi</Text>
                         <TextInput
-                            style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
+                            style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900 text-sm`}
                             placeholder="e.g. Gobi / Paneer"
+                            placeholderTextColor="#9ca3af"
                             value={sabzi}
                             onChangeText={setSabzi}
                         />
 
                         {/* Prices */}
-                        <View style={tw`flex-row gap-4 mb-4`}>
+                        <View style={tw`flex-row gap-3 mb-4`}>
                             <View style={tw`flex-1`}>
-                                <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Half Price</Text>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Half Price</Text>
                                 <TextInput
-                                    style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 font-bold text-gray-900`}
+                                    style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 font-bold text-gray-900 text-sm`}
                                     keyboardType="numeric"
+                                    placeholder="₹50"
+                                    placeholderTextColor="#9ca3af"
                                     value={halfPrice}
                                     onChangeText={setHalfPrice}
                                 />
                             </View>
                             <View style={tw`flex-1`}>
-                                <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Price</Text>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Price</Text>
                                 <TextInput
-                                    style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 font-bold text-gray-900`}
+                                    style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 font-bold text-gray-900 text-sm`}
                                     keyboardType="numeric"
+                                    placeholder="₹80"
+                                    placeholderTextColor="#9ca3af"
                                     value={fullPrice}
                                     onChangeText={setFullPrice}
                                 />
@@ -298,44 +338,45 @@ export const MenuScreen = () => {
                         </View>
 
                         {/* Add-ons */}
-                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Dabba Add-on</Text>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Dabba Add-on</Text>
                         <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
                             {FULL_ADDON_SUGGESTIONS.map(a => (
                                 <Pressable
                                     key={a}
                                     onPress={() => { setFullAddon(a); setShowCustomAddon(false); }}
-                                    style={[tw`px-4 py-2 rounded-full border`, fullAddon === a ? tw`bg-emerald-100 border-emerald-400` : tw`bg-white border-gray-200`]}
+                                    style={[tw`px-3.5 py-2 rounded-xl border`, fullAddon === a ? tw`bg-emerald-100 border-emerald-400` : tw`bg-white border-gray-200`]}
                                 >
-                                    <Text style={[tw`text-[10px] font-bold`, fullAddon === a ? tw`text-emerald-700` : tw`text-gray-500`]}>+ {a}</Text>
+                                    <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, fullAddon === a ? tw`text-emerald-700` : tw`text-gray-500`]}>+ {a}</Text>
                                 </Pressable>
                             ))}
                             <Pressable
                                 onPress={() => { setFullAddon(""); setShowCustomAddon(true); }}
-                                style={[tw`px-4 py-2 rounded-full border`, showCustomAddon ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
+                                style={[tw`px-3.5 py-2 rounded-xl border`, showCustomAddon ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
                             >
-                                <Text style={tw`text-[10px] font-bold text-gray-500`}>+ Other</Text>
+                                <Text style={tw`text-[10px] font-black uppercase tracking-wide text-gray-500`}>+ Other</Text>
                             </Pressable>
                         </View>
 
                         {showCustomAddon && (
                             <TextInput
-                                style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
+                                style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900 text-sm`}
                                 placeholder="Custom Add-on"
+                                placeholderTextColor="#9ca3af"
                                 value={customFullAddon}
                                 onChangeText={setCustomFullAddon}
                             />
                         )}
 
                         {/* Free Add-ons */}
-                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Free Add-ons</Text>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Free Add-ons</Text>
                         <View style={tw`flex-row flex-wrap gap-2 mb-6`}>
                             {FREE_ADDONS.map(a => (
                                 <Pressable
                                     key={a}
                                     onPress={() => toggleFreeAddon(a)}
-                                    style={[tw`px-4 py-2 rounded-full border`, freeAddons.includes(a) ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                    style={[tw`px-3.5 py-2 rounded-xl border`, freeAddons.includes(a) ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
                                 >
-                                    <Text style={[tw`text-[10px] font-bold`, freeAddons.includes(a) ? tw`text-yellow-700` : tw`text-gray-500`]}>{a}</Text>
+                                    <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, freeAddons.includes(a) ? tw`text-yellow-700` : tw`text-gray-500`]}>{a}</Text>
                                 </Pressable>
                             ))}
                         </View>
@@ -431,6 +472,6 @@ export const MenuScreen = () => {
                 </Pressable>
 
             </ScrollView>
-        </View>
+        </Animated.View>
     );
 };

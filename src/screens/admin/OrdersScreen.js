@@ -57,46 +57,56 @@ export const OrdersScreen = () => {
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* Creative Header - Continuity */}
-            <LinearGradient
-                colors={['#fff', '#faf9f6']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
-            >
-                <Text style={tw`text-2xl font-black text-gray-900`}>Daily Orders</Text>
-                <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Confirm & Batch Production</Text>
-            </LinearGradient>
-
-            <View style={tw`p-6`}>
-                {/* Search */}
-                <View style={tw`bg-white rounded-3xl flex-row items-center px-6 shadow-sm border border-gray-100 mb-4`}>
-                    <Search size={20} color="#9ca3af" />
-                    <TextInput
-                        style={tw`flex-1 py-4 ml-3 font-bold text-gray-900`}
-                        placeholder="Search student name..."
-                        value={searchTerm}
-                        onChangeText={setSearchTerm}
-                    />
-                </View>
-
-                {/* Filters */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={tw`flex-row mb-6`}>
-                    {['ALL', 'PENDING', 'CONFIRMED'].map(f => (
-                        <Pressable
-                            key={f}
-                            onPress={() => setStatusFilter(f)}
-                            style={[tw`px-6 py-2 rounded-full border mr-2`, statusFilter === f ? tw`bg-yellow-400 border-yellow-400` : tw`bg-white border-gray-200`]}
-                        >
-                            <Text style={[tw`text-xs font-black`, statusFilter === f ? tw`text-gray-900` : tw`text-gray-400`]}>{f}</Text>
-                        </Pressable>
-                    ))}
-                </ScrollView>
-
-                <ScrollView
-                    contentContainerStyle={tw`pb-64`}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            {/* Absolute Creative Header - Fixed & Sticky */}
+            <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
+                <LinearGradient
+                    colors={['#fff', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={tw`px-6 pt-16 pb-6 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
                 >
+                    <View style={tw`mb-4`}>
+                        <Text style={tw`text-2xl font-black text-gray-900`}>Daily Orders</Text>
+                        <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Confirm & Batch Production</Text>
+                    </View>
+
+                    {/* Sticky Controls */}
+                    <View style={tw`gap-4`}>
+                        {/* Search */}
+                        <View style={tw`bg-white rounded-2xl flex-row items-center px-4 shadow-sm border border-gray-100`}>
+                            <Search size={16} color="#9ca3af" strokeWidth={2.5} />
+                            <TextInput
+                                style={tw`flex-1 py-3 ml-2 font-bold text-gray-900 text-sm`}
+                                placeholder="Search student identity..."
+                                value={searchTerm}
+                                onChangeText={setSearchTerm}
+                            />
+                        </View>
+
+                        {/* Filters */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={tw`flex-row`}>
+                            {['ALL', 'PENDING', 'CONFIRMED'].map(f => (
+                                <Pressable
+                                    key={f}
+                                    onPress={() => setStatusFilter(f)}
+                                    style={[tw`px-5 py-2 rounded-xl border mr-2`, statusFilter === f ? tw`bg-gray-900 border-gray-900` : tw`bg-white border-gray-100`]}
+                                >
+                                    <Text style={[tw`text-[9px] font-black uppercase tracking-widest`, statusFilter === f ? tw`text-white` : tw`text-gray-400`]}>{f}</Text>
+                                </Pressable>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </LinearGradient>
+            </View>
+
+            <ScrollView
+                style={tw`flex-1`}
+                contentContainerStyle={tw`p-6 pt-68 pb-64`}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                showsVerticalScrollIndicator={false}
+            >
+
+                <View>
                     {filteredOrders.map(o => {
                         const isConfirmed = o.status === 'CONFIRMED';
                         return (
@@ -153,8 +163,8 @@ export const OrdersScreen = () => {
                             <Text style={tw`text-gray-400 font-black mt-4`}>No orders found</Text>
                         </View>
                     )}
-                </ScrollView>
-            </View>
+                </View>
+            </ScrollView>
         </View>
     );
 };
