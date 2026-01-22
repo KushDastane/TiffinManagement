@@ -71,10 +71,10 @@ const WalletCard = ({ balance, loading }) => {
                     <View style={tw`mb-12`}>
                         <Text style={tw`text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-2`}>Current Balance</Text>
                         <View style={tw`flex-row items-baseline`}>
-                            <Text style={tw`text-5xl font-black text-white tracking-tighter`}>
+                            <Text style={tw`text-5xl font-black ${balance < 0 ? 'text-red-400' : 'text-white'} tracking-tighter`}>
                                 ₹{balance?.toFixed(0) || 0}
                             </Text>
-                            <Text style={tw`text-lg font-black text-white/40 ml-1 mb-1`}>.00</Text>
+                            <Text style={tw`text-lg font-black ${balance < 0 ? 'text-red-400/60' : 'text-white/40'} ml-1 mb-1`}>.00</Text>
                         </View>
                         <View style={tw`flex-row items-center gap-2 mt-4`}>
                             <View style={[tw`w-2 h-2 rounded-full`, balance < 0 ? tw`bg-red-500` : tw`bg-emerald-400 shadow-lg shadow-emerald-500/50`]} />
