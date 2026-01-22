@@ -51,9 +51,15 @@ const WalletCard = ({ balance, loading }) => {
                         <Text style={tw`text-4xl font-bold text-white mb-2`}>
                             ₹{balance?.toFixed(0) || 0}
                         </Text>
-                        <Text style={tw`text-sm text-green-400 mb-8 font-medium`}>
-                            Enough for approx. {Math.floor((balance || 0) / 50)} meals
-                        </Text>
+                        {balance < 0 ? (
+                            <Text style={tw`text-sm text-red-400 mb-8 font-medium`}>
+                                Please pay your dues soon
+                            </Text>
+                        ) : (
+                            <Text style={tw`text-sm text-green-400 mb-8 font-medium`}>
+                                Enough for approx. {Math.floor((balance || 0) / 50)} meals
+                            </Text>
+                        )}
                     </View>
                 )}
 
@@ -168,7 +174,7 @@ export const HomeScreen = () => {
         const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, (data) => {
             setMyOrders(data);
             // Find today's order
-            const today = data.find(o => o.dateId === dateId && o.mealType === activeSlot?.toUpperCase());
+            const today = data.find(o => o.dateId === dateId && o.slot === activeSlot);
             setTodaysOrder(today);
         });
 
@@ -236,7 +242,10 @@ export const HomeScreen = () => {
                     <View style={tw`flex-row justify-between items-start mb-4`}>
                         <View style={tw`flex-row items-center gap-3`}>
                             <View style={tw`w-10 h-10 rounded-xl bg-yellow-100 items-center justify-center`}>
-                                <Text style={tw`text-lg`}>🥘</Text>
+                                <Text style={tw`text-lg`}>
+                                    {!todaysOrder ? "🍱" :
+                                        (todaysOrder.status === 'CONFIRMED' ? "👩‍🍳" : "⌛")}
+                                </Text>
                             </View>
                             <View style={tw`bg-yellow-100 px-3 py-1 rounded-full`}>
                                 <Text style={tw`text-[10px] font-bold text-yellow-800 uppercase`}>
@@ -245,24 +254,29 @@ export const HomeScreen = () => {
                             </View>
                         </View>
                         {todaysOrder ? (
-                            <CheckCircle size={28} color="#16a34a" fill="#dcfce7" />
+                            todaysOrder.status === 'CONFIRMED' ? (
+                                <CheckCircle size={28} color="#16a34a" fill="#dcfce7" />
+                            ) : (
+                                <Clock size={28} color="#eab308" fill="#fef9c3" />
+                            )
                         ) : (
-                            <Clock size={28} color="#f97316" fill="#ffedd5" />
+                            <Clock size={28} color="#9ca3af" fill="#f3f4f6" />
                         )}
                     </View>
 
                     <Text style={tw`text-xl font-bold text-gray-900 mb-2`}>
-                        {todaysOrder
-                            ? "Meal Confirmed"
-                            : "No Order Placed"}
+                        {!todaysOrder ? "No Order Placed" :
+                            (todaysOrder.status === 'CONFIRMED' ? "Meal Confirmed" : "Waiting to confirm")}
                     </Text>
 
                     <Text style={tw`text-gray-500 font-medium text-sm mb-6 leading-5`}>
-                        {todaysOrder
-                            ? "Your tiffin is being prepared with care."
-                            : kitchenOpen
-                                ? "Place your order before the cutoff time."
-                                : "Ordering is currently closed."}
+                        {!todaysOrder ? (
+                            kitchenOpen ? "Place your order before the cutoff time." : "Ordering is currently closed."
+                        ) : (
+                            todaysOrder.status === 'CONFIRMED' ?
+                                "Your meal is being prepared with love. You will be informed once it's ready." :
+                                "If it's taking longer to confirm try calling admin."
+                        )}
                     </Text>
 
                     {kitchenOpen && !todaysOrder && (

@@ -45,7 +45,7 @@ export const listenToAdminStats = (kitchenId, slot, callback) => {
         const filtered = slot ? orders.filter(o => o.slot === slot) : orders;
 
         stats.totalOrders = filtered.length;
-        stats.pendingOrders = filtered.filter(o => o.status === 'placed' || o.status === 'PENDING').length;
+        stats.pendingOrders = filtered.filter(o => o.status === 'PENDING').length;
 
         // Unique students (userId)
         const students = new Set(filtered.map(o => o.userId));
@@ -71,6 +71,10 @@ export const listenToAdminStats = (kitchenId, slot, callback) => {
 export const getCookingSummary = (orders, menuSlotData) => {
     if (!orders || orders.length === 0) return null;
 
+    // Only count confirmed orders for cooking
+    const confirmedOrders = orders.filter(o => o.status === 'CONFIRMED');
+    if (confirmedOrders.length === 0) return null;
+
     const summary = {
         halfDabba: 0,
         fullDabba: 0,
@@ -79,7 +83,7 @@ export const getCookingSummary = (orders, menuSlotData) => {
         breakdown: {}
     };
 
-    orders.forEach(o => {
+    confirmedOrders.forEach(o => {
         // Based on variant/type
         if (o.type === 'ROTI_SABZI') {
             // Simplified check: usually mainItem name or variant label

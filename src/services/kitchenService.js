@@ -3,6 +3,7 @@ import {
     addDoc,
     doc,
     updateDoc,
+    getDoc,
     query,
     where,
     getDocs,
@@ -137,5 +138,40 @@ export const updateKitchen = async (kitchenId, updates) => {
     } catch (error) {
         console.error("Error updating kitchen:", error);
         return { error: error.message };
+    }
+};
+
+export const getKitchenConfig = async (kitchenId) => {
+    try {
+        if (!kitchenId) return null;
+        const docRef = doc(db, 'kitchens', kitchenId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            const data = snap.data();
+            return {
+                openTime: data.openTime || '07:00',
+                closeTime: data.closeTime || '21:00',
+                holiday: data.holiday || { active: false, from: '', to: '', reason: '' }
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error("Error getting kitchen config:", error);
+        return null;
+    }
+};
+
+export const updateKitchenConfig = async (kitchenId, config) => {
+    try {
+        if (!kitchenId) throw new Error("Missing kitchen ID");
+        const kitchenRef = doc(db, 'kitchens', kitchenId);
+        await updateDoc(kitchenRef, {
+            ...config,
+            updatedAt: serverTimestamp()
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating kitchen config:", error);
+        return { success: false, error: error.message };
     }
 };

@@ -35,7 +35,7 @@ export const placeOrder = async (kitchenId, orderData) => {
             ...orderData,
             kitchenId,
             dateId,
-            status: orderData.status || 'placed',
+            status: orderData.status || 'PENDING',
             isTrial: orderData.isTrial || false,
             paymentStatus: orderData.paymentStatus || 'pending',
             paymentMethod: orderData.paymentMethod || 'wallet', // Default to wallet for regular students

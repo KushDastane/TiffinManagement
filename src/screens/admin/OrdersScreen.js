@@ -34,7 +34,7 @@ export const OrdersScreen = () => {
         return orders.filter(o => {
             const matchesSearch = !searchTerm || (o.userDisplayName || 'Student').toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === 'ALL' ||
-                (statusFilter === 'PENDING' && (o.status === 'placed' || o.status === 'PENDING')) ||
+                (statusFilter === 'PENDING' && o.status === 'PENDING') ||
                 (statusFilter === 'CONFIRMED' && o.status === 'CONFIRMED');
             return matchesSearch && matchesStatus;
         });

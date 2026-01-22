@@ -188,7 +188,7 @@ export const KhataScreen = () => {
                     <Text style={tw`text-xs uppercase tracking-wide text-gray-500 font-bold mb-1`}>Current Balance</Text>
                     <Text style={[
                         tw`text-4xl font-black mb-2`,
-                        (summary?.balance || 0) > 0 ? tw`text-red-500` : tw`text-green-500`
+                        (summary?.balance || 0) < 0 ? tw`text-red-500` : tw`text-green-500`
                     ]}>
                         ₹{summary?.balance || 0}
                     </Text>

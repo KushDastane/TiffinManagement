@@ -113,7 +113,12 @@ export const getStudentBalance = async (kitchenId, userId) => {
         // But for MVP, let's include 'placed' as "Tentative Debt" or just all.
         // Let's stick to: Orders = Debit.
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
-        const qOrders = query(ordersRef, where('userId', '==', userId), where('isTrial', '==', false));
+        const qOrders = query(
+            ordersRef,
+            where('userId', '==', userId),
+            where('isTrial', '==', false),
+            where('status', '==', 'CONFIRMED')
+        );
         const ordersSnap = await getDocs(qOrders);
         const totalDebits = ordersSnap.docs.reduce((sum, doc) => sum + (doc.data().totalAmount || 0), 0);
 
@@ -129,7 +134,7 @@ export const getStudentBalance = async (kitchenId, userId) => {
         const pendingSnap = await getDocs(qPendingPayments);
 
         return {
-            balance: totalDebits - totalCredits,
+            balance: totalCredits - totalDebits,
             totalOrders: totalDebits,
             totalPaid: totalCredits,
             orders: ordersSnap.docs.map(d => ({ ...d.data(), id: d.id, isDebit: true, date: d.data().createdAt })),
