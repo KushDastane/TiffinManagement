@@ -34,32 +34,52 @@ import {
 const WalletCard = ({ balance, loading }) => {
     const navigation = useNavigation();
     return (
-        <View style={tw`mb-6`}>
+        <View style={tw`mb-8`}>
             <LinearGradient
-                colors={['#111827', '#1f2937']}
+                colors={['#0f172a', '#1e293b', '#020617']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={tw`rounded-[35px] p-8 shadow-2xl border border-gray-800`}
+                style={tw`rounded-[40px] p-8 shadow-2xl relative overflow-hidden border border-white/5`}
             >
-                <View style={tw`flex-row justify-between items-center mb-10`}>
-                    <View style={tw`w-10 h-10 rounded-xl bg-white/5 items-center justify-center border border-white/10`}>
-                        <CreditCard size={18} color="#9ca3af" />
+                {/* Decorative Background Elements */}
+                <View style={[tw`absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full`, { transform: [{ scale: 1.5 }] }]} />
+                <View style={[tw`absolute -bottom-20 -left-10 w-32 h-32 bg-yellow-500/5 rounded-full`, { transform: [{ scale: 2 }] }]} />
+
+                <View style={tw`flex-row justify-between items-center mb-12`}>
+                    <View style={tw`gap-1`}>
+                        <View style={tw`w-12 h-9 rounded-lg bg-yellow-400/20 border border-yellow-400/30 items-center justify-center overflow-hidden`}>
+                            <LinearGradient
+                                colors={['#fbbf24', '#f59e0b']}
+                                style={tw`w-full h-full opacity-30`}
+                            />
+                            <View style={tw`absolute w-full h-[1px] bg-yellow-400/20 top-3`} />
+                            <View style={tw`absolute w-full h-[1px] bg-yellow-400/20 top-6`} />
+                            <View style={tw`absolute h-full w-[1px] bg-yellow-400/20 left-4`} />
+                            <View style={tw`absolute h-full w-[1px] bg-yellow-400/20 left-8`} />
+                        </View>
                     </View>
-                    <View style={tw`bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20`}>
-                        <Text style={tw`text-[8px] font-black text-yellow-500 uppercase tracking-widest`}>Premium Wallet</Text>
+                    <View style={tw`bg-white/5 px-4 py-1.5 rounded-full border border-white/10`}>
+                        <Text style={tw`text-[8px] font-black text-white/60 uppercase tracking-widest`}>E-Wallet</Text>
                     </View>
                 </View>
 
-                {loading ? <ActivityIndicator color="white" /> : (
-                    <View style={tw`mb-10`}>
-                        <Text style={tw`text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1`}>Available Balance</Text>
-                        <Text style={tw`text-5xl font-black text-white tracking-tighter`}>
-                            ₹{balance?.toFixed(0) || 0}
-                        </Text>
-                        <View style={tw`flex-row items-center gap-2 mt-3`}>
-                            <View style={[tw`w-1.5 h-1.5 rounded-full`, balance < 0 ? tw`bg-red-500` : tw`bg-yellow-400`]} />
-                            <Text style={tw`text-[9px] font-black uppercase tracking-widest ${balance < 0 ? 'text-red-400' : 'text-yellow-400/80'}`}>
-                                {balance < 0 ? "Action Required" : "Credit Status: Good"}
+                {loading ? (
+                    <View style={tw`mb-12 items-start`}>
+                        <ActivityIndicator color="#fbbf24" />
+                    </View>
+                ) : (
+                    <View style={tw`mb-12`}>
+                        <Text style={tw`text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-2`}>Current Balance</Text>
+                        <View style={tw`flex-row items-baseline`}>
+                            <Text style={tw`text-5xl font-black text-white tracking-tighter`}>
+                                ₹{balance?.toFixed(0) || 0}
+                            </Text>
+                            <Text style={tw`text-lg font-black text-white/40 ml-1 mb-1`}>.00</Text>
+                        </View>
+                        <View style={tw`flex-row items-center gap-2 mt-4`}>
+                            <View style={[tw`w-2 h-2 rounded-full`, balance < 0 ? tw`bg-red-500` : tw`bg-emerald-400 shadow-lg shadow-emerald-500/50`]} />
+                            <Text style={tw`text-[9px] font-black uppercase tracking-widest ${balance < 0 ? 'text-red-400' : 'text-emerald-400/80'}`}>
+                                {balance < 0 ? "Dues Alert" : "Account Status: Active"}
                             </Text>
                         </View>
                     </View>
@@ -68,12 +88,14 @@ const WalletCard = ({ balance, loading }) => {
                 <Pressable
                     onPress={() => navigation.navigate('Khata')}
                     style={({ pressed }) => [
-                        tw`w-full bg-yellow-400 rounded-2xl py-4 flex-row items-center justify-center gap-2 shadow-lg`,
+                        tw`w-full bg-white rounded-2xl py-4.5 flex-row items-center justify-center gap-3 shadow-xl`,
                         pressed && tw`opacity-90 scale-[0.98]`
                     ]}
                 >
-                    <Plus size={16} color="black" strokeWidth={3} />
-                    <Text style={tw`text-black font-black text-[11px] uppercase tracking-widest`}>Add Money</Text>
+                    <View style={tw`bg-gray-900 w-6 h-6 rounded-lg items-center justify-center`}>
+                        <Plus size={12} color="white" strokeWidth={4} />
+                    </View>
+                    <Text style={tw`text-gray-100 font-black text-[11px] uppercase tracking-widest`}>Add Funds</Text>
                 </Pressable>
             </LinearGradient>
         </View>
