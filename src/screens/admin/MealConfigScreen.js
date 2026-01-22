@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Switch, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Switch, ActivityIndicator, Alert, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTenant } from '../../contexts/TenantContext';
 import { updateKitchen } from '../../services/kitchenService';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -38,6 +39,42 @@ export const MealConfigScreen = () => {
             }
         };
     });
+
+    // Time Picker State
+    const [pickerConfig, setPickerConfig] = useState({ show: false, index: null, field: null, value: new Date() });
+
+    const openPicker = (index, field, currentTimeString) => {
+        const date = new Date();
+        if (currentTimeString) {
+            const [hours, minutes] = currentTimeString.split(':');
+            date.setHours(parseInt(hours) || 9, parseInt(minutes) || 0, 0, 0);
+        } else {
+            date.setHours(9, 0, 0, 0);
+        }
+        setPickerConfig({ show: true, index, field, value: date });
+    };
+
+    const onTimeChange = (event, selectedDate) => {
+        if (event.type === 'dismissed') {
+            setPickerConfig(prev => ({ ...prev, show: false }));
+            return;
+        }
+
+        const currentDate = selectedDate || pickerConfig.value;
+        if (Platform.OS === 'android') {
+            setPickerConfig(prev => ({ ...prev, show: false }));
+        }
+
+        if (selectedDate) {
+            const hours = selectedDate.getHours().toString().padStart(2, '0');
+            const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+            updateSlot(pickerConfig.index, { [pickerConfig.field]: timeString });
+
+            // Update picker value too to avoid jump
+            setPickerConfig(prev => ({ ...prev, value: selectedDate }));
+        }
+    };
 
     const handleSave = async () => {
         setLoading(true);
@@ -198,35 +235,33 @@ export const MealConfigScreen = () => {
                                 <View style={tw`flex-row gap-4 mb-4`}>
                                     <View style={tw`flex-1`}>
                                         <Text style={tw`text-[10px] text-gray-400 font-black mb-1 uppercase tracking-widest`}>Opens At</Text>
-                                        <TextInput
+                                        <Pressable
+                                            onPress={() => openPicker(idx, 'startTime', m.startTime)}
                                             style={{
-                                                backgroundColor: '#f9fafb', // bg-gray-50
+                                                backgroundColor: '#f9fafb',
                                                 borderWidth: 1,
-                                                borderColor: '#f3f4f6', // border-gray-100
-                                                borderRadius: 12, // rounded-xl
-                                                padding: 12, // p-3
-                                                fontWeight: 'bold' // font-bold
+                                                borderColor: '#f3f4f6',
+                                                borderRadius: 12,
+                                                padding: 12,
                                             }}
-                                            value={m.startTime}
-                                            onChangeText={(text) => updateSlot(idx, { startTime: text })}
-                                            placeholder="HH:MM"
-                                        />
+                                        >
+                                            <Text style={{ fontWeight: 'bold', color: '#1f2937' }}>{m.startTime || 'Select Time'}</Text>
+                                        </Pressable>
                                     </View>
                                     <View style={tw`flex-1`}>
                                         <Text style={tw`text-[10px] text-gray-400 font-black mb-1 uppercase tracking-widest`}>Closes At</Text>
-                                        <TextInput
+                                        <Pressable
+                                            onPress={() => openPicker(idx, 'endTime', m.endTime)}
                                             style={{
-                                                backgroundColor: '#f9fafb', // bg-gray-50
+                                                backgroundColor: '#f9fafb',
                                                 borderWidth: 1,
-                                                borderColor: '#f3f4f6', // border-gray-100
-                                                borderRadius: 12, // rounded-xl
-                                                padding: 12, // p-3
-                                                fontWeight: 'bold' // font-bold
+                                                borderColor: '#f3f4f6',
+                                                borderRadius: 12,
+                                                padding: 12,
                                             }}
-                                            value={m.endTime}
-                                            onChangeText={(text) => updateSlot(idx, { endTime: text })}
-                                            placeholder="HH:MM"
-                                        />
+                                        >
+                                            <Text style={{ fontWeight: 'bold', color: '#1f2937' }}>{m.endTime || 'Select Time'}</Text>
+                                        </Pressable>
                                     </View>
                                 </View>
 
@@ -397,6 +432,26 @@ export const MealConfigScreen = () => {
 
                 <View style={tw`h-20`} />
             </ScrollView>
+
+            {pickerConfig.show && (
+                <DateTimePicker
+                    value={pickerConfig.value}
+                    mode="time"
+                    is24Hour={false}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onTimeChange}
+                    style={Platform.OS === 'ios' ? { backgroundColor: 'white', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 } : {}}
+                />
+            )}
+
+            {/* iOS Close Button for Picker */}
+            {Platform.OS === 'ios' && pickerConfig.show && (
+                <View style={tw`absolute bottom-[200px] left-0 right-0 bg-gray-100 p-2 z-50 flex-row justify-end border-t border-gray-200`}>
+                    <Pressable onPress={() => setPickerConfig(prev => ({ ...prev, show: false }))} style={tw`bg-blue-500 px-4 py-2 rounded-lg`}>
+                        <Text style={tw`text-white font-bold`}>Done</Text>
+                    </Pressable>
+                </View>
+            )}
         </View>
     );
 };

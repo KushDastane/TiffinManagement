@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { getKitchenConfig, updateKitchenConfig } from '../../services/kitchenService';
@@ -8,15 +9,16 @@ import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck } from 'lucide-react-native';
 
-const TimeInput = ({ label, value, onChange }) => (
+// Helper Component for Triggers
+const InputTrigger = ({ label, value, onPress, placeholder }) => (
     <View style={tw`flex-1`}>
         <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>{label}</Text>
-        <TextInput
-            style={tw`bg-white rounded-2xl px-4 py-3 border border-gray-100 font-bold text-gray-900`}
-            value={value}
-            onChangeText={onChange}
-            placeholder="00:00"
-        />
+        <Pressable
+            onPress={onPress}
+            style={tw`bg-white rounded-2xl px-4 py-3 border border-gray-100`}
+        >
+            <Text style={tw`font-bold text-gray-900`}>{value || placeholder}</Text>
+        </Pressable>
     </View>
 );
 
@@ -36,6 +38,57 @@ export const SettingsScreen = () => {
         };
         load();
     }, [tenant?.id]);
+
+    // Picker State
+    const [picker, setPicker] = useState({ show: false, mode: 'time', field: null, subField: null, value: new Date() });
+
+    const openPicker = (mode, field, subField, currentValue) => {
+        let date = new Date();
+        if (mode === 'time' && currentValue) {
+            const [h, m] = currentValue.split(':');
+            date.setHours(parseInt(h) || 0, parseInt(m) || 0, 0, 0);
+        } else if (mode === 'date' && currentValue) {
+            const parts = currentValue.split('-');
+            if (parts.length === 3) date = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+        setPicker({ show: true, mode, field, subField, value: date });
+    };
+
+    const handlePickerChange = (event, selectedDate) => {
+        if (event.type === 'dismissed') {
+            setPicker(prev => ({ ...prev, show: false }));
+            return;
+        }
+
+        const currentDate = selectedDate || picker.value;
+        if (Platform.OS === 'android') {
+            setPicker(prev => ({ ...prev, show: false }));
+        }
+
+        if (selectedDate) {
+            let newValue;
+            if (picker.mode === 'time') {
+                const h = selectedDate.getHours().toString().padStart(2, '0');
+                const m = selectedDate.getMinutes().toString().padStart(2, '0');
+                newValue = `${h}:${m}`;
+            } else {
+                const y = selectedDate.getFullYear();
+                const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const d = String(selectedDate.getDate()).padStart(2, '0');
+                newValue = `${y}-${m}-${d}`;
+            }
+
+            // Update Config
+            if (picker.field === 'holiday') {
+                setConfig(prev => ({ ...prev, holiday: { ...prev.holiday, [picker.subField]: newValue } }));
+            } else {
+                setConfig(prev => ({ ...prev, [picker.field]: newValue }));
+            }
+
+            // Update picker val
+            setPicker(prev => ({ ...prev, value: selectedDate }));
+        }
+    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -106,8 +159,8 @@ export const SettingsScreen = () => {
                         <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Operational Hours</Text>
                     </View>
                     <View style={tw`flex-row gap-4`}>
-                        <TimeInput label="Opens At" value={config?.openTime} onChange={(v) => setConfig({ ...config, openTime: v })} />
-                        <TimeInput label="Closes At" value={config?.closeTime} onChange={(v) => setConfig({ ...config, closeTime: v })} />
+                        <InputTrigger label="Opens At" value={config?.openTime} onPress={() => openPicker('time', 'openTime', null, config?.openTime)} placeholder="00:00" />
+                        <InputTrigger label="Closes At" value={config?.closeTime} onPress={() => openPicker('time', 'closeTime', null, config?.closeTime)} placeholder="00:00" />
                     </View>
                 </View>
 
@@ -129,24 +182,18 @@ export const SettingsScreen = () => {
                     {holiday.active && (
                         <View style={tw`gap-4 mt-2`}>
                             <View style={tw`flex-row gap-4`}>
-                                <View style={tw`flex-1`}>
-                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>From</Text>
-                                    <TextInput
-                                        style={tw`bg-gray-50 rounded-2xl px-4 py-3 border border-gray-100 font-bold text-gray-900`}
-                                        value={holiday.from}
-                                        onChangeText={(v) => setConfig({ ...config, holiday: { ...holiday, from: v } })}
-                                        placeholder="YYYY-MM-DD"
-                                    />
-                                </View>
-                                <View style={tw`flex-1`}>
-                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>To</Text>
-                                    <TextInput
-                                        style={tw`bg-gray-50 rounded-2xl px-4 py-3 border border-gray-100 font-bold text-gray-900`}
-                                        value={holiday.to}
-                                        onChangeText={(v) => setConfig({ ...config, holiday: { ...holiday, to: v } })}
-                                        placeholder="YYYY-MM-DD"
-                                    />
-                                </View>
+                                <InputTrigger
+                                    label="From"
+                                    value={holiday.from}
+                                    onPress={() => openPicker('date', 'holiday', 'from', holiday.from)}
+                                    placeholder="YYYY-MM-DD"
+                                />
+                                <InputTrigger
+                                    label="To"
+                                    value={holiday.to}
+                                    onPress={() => openPicker('date', 'holiday', 'to', holiday.to)}
+                                    placeholder="YYYY-MM-DD"
+                                />
                             </View>
                             <TextInput
                                 style={tw`bg-gray-50 rounded-2xl px-6 py-4 border border-gray-100 font-bold text-gray-900`}
@@ -174,6 +221,27 @@ export const SettingsScreen = () => {
 
                 <Text style={tw`text-center text-xs text-gray-300 mt-10 uppercase font-bold tracking-widest`}>DabbaMe v1.0.0 • Production</Text>
             </ScrollView>
+
+            {picker.show && (
+                <DateTimePicker
+                    value={picker.value}
+                    mode={picker.mode}
+                    is24Hour={picker.mode === 'time'}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handlePickerChange}
+                    style={Platform.OS === 'ios' ? { backgroundColor: 'white', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 } : {}}
+                    minimumDate={picker.mode === 'date' ? new Date() : undefined}
+                />
+            )}
+
+            {/* iOS Done Button */}
+            {Platform.OS === 'ios' && picker.show && (
+                <View style={tw`absolute bottom-[200px] left-0 right-0 bg-gray-100 p-2 z-50 flex-row justify-end border-t border-gray-200`}>
+                    <Pressable onPress={() => setPicker(prev => ({ ...prev, show: false }))} style={tw`bg-blue-500 px-4 py-2 rounded-lg`}>
+                        <Text style={tw`text-white font-bold`}>Done</Text>
+                    </Pressable>
+                </View>
+            )}
         </View>
     );
 };

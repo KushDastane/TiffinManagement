@@ -18,7 +18,7 @@ const SettingsStackNav = createNativeStackNavigator();
 /* ---------------- STUDENTS STACK ---------------- */
 
 const StudentsStack = () => (
-    <StudentStackNav.Navigator screenOptions={{ headerShown: false }}>
+    <StudentStackNav.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <StudentStackNav.Screen
             name="StudentsList"
             component={StudentsScreen}
@@ -34,7 +34,7 @@ const StudentsStack = () => (
 /* ---------------- SETTINGS STACK ---------------- */
 
 const AdminSettingsStack = () => (
-    <SettingsStackNav.Navigator screenOptions={{ headerShown: false }}>
+    <SettingsStackNav.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <SettingsStackNav.Screen
             name="AdminSettingsHome"
             component={SettingsScreen}

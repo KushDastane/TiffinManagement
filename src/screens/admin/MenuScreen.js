@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Animated } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Animated, Dimensions } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, isAfterResetTime } from '../../services/menuService';
@@ -29,7 +29,7 @@ export const MenuScreen = () => {
     const [sabzi, setSabzi] = useState("");
     const [halfPrice, setHalfPrice] = useState("50");
     const [fullPrice, setFullPrice] = useState("80");
-    const [fullAddon, setFullAddon] = useState("");
+    const [fullAddon, setFullAddon] = useState("Dal Rice");
     const [customFullAddon, setCustomFullAddon] = useState("");
     const [showCustomAddon, setShowCustomAddon] = useState(false);
     const [freeAddons, setFreeAddons] = useState([]);
@@ -86,7 +86,7 @@ export const MenuScreen = () => {
             setSabzi("");
             setHalfPrice("50");
             setFullPrice("80");
-            setFullAddon("");
+            setFullAddon("Dal Rice");
             setCustomFullAddon("");
             setShowCustomAddon(false);
             setFreeAddons([]);
@@ -95,14 +95,12 @@ export const MenuScreen = () => {
             setExtras([{ name: "Roti", price: "7" }]);
         }
 
-        // Animate transition
+        // Start animation
+        setViewMode('edit');
         Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
             Animated.timing(slideAnim, { toValue: 1, duration: 300, useNativeDriver: true })
-        ]).start(() => {
-            setViewMode('edit');
-            fadeAnim.setValue(1);
-        });
+        ]).start();
     };
 
     const handleSave = async () => {
@@ -141,7 +139,6 @@ export const MenuScreen = () => {
             // Animate back to summary
             Animated.parallel([
                 Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-                Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true })
             ]).start(() => {
                 setViewMode('summary');
             });
@@ -156,9 +153,14 @@ export const MenuScreen = () => {
 
     if (loading) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
 
-    if (viewMode === 'summary') {
-        return (
-            <Animated.View style={[tw`flex-1 bg-[#faf9f6]`, { opacity: fadeAnim }]}>
+    const { width } = Dimensions.get('window');
+    const summaryTranslate = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -width] });
+    const editTranslate = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [width, 0] });
+
+    return (
+        <View style={tw`flex-1 bg-[#faf9f6]`}>
+            {/* Summary View */}
+            <Animated.View style={[tw`absolute top-0 bottom-0 left-0 w-full`, { transform: [{ translateX: summaryTranslate }] }]}>
                 {/* Absolute Header - Summary View */}
                 <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
                     <LinearGradient
@@ -242,236 +244,226 @@ export const MenuScreen = () => {
                     })}
                 </ScrollView>
             </Animated.View>
-        );
-    }
 
-    // Edit View
-    const translateX = slideAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [400, 0]
-    });
-
-    return (
-        <Animated.View style={[tw`flex-1 bg-[#faf9f6]`, { transform: [{ translateX }] }]}>
-            {/* Absolute Header - Edit Mode */}
-            <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
-                <LinearGradient
-                    colors={['#fff', '#faf9f6']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
-                >
-                    <View style={tw`flex-row items-center gap-4`}>
-                        <Pressable
-                            onPress={() => {
-                                Animated.parallel([
-                                    Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-                                    Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true })
-                                ]).start(() => setViewMode('summary'));
-                            }}
-                            style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100`}
-                        >
-                            <ChevronLeft size={20} color="#111827" />
-                        </Pressable>
-                        <View>
-                            <Text style={tw`text-2xl font-black text-gray-900 capitalize`}>Set {editingSlot}</Text>
-                            <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Configuring Daily Meal</Text>
+            {/* Edit View */}
+            <Animated.View style={[tw`absolute top-0 bottom-0 left-0 w-full bg-[#faf9f6]`, { transform: [{ translateX: editTranslate }] }]}>
+                {/* Absolute Header - Edit Mode */}
+                <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
+                    <LinearGradient
+                        colors={['#fff', '#faf9f6']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+                    >
+                        <View style={tw`flex-row items-center gap-4`}>
+                            <Pressable
+                                onPress={() => {
+                                    Animated.parallel([
+                                        Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+                                    ]).start(() => setViewMode('summary'));
+                                }}
+                                style={tw`w-11 h-11 rounded-2xl bg-white items-center justify-center shadow-sm border border-gray-100`}
+                            >
+                                <ChevronLeft size={20} color="#111827" />
+                            </Pressable>
+                            <View>
+                                <Text style={tw`text-2xl font-black text-gray-900 capitalize`}>Set {editingSlot}</Text>
+                                <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Configuring Daily Meal</Text>
+                            </View>
                         </View>
-                    </View>
-                </LinearGradient>
-            </View>
-
-            <ScrollView
-                contentContainerStyle={tw`p-6 pt-48 pb-32`}
-                style={tw`flex-1`}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Meal Type Toggle */}
-                <View style={tw`flex-row gap-3 mb-6`}>
-                    {[{ label: "Roti-Sabzi", value: "ROTI_SABZI" }, { label: "Other", value: "OTHER" }].map(opt => (
-                        <Pressable
-                            key={opt.value}
-                            onPress={() => setMealType(opt.value)}
-                            style={[tw`flex-1 py-3.5 rounded-2xl items-center border`, mealType === opt.value ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-100`]}
-                        >
-                            <Text style={[tw`font-black text-xs uppercase tracking-wider`, mealType === opt.value ? tw`text-yellow-800` : tw`text-gray-400`]}>{opt.label}</Text>
-                        </Pressable>
-                    ))}
+                    </LinearGradient>
                 </View>
 
-                {mealType === 'ROTI_SABZI' ? (
-                    <View>
-                        {/* Sabzi */}
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Sabzi</Text>
-                        <TextInput
-                            style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900 text-sm`}
-                            placeholder="e.g. Gobi / Paneer"
-                            placeholderTextColor="#9ca3af"
-                            value={sabzi}
-                            onChangeText={setSabzi}
-                        />
-
-                        {/* Prices */}
-                        <View style={tw`flex-row gap-3 mb-4`}>
-                            <View style={tw`flex-1`}>
-                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Half Price</Text>
-                                <TextInput
-                                    style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 font-bold text-gray-900 text-sm`}
-                                    keyboardType="numeric"
-                                    placeholder="₹50"
-                                    placeholderTextColor="#9ca3af"
-                                    value={halfPrice}
-                                    onChangeText={setHalfPrice}
-                                />
-                            </View>
-                            <View style={tw`flex-1`}>
-                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Price</Text>
-                                <TextInput
-                                    style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 font-bold text-gray-900 text-sm`}
-                                    keyboardType="numeric"
-                                    placeholder="₹80"
-                                    placeholderTextColor="#9ca3af"
-                                    value={fullPrice}
-                                    onChangeText={setFullPrice}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Add-ons */}
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Full Dabba Add-on</Text>
-                        <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
-                            {FULL_ADDON_SUGGESTIONS.map(a => (
-                                <Pressable
-                                    key={a}
-                                    onPress={() => { setFullAddon(a); setShowCustomAddon(false); }}
-                                    style={[tw`px-3.5 py-2 rounded-xl border`, fullAddon === a ? tw`bg-emerald-100 border-emerald-400` : tw`bg-white border-gray-200`]}
-                                >
-                                    <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, fullAddon === a ? tw`text-emerald-700` : tw`text-gray-500`]}>+ {a}</Text>
-                                </Pressable>
-                            ))}
+                <ScrollView
+                    contentContainerStyle={tw`p-6 pt-48 pb-32`}
+                    style={tw`flex-1`}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Meal Type Toggle */}
+                    <View style={tw`flex-row gap-3 mb-6`}>
+                        {[{ label: "Roti-Sabzi", value: "ROTI_SABZI" }, { label: "Other", value: "OTHER" }].map(opt => (
                             <Pressable
-                                onPress={() => { setFullAddon(""); setShowCustomAddon(true); }}
-                                style={[tw`px-3.5 py-2 rounded-xl border`, showCustomAddon ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
+                                key={opt.value}
+                                onPress={() => setMealType(opt.value)}
+                                style={[tw`flex-1 py-3.5 rounded-2xl items-center border`, mealType === opt.value ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-100`]}
                             >
-                                <Text style={tw`text-[10px] font-black uppercase tracking-wide text-gray-500`}>+ Other</Text>
+                                <Text style={[tw`font-black text-xs uppercase tracking-wider`, mealType === opt.value ? tw`text-yellow-800` : tw`text-gray-400`]}>{opt.label}</Text>
                             </Pressable>
-                        </View>
+                        ))}
+                    </View>
 
-                        {showCustomAddon && (
+                    {mealType === 'ROTI_SABZI' ? (
+                        <View>
+                            <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Sabzi</Text>
                             <TextInput
-                                style={tw`bg-white rounded-2xl px-5 py-3.5 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900 text-sm`}
-                                placeholder="Custom Add-on"
+                                style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 mb-4 font-bold text-gray-900 text-sm`}
+                                placeholder="e.g. Gobi / Paneer"
                                 placeholderTextColor="#9ca3af"
-                                value={customFullAddon}
-                                onChangeText={setCustomFullAddon}
+                                value={sabzi}
+                                onChangeText={setSabzi}
                             />
-                        )}
 
-                        {/* Free Add-ons */}
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Free Add-ons</Text>
-                        <View style={tw`flex-row flex-wrap gap-2 mb-6`}>
-                            {FREE_ADDONS.map(a => (
+                            <View style={tw`flex-row gap-3 mb-4`}>
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Half Price</Text>
+                                    <TextInput
+                                        style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 font-bold text-gray-900 text-sm`}
+                                        keyboardType="numeric"
+                                        placeholder="₹50"
+                                        placeholderTextColor="#9ca3af"
+                                        value={halfPrice}
+                                        onChangeText={setHalfPrice}
+                                    />
+                                </View>
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Full Price</Text>
+                                    <TextInput
+                                        style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 font-bold text-gray-900 text-sm`}
+                                        keyboardType="numeric"
+                                        placeholder="₹80"
+                                        placeholderTextColor="#9ca3af"
+                                        value={fullPrice}
+                                        onChangeText={setFullPrice}
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Add-ons */}
+                            <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Full Dabba Add-on</Text>
+                            <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
+                                {FULL_ADDON_SUGGESTIONS.map(a => (
+                                    <Pressable
+                                        key={a}
+                                        onPress={() => { setFullAddon(a); setShowCustomAddon(false); }}
+                                        style={[tw`px-3.5 py-2 rounded-xl border`, fullAddon === a ? tw`bg-emerald-100 border-emerald-400` : tw`bg-white border-gray-200`]}
+                                    >
+                                        <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, fullAddon === a ? tw`text-emerald-700` : tw`text-gray-500`]}>+ {a}</Text>
+                                    </Pressable>
+                                ))}
                                 <Pressable
-                                    key={a}
-                                    onPress={() => toggleFreeAddon(a)}
-                                    style={[tw`px-3.5 py-2 rounded-xl border`, freeAddons.includes(a) ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                    onPress={() => { setFullAddon(""); setShowCustomAddon(true); }}
+                                    style={[tw`px-3.5 py-2 rounded-xl border`, showCustomAddon ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
                                 >
-                                    <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, freeAddons.includes(a) ? tw`text-yellow-700` : tw`text-gray-500`]}>{a}</Text>
+                                    <Text style={tw`text-[10px] font-black uppercase tracking-wide text-gray-500`}>+ Other</Text>
                                 </Pressable>
-                            ))}
+                            </View>
+
+                            {showCustomAddon && (
+                                <TextInput
+                                    style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 mb-4 font-bold text-gray-900 text-sm`}
+                                    placeholder="Custom Add-on"
+                                    placeholderTextColor="#9ca3af"
+                                    value={customFullAddon}
+                                    onChangeText={setCustomFullAddon}
+                                />
+                            )}
+
+                            {/* Free Add-ons */}
+                            <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Free Add-ons</Text>
+                            <View style={tw`flex-row flex-wrap gap-2 mb-6`}>
+                                {FREE_ADDONS.map(a => (
+                                    <Pressable
+                                        key={a}
+                                        onPress={() => toggleFreeAddon(a)}
+                                        style={[tw`px-3.5 py-2 rounded-xl border`, freeAddons.includes(a) ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                    >
+                                        <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, freeAddons.includes(a) ? tw`text-yellow-700` : tw`text-gray-500`]}>{a}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
                         </View>
-                    </View>
-                ) : (
-                    <View>
-                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Meal Name</Text>
-                        <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
-                            {OTHER_SUGGESTIONS.map(o => (
+                    ) : (
+                        <View>
+                            <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Meal Name</Text>
+                            <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
+                                {OTHER_SUGGESTIONS.map(o => (
+                                    <Pressable
+                                        key={o}
+                                        onPress={() => { setOtherName(o); setShowOtherInput(false); }}
+                                        style={[tw`px-3.5 py-2 rounded-xl border`, otherName === o ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                    >
+                                        <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, otherName === o ? tw`text-yellow-700` : tw`text-gray-500`]}>{o}</Text>
+                                    </Pressable>
+                                ))}
                                 <Pressable
-                                    key={o}
-                                    onPress={() => { setOtherName(o); setShowOtherInput(false); }}
-                                    style={[tw`px-4 py-2 rounded-full border`, otherName === o ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                    onPress={() => { setOtherName(""); setShowOtherInput(true); }}
+                                    style={[tw`px-3.5 py-2 rounded-xl border`, showOtherInput ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
                                 >
-                                    <Text style={[tw`text-[10px] font-bold`, otherName === o ? tw`text-yellow-700` : tw`text-gray-500`]}>{o}</Text>
+                                    <Text style={tw`text-[10px] font-black uppercase tracking-wide text-gray-500`}>+ Other</Text>
                                 </Pressable>
-                            ))}
+                            </View>
+
+                            {showOtherInput && (
+                                <TextInput
+                                    style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 mb-4 font-bold text-gray-900`}
+                                    placeholder="Custom Meal Name"
+                                    value={otherName}
+                                    onChangeText={setOtherName}
+                                />
+                            )}
+
+                            <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Price</Text>
+                            <TextInput
+                                style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 mb-4 font-bold text-gray-900`}
+                                keyboardType="numeric"
+                                placeholder="₹"
+                                value={otherPrice}
+                                onChangeText={setOtherPrice}
+                            />
+                        </View>
+                    )}
+
+                    {/* Extras */}
+                    <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Extras</Text>
+                    {extras.map((e, i) => (
+                        <View key={i} style={tw`flex-row gap-2 mb-2`}>
+                            <TextInput
+                                style={tw`flex-2 bg-white rounded-xl px-4 py-3 border border-gray-200 font-bold text-gray-900 text-xs`}
+                                placeholder="Extra Item"
+                                value={e.name}
+                                onChangeText={(val) => {
+                                    const copy = [...extras];
+                                    copy[i].name = val;
+                                    setExtras(copy);
+                                }}
+                            />
+                            <TextInput
+                                style={tw`flex-1 bg-white rounded-xl px-4 py-3 border border-gray-200 font-bold text-gray-900 text-xs`}
+                                placeholder="Price"
+                                keyboardType="numeric"
+                                value={e.price}
+                                onChangeText={(val) => {
+                                    const copy = [...extras];
+                                    copy[i].price = val;
+                                    setExtras(copy);
+                                }}
+                            />
                             <Pressable
-                                onPress={() => { setOtherName(""); setShowOtherInput(true); }}
-                                style={[tw`px-4 py-2 rounded-full border`, showOtherInput ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
+                                onPress={() => setExtras(extras.filter((_, idx) => idx !== i))}
+                                style={tw`w-10 bg-red-50 rounded-2xl items-center justify-center border border-red-100`}
                             >
-                                <Text style={tw`text-[10px] font-bold text-gray-500`}>+ Other</Text>
+                                <X size={16} color="#b91c1c" />
                             </Pressable>
                         </View>
+                    ))}
+                    <Pressable
+                        onPress={() => setExtras([...extras, { name: "", price: "" }])}
+                        style={tw`bg-gray-50 rounded-xl py-3 items-center border border-gray-200 mt-2`}
+                    >
+                        <Text style={tw`text-xs font-bold text-gray-500 uppercase tracking-widest`}>+ Add Extra</Text>
+                    </Pressable>
 
-                        {showOtherInput && (
-                            <TextInput
-                                style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
-                                placeholder="Custom Meal Name"
-                                value={otherName}
-                                onChangeText={setOtherName}
-                            />
-                        )}
+                    {/* Save Button */}
+                    <Pressable
+                        onPress={handleSave}
+                        disabled={isSaving}
+                        style={[tw`bg-yellow-600 rounded-3xl py-5 shadow-lg mt-10 items-center justify-center`, isSaving && tw`opacity-70`]}
+                    >
+                        {isSaving ? <ActivityIndicator color="white" /> : <Text style={tw`text-white font-black text-base uppercase tracking-widest`}>Save {editingSlot} Menu</Text>}
+                    </Pressable>
 
-                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Price</Text>
-                        <TextInput
-                            style={tw`bg-white rounded-3xl px-6 py-4 shadow-sm border border-gray-100 mb-4 font-bold text-gray-900`}
-                            keyboardType="numeric"
-                            placeholder="₹"
-                            value={otherPrice}
-                            onChangeText={setOtherPrice}
-                        />
-                    </View>
-                )}
-
-                {/* Extras */}
-                <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-2`}>Extras</Text>
-                {extras.map((e, i) => (
-                    <View key={i} style={tw`flex-row gap-2 mb-2`}>
-                        <TextInput
-                            style={tw`flex-2 bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 font-bold text-gray-900 text-xs`}
-                            placeholder="Extra Item"
-                            value={e.name}
-                            onChangeText={(val) => {
-                                const copy = [...extras];
-                                copy[i].name = val;
-                                setExtras(copy);
-                            }}
-                        />
-                        <TextInput
-                            style={tw`flex-1 bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 font-bold text-gray-900 text-xs`}
-                            placeholder="Price"
-                            keyboardType="numeric"
-                            value={e.price}
-                            onChangeText={(val) => {
-                                const copy = [...extras];
-                                copy[i].price = val;
-                                setExtras(copy);
-                            }}
-                        />
-                        <Pressable
-                            onPress={() => setExtras(extras.filter((_, idx) => idx !== i))}
-                            style={tw`w-10 bg-red-50 rounded-2xl items-center justify-center border border-red-100`}
-                        >
-                            <X size={16} color="#b91c1c" />
-                        </Pressable>
-                    </View>
-                ))}
-                <Pressable
-                    onPress={() => setExtras([...extras, { name: "", price: "" }])}
-                    style={tw`bg-gray-50 rounded-2xl py-3 items-center border border-gray-100 mt-2`}
-                >
-                    <Text style={tw`text-xs font-bold text-gray-500 uppercase tracking-widest`}>+ Add Extra</Text>
-                </Pressable>
-
-                {/* Save Button */}
-                <Pressable
-                    onPress={handleSave}
-                    disabled={isSaving}
-                    style={[tw`bg-yellow-600 rounded-3xl py-5 shadow-lg mt-10 items-center justify-center`, isSaving && tw`opacity-70`]}
-                >
-                    {isSaving ? <ActivityIndicator color="white" /> : <Text style={tw`text-white font-black text-base uppercase tracking-widest`}>Save {editingSlot} Menu</Text>}
-                </Pressable>
-
-            </ScrollView>
-        </Animated.View>
+                </ScrollView>
+            </Animated.View>
+        </View>
     );
 };

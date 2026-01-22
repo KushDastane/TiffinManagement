@@ -6,7 +6,7 @@ import { listenToAdminStats, getCookingSummary } from '../../services/adminServi
 import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot } from '../../services/menuService';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import tw from 'twrnc';
-import { Clock, IndianRupee, Package, ChevronRight, Activity, Check } from 'lucide-react-native';
+import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
@@ -98,7 +98,7 @@ export const DashboardScreen = ({ navigation }) => {
     const menuStatus = useMemo(() => {
         if (!slot) return { label: "Off Hours", color: "gray", subLabel: "Kitchen is resting" };
         const slotData = menuData?.[slot];
-        if (!slotData) return { label: `${slot.toUpperCase()} Menu Not Set`, color: "red", subLabel: "Action Required" };
+        if (!slotData) return { label: `${slot.toUpperCase()} Menu Not Set`, color: "red", subLabel: "" };
         return { label: "Ready to Serve", color: "yellow", subLabel: slotData.mainItem };
     }, [menuData, slot]);
 
@@ -117,7 +117,7 @@ export const DashboardScreen = ({ navigation }) => {
                             <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-[0.2em] mb-1`}>{todayStr}</Text>
                             <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
                                 Kitchen{"\n"}
-                                <Text style={tw`text-yellow-600`}>Terminal</Text>
+                                <Text style={tw`text-yellow-600`}>Dashboard</Text>
                             </Text>
                         </View>
                         <View style={tw`w-14 h-14 rounded-[22px] bg-white items-center justify-center shadow-lg shadow-yellow-200 border border-white`}>
@@ -125,24 +125,46 @@ export const DashboardScreen = ({ navigation }) => {
                         </View>
                     </View>
 
-                    {/* Live Status Card - Integrated & World Class */}
-                    <View style={tw`bg-white rounded-[28px] p-5 shadow-xl shadow-yellow-600/10 border border-yellow-100/50 flex-row items-center justify-between`}>
-                        <View style={tw`flex-row items-center gap-4`}>
-                            <View style={tw`w-11 h-11 rounded-2xl bg-${menuStatus.color}-50 items-center justify-center`}>
-                                <View style={tw`w-2 h-2 rounded-full bg-${menuStatus.color}-500`} />
-                            </View>
-                            <View>
-                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5`}>{menuStatus.subLabel}</Text>
-                                <Text style={tw`text-sm font-black text-gray-900`}>{menuStatus.label}</Text>
-                            </View>
-                        </View>
-                        <Pressable
-                            onPress={() => navigation.navigate('Menu')}
-                            style={tw`bg-${menuStatus.color === 'red' ? 'red' : 'gray'}-900 px-4 py-2 rounded-xl`}
+                    {/* Live Status Card - Dashboard Redesign */}
+                    <Pressable onPress={() => navigation.navigate('Menu')}>
+                        <LinearGradient
+                            colors={menuStatus.color === 'red' ? ['#450a0a', '#7f1d1d'] : ['#064e3b', '#059669']}
+                            start={{ x: 0, y: 0.5 }}
+                            end={{ x: 1, y: 0.5 }}
+                            style={tw`rounded-3xl p-5 shadow-lg flex-row items-center justify-between border border-white/10`}
                         >
-                            <Text style={tw`text-[10px] font-black text-white uppercase`}>Manage</Text>
-                        </Pressable>
-                    </View>
+                            <View style={tw`flex-row items-center gap-4 flex-1`}>
+                                <View style={tw`w-12 h-12 rounded-2xl bg-white/10 items-center justify-center border border-white/5`}>
+                                    {slot === 'dinner' ? <Moon size={22} color="#fbbf24" fill="#fbbf24" /> : <Sun size={24} color="#fbbf24" />}
+                                </View>
+                                <View style={tw`flex-1`}>
+
+                                    <Text style={tw`text-2xl font-black text-white capitalize`}>{slot || 'Unknown'}</Text>
+                                    <Text style={tw`text-[10px] text-white/80 font-medium`} numberOfLines={1}>{menuStatus.color === 'red' ? 'Upload menu' : 'Menu is live • Receiving orders'}</Text>
+                                </View>
+                            </View>
+
+                            <View style={tw`items-end pl-2`}>
+                                {menuStatus.color === 'red' ? (
+                                    <>
+                                        <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
+                                            <AlertTriangle size={14} color="#fca5a5" />
+                                            <Text style={tw`text-xs font-bold text-red-100`}>Menu Missing</Text>
+                                        </View>
+
+                                    </>
+                                ) : (
+                                    <>
+                                        <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
+                                            <CheckCircle size={14} color="#a7f3d0" />
+                                            <Text style={tw`text-xs font-bold text-emerald-100`}>Active</Text>
+                                        </View>
+                                        <Text style={tw`text-[9px] text-white/40`}>{orders.length} orders</Text>
+                                    </>
+                                )}
+                            </View>
+                        </LinearGradient>
+                    </Pressable>
                 </LinearGradient>
             </View>
 
