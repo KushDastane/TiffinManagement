@@ -22,9 +22,9 @@ export const getTomorrowKey = () => {
 export const isAfterResetTime = () => {
     const now = new Date();
     const currentHour = now.getHours();
-    // After 9 PM (21:00) until 6 AM next day, show tomorrow's menu
-    // This handles: 21, 22, 23, 0, 1, 2, 3, 4, 5
-    return currentHour >= 21 || currentHour < 6;
+    // After 9 PM (21:00), show tomorrow's menu. 
+    // Midnight to morning (0-6) is considered "Today" so strict >= 21.
+    return currentHour >= 21;
 };
 
 /**
@@ -68,14 +68,23 @@ export const getEffectiveMenuDateKey = () => {
 
 export const getEffectiveMealSlot = () => {
     const currentHour = new Date().getHours();
-    // Use the same logic as the user's snippet
+
+    // Logic:
+    // < 15 (3 PM) -> Lunch
+    // < 21 (9 PM) -> Dinner
+    // >= 21 (9 PM) -> Lunch (Cycle resets to next day via Date Key)
+
     if (currentHour < 15) return "lunch";
-    if (currentHour >= 16 && currentHour < 21) return "dinner";
-    // The user's snippet implies currentHour < 15 is lunch, else maybe dinner? 
-    // Let's refine based on the user's canPlaceOrder logic:
-    // lunch: currentHour < 15
-    // dinner: currentHour < 20 (and presumably after lunch time)
-    if (currentHour < 15) return "lunch";
-    if (currentHour < 20) return "dinner";
-    return null;
+    if (currentHour < 21) return "dinner";
+    return "lunch";
+};
+
+export const getLunchDateKey = () => {
+    const currentHour = new Date().getHours();
+    return currentHour < 15 ? getTodayKey() : getTomorrowKey();
+};
+
+export const getDinnerDateKey = () => {
+    const currentHour = new Date().getHours();
+    return currentHour < 21 ? getTodayKey() : getTomorrowKey();
 };

@@ -198,22 +198,20 @@ export const HomeScreen = () => {
         setRefreshing(false);
     };
 
-    const kitchenOpen = activeSlot && (
-        (activeSlot === 'lunch' && new Date().getHours() < 15) ||
-        (activeSlot === 'dinner' && new Date().getHours() < 21)
-    );
+    // Kitchen is considered open if there is an active slot (which is always true now)
+    const kitchenOpen = !!activeSlot;
 
     return (
-        <View style={tw`flex-1 bg-[#faf9f6]`}>
+        <View style={tw`flex-1  bg-[#faf9f6]`}>
             {/* Absolute Creative Header - Premium Hook */}
             <View style={tw`absolute top-0 left-0 right-0 z-10`}>
                 <LinearGradient
                     colors={['#fef9c3', '#faf9f6']}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
-                    style={tw`pt-14 pb-12 px-6 rounded-b-[45px] shadow-sm`}
+                    style={tw`pt-14 pb-12 mb-2 px-6 rounded-b-[45px] shadow-sm`}
                 >
-                    <View style={tw`flex-row justify-between items-start`}>
+                    <View style={tw`flex-row  justify-between items-start`}>
                         <View>
                             <View style={tw`flex-row items-center gap-2 mb-2`}>
                                 <View style={tw`w-2 h-2 rounded-full bg-yellow-400`} />

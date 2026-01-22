@@ -119,12 +119,8 @@ export const OrderScreen = () => {
         };
     }, [tenant?.id, user?.uid, dateId, activeSlot]);
 
-    const canPlaceOrder = useMemo(() => {
-        const hour = new Date().getHours();
-        if (activeSlot === 'lunch') return hour < 15;
-        if (activeSlot === 'dinner') return hour < 20;
-        return false;
-    }, [activeSlot]);
+    // Always allow placing order if menu is present
+    const canPlaceOrder = true;
 
     const total = useMemo(() => {
         if (!selectedItem) return 0;
@@ -181,12 +177,12 @@ export const OrderScreen = () => {
     if (!activeSlot || !menu || menu.status !== 'SET') {
         return (
             <View style={tw`flex-1 bg-white items-center justify-center p-10`}>
-                <Text style={tw`text-6xl mb-6`}>🍱</Text>
+                <Text style={tw`text-6xl mb-6`}>👨‍🍳</Text>
                 <Text style={tw`text-2xl font-black text-gray-900 text-center mb-2`}>
-                    Oops, kitchen is closed
+                    Menu Updating...
                 </Text>
                 <Text style={tw`text-gray-400 text-center font-bold`}>
-                    Timings:{"\n"}7:00 AM – 1:00 PM{"\n"}4:00 PM – 9:00 PM
+                    The kitchen is deciding the menu for {activeSlot}.{'\n'}Please check back shortly!
                 </Text>
             </View>
         );
@@ -279,11 +275,12 @@ export const OrderScreen = () => {
 
             {/* Bottom Bar - High Impact */}
             <View style={tw`absolute bottom-10 left-6 right-6`}>
+                
                 <Pressable
                     disabled={!selectedItem || !canPlaceOrder || saving}
                     onPress={handlePlaceOrder}
                     style={[
-                        tw`flex-row justify-between items-center p-5 rounded-2xl shadow-xl border border-gray-800`,
+                        tw`flex-row mb-10 justify-between items-center p-5 rounded-2xl shadow-xl border border-gray-800`,
                         {
                             backgroundColor: '#111827',
                             opacity: (!selectedItem || !canPlaceOrder || saving) ? 0.6 : 1

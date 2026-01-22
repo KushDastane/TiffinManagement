@@ -48,7 +48,8 @@ export const DashboardScreen = ({ navigation }) => {
     }, [tenant?.id, slot, dateKey]);
 
     const cookingSummary = useMemo(() => {
-        return getCookingSummary(orders, menuData?.[slot]);
+        const activeOrders = orders.filter(o => o.slot === slot);
+        return getCookingSummary(activeOrders, menuData?.[slot]);
     }, [orders, menuData, slot]);
 
     const onRefresh = () => {

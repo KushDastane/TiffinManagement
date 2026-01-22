@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Animated, Dimensions } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, isAfterResetTime } from '../../services/menuService';
+import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, getLunchDateKey, getDinnerDateKey } from '../../services/menuService';
 import tw from 'twrnc';
 import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +21,7 @@ export const MenuScreen = () => {
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
     // Data State
-    const [todayMenuData, setTodayMenuData] = useState(null);
+    const [menuCache, setMenuCache] = useState({});
     const [loading, setLoading] = useState(true);
 
     // Form State
@@ -41,21 +41,36 @@ export const MenuScreen = () => {
     const [extras, setExtras] = useState([{ name: "Roti", price: "7" }]);
     const [isSaving, setIsSaving] = useState(false);
 
-    const dateId = useMemo(() => isAfterResetTime() ? getTomorrowKey() : getTodayKey(), []);
+    const todayKey = useMemo(() => getTodayKey(), []);
+    const tomorrowKey = useMemo(() => getTomorrowKey(), []);
 
     useEffect(() => {
         if (!tenant?.id) return;
         setLoading(true);
-        const unsub = subscribeToMenu(tenant.id, dateId, (data) => {
-            setTodayMenuData(data);
+
+        const unsubToday = subscribeToMenu(tenant.id, todayKey, (data) => {
+            setMenuCache(prev => ({ ...prev, [todayKey]: data }));
             setLoading(false);
         });
-        return unsub;
-    }, [tenant?.id, dateId]);
+
+        const unsubTomorrow = subscribeToMenu(tenant.id, tomorrowKey, (data) => {
+            setMenuCache(prev => ({ ...prev, [tomorrowKey]: data }));
+        });
+
+        return () => {
+            unsubToday();
+            unsubTomorrow();
+        };
+    }, [tenant?.id, todayKey, tomorrowKey]);
+
+    const getSlotData = (slot) => {
+        const key = slot === 'lunch' ? getLunchDateKey() : getDinnerDateKey();
+        return menuCache[key]?.[slot];
+    };
 
     const startEditing = (slot) => {
         setEditingSlot(slot);
-        const existing = todayMenuData?.[slot];
+        const existing = getSlotData(slot);
 
         if (existing) {
             setMealType(existing.type || 'ROTI_SABZI');
@@ -109,6 +124,7 @@ export const MenuScreen = () => {
 
         const payload = {
             type: mealType,
+            status: 'SET',
             extras: extras.filter(e => e.name && e.price).map(e => ({ name: e.name, price: Number(e.price) })),
         };
 
@@ -133,7 +149,8 @@ export const MenuScreen = () => {
             payload.other = { name: otherName, price: Number(otherPrice) };
         }
 
-        const result = await saveMenu(tenant.id, dateId, { [editingSlot]: payload });
+        const targetDate = editingSlot === 'lunch' ? getLunchDateKey() : getDinnerDateKey();
+        const result = await saveMenu(tenant.id, targetDate, { [editingSlot]: payload });
         setIsSaving(false);
         if (result.success) {
             // Animate back to summary
@@ -170,7 +187,7 @@ export const MenuScreen = () => {
                         style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
                     >
                         <Text style={tw`text-2xl font-black text-gray-900`}>Daily Menu</Text>
-                        <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Meals for {dateId}</Text>
+                        <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Meals for {todayKey}</Text>
                     </LinearGradient>
                 </View>
 
@@ -180,7 +197,7 @@ export const MenuScreen = () => {
                     showsVerticalScrollIndicator={false}
                 >
                     {['lunch', 'dinner'].map(slot => {
-                        const data = todayMenuData?.[slot];
+                        const data = getSlotData(slot);
                         const Icon = slot === 'lunch' ? Sun : Moon;
                         const accent = slot === 'lunch' ? 'yellow-400' : 'amber-500';
 
