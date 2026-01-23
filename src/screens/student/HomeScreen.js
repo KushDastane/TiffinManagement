@@ -74,7 +74,7 @@ const WalletCard = ({ balance, loading }) => {
                     </View>
                 ) : (
                     <View style={tw`mb-12`}>
-                        <Text style={tw`text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-2`}>Current Balance</Text>
+                        <Text style={tw`text-[10px] font-black text-white/40 uppercase tracking-widest mb-2`}>Current Balance</Text>
                         <View style={tw`flex-row items-baseline`}>
                             <Text style={tw`text-5xl font-black ${balance < 0 ? 'text-red-400' : 'text-white'} tracking-tighter`}>
                                 ₹{balance?.toFixed(0) || 0}

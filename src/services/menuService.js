@@ -107,11 +107,19 @@ export const getEffectiveMealSlot = (kitchenConfig) => {
 
     if (activeSlots.length === 0) return null;
 
-    // 1. Check for current slots (now <= end)
-    const current = activeSlots.filter(s => currentTime <= s.end);
-    if (current.length > 0) return current[0].id;
+    // 1. Find slots currently within their window (start <= now <= end)
+    const inWindow = activeSlots.filter(s => currentTime >= s.start && currentTime <= s.end);
+    if (inWindow.length > 0) {
+        // If multiple (e.g., Breakfast 8-11 and Lunch 10-14), 
+        // pick the one that started LATER (the more recent focus)
+        return inWindow[inWindow.length - 1].id;
+    }
 
-    // 2. If nothing is "Current", return the very first slot of the day (for the next cycle)
+    // 2. If nothing "In Window", find the next upcoming slot (now < start)
+    const upcoming = activeSlots.filter(s => currentTime < s.start);
+    if (upcoming.length > 0) return upcoming[0].id;
+
+    // 3. Fallback to the first slot of the day
     return activeSlots[0].id;
 };
 

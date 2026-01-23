@@ -191,17 +191,17 @@ export const HistoryScreen = () => {
                 </ScrollView>
 
                 {/* Orders List */}
-                {["today", "yesterday", "older"].map(key => (
-                    groupedOrders[key].length > 0 && (
+                {["today", "yesterday", "older"].map(key =>
+                    groupedOrders[key].length > 0 ? (
                         <View key={key} style={tw`mb-8`}>
                             <Text style={tw`mb-4 text-xs font-black uppercase tracking-widest text-gray-400`}>{key}</Text>
                             {groupedOrders[key].map(o => {
                                 const { day, month } = formatDayPill(o.createdAt);
-                                const mainItem = o.items ? o.items[0] : {};
-                                const itemName = mainItem.name || o.mealType || "Thali";
-                                const qty = mainItem.quantity || o.quantity || 1;
-                                const itemPrice = mainItem.price || o.price || 0;
-                                const total = o.totalAmount || (qty * itemPrice);
+                                const slotLabel = (o.slot || o.mealType || 'Meal').charAt(0).toUpperCase() + (o.slot || o.mealType || 'Meal').slice(1);
+                                const itemName = o.mainItem || (o.type === 'ROTI_SABZI' ? 'Roti Sabzi' : slotLabel);
+                                const qty = o.quantity || 1;
+                                const total = o.totalAmount || 0;
+                                const itemPrice = o.price || (qty > 0 ? (total / qty) : 0);
 
                                 return (
                                     <View key={o.id} style={tw`bg-white rounded-2xl p-4 shadow-sm/30 border border-gray-100 flex-row gap-4 mb-3 items-center`}>
@@ -215,7 +215,7 @@ export const HistoryScreen = () => {
                                         <View style={tw`flex-1`}>
                                             <View style={tw`flex-row justify-between items-start`}>
                                                 <View>
-                                                    <Text style={tw`text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5`}>{o.mealType}</Text>
+                                                    <Text style={tw`text-[8px] font-black text-yellow-600 uppercase tracking-widest mb-0.5`}>{slotLabel}</Text>
                                                     <Text style={tw`font-black text-gray-900 text-sm`}>{itemName}</Text>
                                                     <Text style={tw`text-[9px] font-bold text-gray-400 mt-0.5 uppercase`}>{qty} × ₹{itemPrice}</Text>
                                                 </View>
@@ -231,8 +231,8 @@ export const HistoryScreen = () => {
                                 );
                             })}
                         </View>
-                    )
-                ))}
+                    ) : null
+                )}
 
                 {filteredOrders.length === 0 && (
                     <View style={tw`items-center justify-center py-10`}>

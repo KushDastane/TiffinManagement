@@ -52,11 +52,15 @@ export const listenToAdminStats = (kitchenId, slot, callback) => {
         stats.studentsToday = students.size;
 
         callback({ ...stats });
+    }, (error) => {
+        console.error("listenToAdminStats orders error:", error);
     });
 
     const unsubPayments = onSnapshot(paymentsQuery, (snap) => {
         stats.pendingPayments = snap.size;
         callback({ ...stats });
+    }, (error) => {
+        console.error("listenToAdminStats payments error:", error);
     });
 
     return () => {
@@ -79,24 +83,29 @@ export const getCookingSummary = (orders, menuSlotData) => {
         halfDabba: 0,
         fullDabba: 0,
         other: 0,
-        extraRoti: 0,
-        breakdown: {}
+        breakdown: {},
+        extrasBreakdown: {}
     };
 
     confirmedOrders.forEach(o => {
         // Based on variant/type
         if (o.type === 'ROTI_SABZI') {
-            // Simplified check: usually mainItem name or variant label
             if (o.mainItem?.includes('Half')) summary.halfDabba += o.quantity || 1;
             else if (o.mainItem?.includes('Full')) summary.fullDabba += o.quantity || 1;
+            else summary.fullDabba += o.quantity || 1;
         } else {
+            const itemName = o.mainItem || (o.slot?.charAt(0).toUpperCase() + o.slot?.slice(1)) || 'Other';
+            summary.breakdown[itemName] = (summary.breakdown[itemName] || 0) + (o.quantity || 1);
             summary.other += o.quantity || 1;
         }
 
-        // Extras
+        // Detailed Extras Breakdown
         if (o.componentsSnapshot) {
             o.componentsSnapshot.forEach(c => {
-                if (c.name === 'Roti') summary.extraRoti += (Number(c.quantity) || 0);
+                const qty = Number(c.quantity) || 0;
+                if (qty > 0) {
+                    summary.extrasBreakdown[c.name] = (summary.extrasBreakdown[c.name] || 0) + qty;
+                }
             });
         }
     });

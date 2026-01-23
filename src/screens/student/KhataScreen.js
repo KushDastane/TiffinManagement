@@ -245,7 +245,8 @@ export const KhataScreen = () => {
                                             key={item.id}
                                             type={item.type}
                                             amount={item.amount || item.totalAmount}
-                                            label={item.source === "PAYMENT" ? "Balance Added" : (item.source === 'ORDER' ? `${item.mealType || 'Meal'} Order` : "Transaction")}
+                                            label={item.source === "PAYMENT" ? "Balance Added" : (item.source === 'ORDER' ?
+                                                `${(item.slot || item.mealType || 'Meal').charAt(0).toUpperCase() + (item.slot || item.mealType || 'Meal').slice(1)} - ${item.mainItem || (item.type === 'ROTI_SABZI' ? 'Roti Sabzi' : 'Meal')}` : "Transaction")}
                                             date={dateStr}
                                         />
                                     );

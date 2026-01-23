@@ -155,7 +155,7 @@ export const StudentDetailsScreen = ({ route, navigation }) => {
                                     <View>
                                         <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>{p.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}</Text>
                                         <Text style={tw`text-xl font-black text-emerald-700`}>₹{p.amount}</Text>
-                                        <Text style={tw`text-[9px] font-black text-gray-900 uppercase tracking-widest mt-1`}>via {p.paymentMode}</Text>
+                                        <Text style={tw`text-[9px] font-black text-gray-900 uppercase tracking-widest mt-1`}>via {p.method || 'Payment'}</Text>
                                     </View>
                                     <View style={tw`bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100`}>
                                         <Text style={tw`text-[8px] font-black text-emerald-800 uppercase tracking-widest`}>{p.status}</Text>

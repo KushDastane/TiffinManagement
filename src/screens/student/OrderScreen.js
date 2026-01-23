@@ -125,9 +125,19 @@ export const OrderScreen = () => {
         const dateId = getSlotDateKey(selectedSlot, tenant);
         const unsubMenu = subscribeToMenu(tenant.id, dateId, (data) => {
             if (data && data[selectedSlot]) {
-                setMenu(data[selectedSlot]);
+                const sData = data[selectedSlot];
+                setMenu(sData);
+                // Auto-select if type is OTHER
+                if (sData.type === 'OTHER' && sData.other) {
+                    setSelectedItem({
+                        key: 'other',
+                        label: sData.other.name || "Special Meal",
+                        price: sData.other.price || 0
+                    });
+                }
             } else {
                 setMenu(null);
+                setSelectedItem(null);
             }
             setLoading(false);
         });

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions, Alert, A
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { listenToAdminStats, getCookingSummary } from '../../services/adminService';
-import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot } from '../../services/menuService';
+import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot, getAvailableSlots } from '../../services/menuService';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import tw from 'twrnc';
 import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle, Coffee, UtensilsCrossed } from 'lucide-react-native';
@@ -27,8 +27,21 @@ export const DashboardScreen = ({ navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [confirmingId, setConfirmingId] = useState(null);
 
-    const slot = useMemo(() => getEffectiveMealSlot(tenant), [tenant]);
+    const initialSlot = useMemo(() => getEffectiveMealSlot(tenant), [tenant]);
+    const [manualSlot, setManualSlot] = useState(null);
+    const slot = manualSlot || initialSlot;
     const dateKey = useMemo(() => getEffectiveMenuDateKey(tenant), [tenant]);
+
+    const enabledSlots = useMemo(() => {
+        if (!tenant?.mealSlots) return [];
+        const now = new Date();
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        return Object.entries(tenant.mealSlots)
+            .filter(([_, s]) => s.active && currentTime <= s.end) // Only show slots that haven't ended
+            .map(([id, s]) => ({ id, ...s }))
+            .sort((a, b) => a.start.localeCompare(b.start));
+    }, [tenant]);
 
     useEffect(() => {
         if (!tenant?.id) return;
@@ -124,7 +137,7 @@ export const DashboardScreen = ({ navigation }) => {
                 >
                     <View style={tw`flex-row justify-between items-start mb-8`}>
                         <View>
-                            <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-[0.2em] mb-1`}>{todayStr}</Text>
+                            <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>{todayStr}</Text>
                             <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
                                 Kitchen{"\n"}
                                 <Text style={tw`text-yellow-600`}>Dashboard</Text>
@@ -189,11 +202,42 @@ export const DashboardScreen = ({ navigation }) => {
                             </View>
                         </LinearGradient>
                     </Pressable>
+
+                    {/* Slot Switcher - For Overlap Resolution */}
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={tw`mt-6`}
+                        contentContainerStyle={tw`px-1`}
+                    >
+                        {enabledSlots.map(s => {
+                            const isSelected = slot === s.id;
+                            const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
+                            return (
+                                <Pressable
+                                    key={s.id}
+                                    onPress={() => setManualSlot(s.id)}
+                                    style={[
+                                        tw`flex-row items-center gap-2 px-5 py-2.5 rounded-2xl mr-3 border`,
+                                        isSelected
+                                            ? tw`bg-yellow-400 border-yellow-400 shadow-md shadow-yellow-100`
+                                            : tw`bg-white border-white`
+                                    ]}
+                                >
+                                    <Icon size={12} color={isSelected ? "#111827" : "#9ca3af"} />
+                                    <Text style={[
+                                        tw`text-[9px] font-black uppercase tracking-widest`,
+                                        isSelected ? tw`text-gray-900` : tw`text-gray-400`
+                                    ]}>{s.id}</Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
                 </LinearGradient>
             </View>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pt-90 pb-32`}
+                contentContainerStyle={tw`p-6 pt-105 pb-32`}
                 style={tw`flex-1`}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}
@@ -214,20 +258,45 @@ export const DashboardScreen = ({ navigation }) => {
                         </View>
 
                         <View style={tw`flex-row justify-between items-center`}>
-                            <View style={tw`items-center flex-1`}>
-                                <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary.halfDabba}</Text>
-                                <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Half</Text>
-                            </View>
-                            <View style={tw`w-[1px] h-12 bg-gray-100`} />
-                            <View style={tw`items-center flex-1`}>
-                                <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary.fullDabba}</Text>
-                                <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Full</Text>
-                            </View>
-                            <View style={tw`w-[1px] h-12 bg-gray-100`} />
-                            <View style={tw`items-center flex-1`}>
-                                <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary.extraRoti}</Text>
-                                <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Extras</Text>
-                            </View>
+                            {(cookingSummary?.halfDabba > 0 || cookingSummary?.fullDabba > 0) && (
+                                <>
+                                    <View style={tw`items-center flex-1`}>
+                                        <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary?.halfDabba || 0}</Text>
+                                        <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Half</Text>
+                                    </View>
+                                    <View style={tw`w-[1px] h-12 bg-gray-100`} />
+                                    <View style={tw`items-center flex-1`}>
+                                        <Text style={tw`text-3xl font-black text-gray-900`}>{cookingSummary?.fullDabba || 0}</Text>
+                                        <Text style={tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`}>Full</Text>
+                                    </View>
+                                </>
+                            )}
+
+                            {((cookingSummary?.halfDabba > 0 || cookingSummary?.fullDabba > 0) && Object.keys(cookingSummary?.breakdown || {}).length > 0) && (
+                                <View style={tw`w-[1px] h-12 bg-gray-100`} />
+                            )}
+
+                            {Object.entries(cookingSummary?.breakdown || {}).map(([name, count], idx, arr) => (
+                                <React.Fragment key={name}>
+                                    <View style={tw`items-center flex-1`}>
+                                        <Text style={tw`text-3xl font-black text-gray-900`}>{count || 0}</Text>
+                                        <Text style={[tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`, { width: '80%', textAlign: 'center' }]} numberOfLines={1}>{name}</Text>
+                                    </View>
+                                    {(idx < arr.length - 1 || cookingSummary?.extraRoti > 0) && <View style={tw`w-[1px] h-12 bg-gray-100`} />}
+                                </React.Fragment>
+                            ))}
+
+                            {Object.entries(cookingSummary?.extrasBreakdown || {}).map(([name, count], idx, arr) => (
+                                <React.Fragment key={name}>
+                                    {((cookingSummary?.halfDabba > 0 || cookingSummary?.fullDabba > 0 || Object.keys(cookingSummary?.breakdown || {}).length > 0) || idx > 0) && (
+                                        <View style={tw`w-[1px] h-12 bg-gray-100`} />
+                                    )}
+                                    <View style={tw`items-center flex-1`}>
+                                        <Text style={tw`text-3xl font-black text-gray-900`}>{count || 0}</Text>
+                                        <Text style={[tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`, { width: '80%', textAlign: 'center' }]} numberOfLines={1}>{name}</Text>
+                                    </View>
+                                </React.Fragment>
+                            ))}
                         </View>
                     </View>
                 )}
@@ -304,7 +373,7 @@ export const DashboardScreen = ({ navigation }) => {
                     onPress={() => navigation.navigate('Orders')}
                     style={tw`mt-8 items-center py-4`}
                 >
-                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]`}>View All Activity ➔</Text>
+                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>View All Activity ➔</Text>
                 </Pressable>
             </ScrollView>
         </View>

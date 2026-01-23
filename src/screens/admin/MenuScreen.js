@@ -8,6 +8,8 @@ import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun 
 import { LinearGradient } from 'expo-linear-gradient';
 
 const OTHER_SUGGESTIONS = ["Misal Pav", "Pav Bhaji", "Thalipeeth"];
+const BREAKFAST_SUGGESTIONS = ["Poha", "Upma", "Sabudana Khichdi", "Paratha"];
+const SNACKS_SUGGESTIONS = ["Pani Puri", "Dhokla"];
 const FULL_ADDON_SUGGESTIONS = ["Dal Rice", "Kadhi Rice", "Biryani"];
 const FREE_ADDONS = ["Chatni", "Pickle", "Dahi", "Sweet"];
 
@@ -80,6 +82,7 @@ export const MenuScreen = () => {
     const startEditing = (slot) => {
         setEditingSlot(slot);
         const existing = getSlotData(slot);
+        const isQuickMeal = slot === 'breakfast' || slot === 'snacks';
 
         if (existing) {
             setMealType(existing.type || 'ROTI_SABZI');
@@ -103,10 +106,10 @@ export const MenuScreen = () => {
                 setOtherPrice(String(existing.other.price || ""));
                 setShowOtherInput(!OTHER_SUGGESTIONS.includes(existing.other.name));
             }
-            setExtras(existing.extras?.map(e => ({ name: e.name, price: String(e.price) })) || [{ name: "Roti", price: "7" }]);
+            setExtras(existing.extras?.map(e => ({ name: e.name, price: String(e.price) })) || (isQuickMeal ? [] : [{ name: "Roti", price: "7" }]));
         } else {
             // Defaults
-            setMealType('ROTI_SABZI');
+            setMealType(isQuickMeal ? 'OTHER' : 'ROTI_SABZI');
             setSabzi("");
             setHalfPrice("50");
             setFullPrice("80");
@@ -114,9 +117,8 @@ export const MenuScreen = () => {
             setCustomFullAddon("");
             setShowCustomAddon(false);
             setFreeAddons([]);
-            setOtherName("");
-            setOtherPrice("");
-            setExtras([{ name: "Roti", price: "7" }]);
+            setOtherPrice(isQuickMeal ? "25" : "");
+            setExtras(isQuickMeal ? [] : [{ name: "Roti", price: "7" }]);
         }
 
         // Start animation
@@ -305,18 +307,20 @@ export const MenuScreen = () => {
                     style={tw`flex-1`}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Meal Type Toggle */}
-                    <View style={tw`flex-row gap-3 mb-6`}>
-                        {[{ label: "Roti-Sabzi", value: "ROTI_SABZI" }, { label: "Other", value: "OTHER" }].map(opt => (
-                            <Pressable
-                                key={opt.value}
-                                onPress={() => setMealType(opt.value)}
-                                style={[tw`flex-1 py-3.5 rounded-2xl items-center border`, mealType === opt.value ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-100`]}
-                            >
-                                <Text style={[tw`font-black text-xs uppercase tracking-wider`, mealType === opt.value ? tw`text-yellow-800` : tw`text-gray-400`]}>{opt.label}</Text>
-                            </Pressable>
-                        ))}
-                    </View>
+                    {/* Meal Type Toggle - Only show for non-quick slots or if desired */}
+                    {!(editingSlot === 'breakfast' || editingSlot === 'snacks') && (
+                        <View style={tw`flex-row gap-3 mb-6`}>
+                            {[{ label: "Roti-Sabzi", value: "ROTI_SABZI" }, { label: "Other", value: "OTHER" }].map(opt => (
+                                <Pressable
+                                    key={opt.value}
+                                    onPress={() => setMealType(opt.value)}
+                                    style={[tw`flex-1 py-3.5 rounded-2xl items-center border`, mealType === opt.value ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-100`]}
+                                >
+                                    <Text style={[tw`font-black text-xs uppercase tracking-wider`, mealType === opt.value ? tw`text-yellow-800` : tw`text-gray-400`]}>{opt.label}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    )}
 
                     {mealType === 'ROTI_SABZI' ? (
                         <View>
@@ -400,22 +404,24 @@ export const MenuScreen = () => {
                         </View>
                     ) : (
                         <View>
-                            <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Meal Name</Text>
+                            <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Selection</Text>
                             <View style={tw`flex-row flex-wrap gap-2 mb-4`}>
-                                {OTHER_SUGGESTIONS.map(o => (
-                                    <Pressable
-                                        key={o}
-                                        onPress={() => { setOtherName(o); setShowOtherInput(false); }}
-                                        style={[tw`px-3.5 py-2 rounded-xl border`, otherName === o ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
-                                    >
-                                        <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, otherName === o ? tw`text-yellow-700` : tw`text-gray-500`]}>{o}</Text>
-                                    </Pressable>
-                                ))}
+                                {(editingSlot === 'breakfast' ? BREAKFAST_SUGGESTIONS :
+                                    editingSlot === 'snacks' ? SNACKS_SUGGESTIONS :
+                                        OTHER_SUGGESTIONS).map(o => (
+                                            <Pressable
+                                                key={o}
+                                                onPress={() => { setOtherName(o); setShowOtherInput(false); }}
+                                                style={[tw`px-3.5 py-2 rounded-xl border`, otherName === o ? tw`bg-yellow-100 border-yellow-400` : tw`bg-white border-gray-200`]}
+                                            >
+                                                <Text style={[tw`text-[10px] font-black uppercase tracking-wide`, otherName === o ? tw`text-yellow-700` : tw`text-gray-500`]}>{o}</Text>
+                                            </Pressable>
+                                        ))}
                                 <Pressable
                                     onPress={() => { setOtherName(""); setShowOtherInput(true); }}
                                     style={[tw`px-3.5 py-2 rounded-xl border`, showOtherInput ? tw`bg-gray-100 border-gray-400` : tw`bg-white border-gray-200`]}
                                 >
-                                    <Text style={tw`text-[10px] font-black uppercase tracking-wide text-gray-500`}>+ Other</Text>
+                                    <Text style={tw`text-[10px] font-black uppercase tracking-wide text-gray-500`}>+ Custom</Text>
                                 </Pressable>
                             </View>
 
