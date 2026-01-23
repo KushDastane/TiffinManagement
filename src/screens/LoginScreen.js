@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { loginUser, registerUser } from '../services/authService';
+import tw from 'twrnc';
 
 export const LoginScreen = () => {
     const [email, setEmail] = useState('');
@@ -31,15 +32,15 @@ export const LoginScreen = () => {
     };
 
     return (
-        <View className="flex-1 bg-white items-center justify-center p-4">
-            <Text className="text-3xl font-extrabold text-yellow-500 mb-8 tracking-widest">
+        <View style={tw`flex-1 bg-white items-center justify-center p-4`}>
+            <Text style={tw`text-3xl font-extrabold text-yellow-500 mb-8 tracking-widest`}>
                 TIFFIN CRM
             </Text>
 
-            <View className="w-full max-w-sm">
-                <Text className="text-gray-600 mb-2 font-medium">Email Address</Text>
+            <View style={tw`w-full max-w-sm`}>
+                <Text style={tw`text-gray-600 mb-2 font-medium`}>Email Address</Text>
                 <TextInput
-                    className="w-full border border-gray-300 rounded-lg p-3 mb-4 text-lg bg-gray-50 focus:border-yellow-400"
+                    style={tw`w-full border border-gray-300 rounded-lg p-3 mb-4 text-lg bg-gray-50 focus:border-yellow-400`}
                     placeholder="hello@example.com"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -47,9 +48,9 @@ export const LoginScreen = () => {
                     onChangeText={setEmail}
                 />
 
-                <Text className="text-gray-600 mb-2 font-medium">Password</Text>
+                <Text style={tw`text-gray-600 mb-2 font-medium`}>Password</Text>
                 <TextInput
-                    className="w-full border border-gray-300 rounded-lg p-3 mb-6 text-lg bg-gray-50 focus:border-yellow-400"
+                    style={tw`w-full border border-gray-300 rounded-lg p-3 mb-6 text-lg bg-gray-50 focus:border-yellow-400`}
                     placeholder="******"
                     secureTextEntry
                     value={password}
@@ -57,24 +58,27 @@ export const LoginScreen = () => {
                 />
 
                 <TouchableOpacity
-                    className={`w-full bg-yellow-400 rounded-lg p-4 items-center shadow-sm ${loading ? 'opacity-70' : ''}`}
+                    style={[
+                        tw`w-full bg-yellow-400 rounded-lg p-4 items-center shadow-sm`,
+                        loading ? tw`opacity-70` : null
+                    ]}
                     onPress={handleAuth}
                     disabled={loading}
                 >
                     {loading ? (
                         <ActivityIndicator color="black" />
                     ) : (
-                        <Text className="text-black font-bold text-lg">
+                        <Text style={tw`text-black font-bold text-lg`}>
                             {isRegistering ? "Create Account" : "Login"}
                         </Text>
                     )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    className="mt-6 items-center"
+                    style={tw`mt-6 items-center`}
                     onPress={() => setIsRegistering(!isRegistering)}
                 >
-                    <Text className="text-gray-500 text-base">
+                    <Text style={tw`text-gray-500 text-base`}>
                         {isRegistering ? "Already have an account? Login" : "New to Tiffin CRM? Sign Up"}
                     </Text>
                 </TouchableOpacity>

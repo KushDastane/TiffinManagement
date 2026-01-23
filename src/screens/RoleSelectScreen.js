@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { createUserProfile } from '../services/authService';
+import tw from 'twrnc';
 
 export const RoleSelectScreen = () => {
     const { user } = useAuth();
@@ -24,27 +25,27 @@ export const RoleSelectScreen = () => {
     };
 
     return (
-        <View className="flex-1 bg-white items-center justify-center p-4">
-            <Text className="text-2xl font-bold mb-8 text-gray-800">Who are you?</Text>
+        <View style={tw`flex-1 bg-white items-center justify-center p-4`}>
+            <Text style={tw`text-2xl font-bold mb-8 text-gray-800`}>Who are you?</Text>
 
             {loading ? (
                 <ActivityIndicator size="large" color="#FACC15" />
             ) : (
                 <>
                     <TouchableOpacity
-                        className="w-full max-w-sm bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 mb-6 items-center shadow-sm"
+                        style={tw`w-full max-w-sm bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 mb-6 items-center shadow-sm`}
                         onPress={() => selectRole('admin')}
                     >
-                        <Text className="text-xl font-bold mb-2 text-yellow-800">Kitchen Owner</Text>
-                        <Text className="text-gray-600 text-center">I run a tiffin service and want to manage orders.</Text>
+                        <Text style={tw`text-xl font-bold mb-2 text-yellow-800`}>Kitchen Owner</Text>
+                        <Text style={tw`text-gray-600 text-center`}>I run a tiffin service and want to manage orders.</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        className="w-full max-w-sm bg-blue-50 border-2 border-blue-400 rounded-xl p-6 items-center shadow-sm"
+                        style={tw`w-full max-w-sm bg-blue-50 border-2 border-blue-400 rounded-xl p-6 items-center shadow-sm`}
                         onPress={() => selectRole('student')}
                     >
-                        <Text className="text-xl font-bold mb-2 text-blue-800">Student / Customer</Text>
-                        <Text className="text-gray-600 text-center">I want to join a kitchen and order meals.</Text>
+                        <Text style={tw`text-xl font-bold mb-2 text-blue-800`}>Student / Customer</Text>
+                        <Text style={tw`text-gray-600 text-center`}>I want to join a kitchen and order meals.</Text>
                     </TouchableOpacity>
                 </>
             )}

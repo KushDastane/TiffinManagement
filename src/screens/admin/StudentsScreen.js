@@ -23,6 +23,10 @@ export const StudentsScreen = ({ navigation }) => {
             setStudents(list);
             setLoading(false);
             setRefreshing(false);
+        }, (error) => {
+            console.error("StudentsScreen: users listener error:", error);
+            setLoading(false);
+            setRefreshing(false);
         });
 
         return unsub;

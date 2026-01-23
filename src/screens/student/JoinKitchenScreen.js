@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { joinKitchen } from '../../services/kitchenService';
+import tw from 'twrnc';
 
 export const JoinKitchenScreen = () => {
     const { user } = useAuth();
@@ -16,9 +17,10 @@ export const JoinKitchenScreen = () => {
 
         setLoading(true);
         const result = await joinKitchen(user.uid, joinCode.toUpperCase());
-        setLoading(false);
+        setLoading(true); // Keep loading until navigation triggers? Or set false.
 
         if (result.error) {
+            setLoading(false);
             Alert.alert("Error", result.error);
         } else {
             // Success! AuthContext/TenantContext will update and redirect
@@ -27,14 +29,14 @@ export const JoinKitchenScreen = () => {
     };
 
     return (
-        <View className="flex-1 bg-white items-center justify-center p-4">
-            <Text className="text-2xl font-bold mb-4 text-gray-800">Join a Kitchen</Text>
-            <Text className="text-gray-500 mb-8 text-center px-4">
+        <View style={tw`flex-1 bg-white items-center justify-center p-4`}>
+            <Text style={tw`text-2xl font-bold mb-4 text-gray-800`}>Join a Kitchen</Text>
+            <Text style={tw`text-gray-500 mb-8 text-center px-4`}>
                 Enter the 6-character code shared by your kitchen manager.
             </Text>
 
             <TextInput
-                className="w-full max-w-xs border-2 border-dashed border-gray-300 rounded-lg p-4 mb-8 text-3xl text-center font-mono tracking-widest uppercase focus:border-yellow-400"
+                style={tw`w-full max-w-xs border-2 border-dashed border-gray-300 rounded-lg p-4 mb-8 text-3xl text-center font-mono tracking-widest uppercase focus:border-yellow-400`}
                 placeholder="XK9J2M"
                 maxLength={6}
                 value={joinCode}
@@ -43,14 +45,17 @@ export const JoinKitchenScreen = () => {
             />
 
             <TouchableOpacity
-                className={`w-full max-w-sm bg-yellow-400 rounded-lg p-4 items-center shadow-sm ${loading ? 'opacity-70' : ''}`}
+                style={[
+                    tw`w-full max-w-sm bg-yellow-400 rounded-lg p-4 items-center shadow-sm`,
+                    loading ? tw`opacity-70` : null
+                ]}
                 onPress={handleJoin}
                 disabled={loading}
             >
                 {loading ? (
                     <ActivityIndicator color="black" />
                 ) : (
-                    <Text className="text-black font-bold text-lg">Join Kitchen</Text>
+                    <Text style={tw`text-black font-bold text-lg`}>Join Kitchen</Text>
                 )}
             </TouchableOpacity>
         </View>

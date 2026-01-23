@@ -73,12 +73,20 @@ export const DashboardScreen = ({ navigation }) => {
     const nextPendingOrder = useMemo(() => {
         let pending = orders
             .filter(o => (o.status === 'PENDING' || o.status === 'placed') && o.slot === slot)
-            .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+            .sort((a, b) => {
+                if (a.isPriority && !b.isPriority) return -1;
+                if (!a.isPriority && b.isPriority) return 1;
+                return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+            });
 
         if (pending.length === 0) {
             pending = orders
                 .filter(o => o.status === 'PENDING' || o.status === 'placed')
-                .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+                .sort((a, b) => {
+                    if (a.isPriority && !b.isPriority) return -1;
+                    if (!a.isPriority && b.isPriority) return 1;
+                    return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+                });
         }
 
         return pending[0] || null;
@@ -328,13 +336,15 @@ export const DashboardScreen = ({ navigation }) => {
 
                 {/* 4. The Action Center: Quick Confirm */}
                 {nextPendingOrder && (
-                    <View style={tw`mt-4 bg-gray-900 rounded-[40px] p-8 shadow-xl overflow-hidden`}>
+                    <View style={[tw`mt-4 rounded-[40px] p-8 shadow-xl overflow-hidden`, nextPendingOrder.isPriority ? tw`bg-orange-600` : tw`bg-gray-900`]}>
                         <View style={tw`absolute -bottom-10 -left-10 w-40 h-40 bg-white/5 rounded-full`} />
 
                         <View style={tw`flex-row items-center justify-between mb-6`}>
                             <View style={tw`flex-row items-center gap-2.5`}>
-                                <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />
-                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Action Required</Text>
+                                <View style={[tw`w-1.5 h-1.5 rounded-full`, nextPendingOrder.isPriority ? tw`bg-white` : tw`bg-yellow-400`]} />
+                                <Text style={tw`text-[10px] font-black text-white/50 uppercase tracking-widest`}>
+                                    {nextPendingOrder.isPriority ? "Priority Order" : "Action Required"}
+                                </Text>
                             </View>
                             <View style={tw`bg-white/10 px-3 py-1 rounded-full`}>
                                 <Text style={tw`text-[9px] font-black text-white uppercase`}>Latest Order</Text>
@@ -343,8 +353,8 @@ export const DashboardScreen = ({ navigation }) => {
 
                         <View style={tw`mb-8`}>
                             <Text style={tw`text-xl font-black text-white`}>{nextPendingOrder.userDisplayName || 'Student'}</Text>
-                            <Text style={tw`text-sm font-bold text-gray-400 mt-1`}>
-                                {nextPendingOrder.quantity} × {nextPendingOrder.mainItem} • <Text style={tw`text-yellow-400/80 font-black`}>{nextPendingOrder.slot?.toUpperCase()}</Text>
+                            <Text style={tw`text-sm font-bold text-white/60 mt-1`}>
+                                {nextPendingOrder.quantity} × {nextPendingOrder.mainItem} • <Text style={[tw`font-black`, nextPendingOrder.isPriority ? tw`text-white` : tw`text-yellow-400`]}>{nextPendingOrder.slot?.toUpperCase()}</Text>
                             </Text>
                         </View>
 
@@ -352,7 +362,7 @@ export const DashboardScreen = ({ navigation }) => {
                             onPress={() => handleQuickConfirm(nextPendingOrder.id)}
                             disabled={confirmingId === nextPendingOrder.id}
                             style={({ pressed }) => [
-                                tw`bg-yellow-400 rounded-3xl py-5 items-center justify-center flex-row gap-3`,
+                                tw`bg-white rounded-3xl py-5 items-center justify-center flex-row gap-3`,
                                 pressed && tw`scale-98 opacity-90`
                             ]}
                         >
@@ -360,8 +370,8 @@ export const DashboardScreen = ({ navigation }) => {
                                 <ActivityIndicator color="#111827" size="small" />
                             ) : (
                                 <>
-                                    <Check size={20} color="#111827" strokeWidth={3} />
-                                    <Text style={tw`text-[#111827] font-black text-base uppercase tracking-tight`}>Confirm Order</Text>
+                                    <Check size={20} color={nextPendingOrder.isPriority ? "#ea580c" : "#111827"} strokeWidth={3} />
+                                    <Text style={[tw`font-black text-base uppercase tracking-tight`, { color: nextPendingOrder.isPriority ? "#ea580c" : "#111827" }]}>Confirm Order</Text>
                                 </>
                             )}
                         </Pressable>

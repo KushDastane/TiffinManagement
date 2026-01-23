@@ -204,7 +204,7 @@ export const HistoryScreen = () => {
                                 const itemPrice = o.price || (qty > 0 ? (total / qty) : 0);
 
                                 return (
-                                    <View key={o.id} style={tw`bg-white rounded-2xl p-4 shadow-sm/30 border border-gray-100 flex-row gap-4 mb-3 items-center`}>
+                                    <View key={o.id} style={tw`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex-row gap-4 mb-3 items-center`}>
                                         {/* Date Icon */}
                                         <View style={tw`w-12 h-12 rounded-xl bg-gray-50 items-center justify-center border border-gray-50`}>
                                             <Text style={tw`text-[8px] font-black text-gray-300 uppercase`}>{month}</Text>
@@ -215,7 +215,14 @@ export const HistoryScreen = () => {
                                         <View style={tw`flex-1`}>
                                             <View style={tw`flex-row justify-between items-start`}>
                                                 <View>
-                                                    <Text style={tw`text-[8px] font-black text-yellow-600 uppercase tracking-widest mb-0.5`}>{slotLabel}</Text>
+                                                    <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
+                                                        <Text style={tw`text-[8px] font-black text-yellow-600 uppercase tracking-widest`}>{slotLabel}</Text>
+                                                        {o.isPriority && (
+                                                            <View style={tw`bg-orange-100 px-1.5 py-0.5 rounded-md`}>
+                                                                <Text style={tw`text-[7px] font-black text-orange-600 uppercase`}>Priority</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
                                                     <Text style={tw`font-black text-gray-900 text-sm`}>{itemName}</Text>
                                                     <Text style={tw`text-[9px] font-bold text-gray-400 mt-0.5 uppercase`}>{qty} × ₹{itemPrice}</Text>
                                                 </View>

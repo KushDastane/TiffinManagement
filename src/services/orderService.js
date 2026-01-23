@@ -95,6 +95,7 @@ export const placeStudentOrder = async (kitchenId, orderData) => {
     const legacyPayload = {
         userId: studentId,
         slot: mealType.toLowerCase(),
+        isPriority: orderData.isPriority || false,
         type: items.itemType || 'ROTI_SABZI',
         mainItem: items.item,
         quantity: items.quantity,

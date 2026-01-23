@@ -5,6 +5,7 @@ import { subscribeToMenu } from '../../services/menuService';
 import { placeOrder } from '../../services/orderService';
 import { uploadImage } from '../../services/paymentService';
 import { useAuth } from '../../contexts/AuthContext';
+import tw from 'twrnc';
 
 // Simplified SlotCard for Trial (Decoupled from Ledger/Wallet)
 const TrialSlotCard = ({ slotName, slotData, onOrder }) => {
@@ -23,36 +24,42 @@ const TrialSlotCard = ({ slotName, slotData, onOrder }) => {
     };
 
     return (
-        <View className="bg-white p-4 rounded-xl mb-6 border border-gray-100 shadow-sm">
-            <Text className="text-xl font-bold text-gray-800 mb-4">{slotName}</Text>
+        <View style={tw`bg-white p-4 rounded-xl mb-6 border border-gray-100 shadow-sm`}>
+            <Text style={tw`text-xl font-bold text-gray-800 mb-4`}>{slotName}</Text>
 
             {type === "ROTI_SABZI" ? (
                 <View>
-                    <Text className="text-lg font-bold text-yellow-700 mb-2">{rotiSabzi.sabzi}</Text>
-                    <View className="flex-row mb-4 bg-gray-50 p-1 rounded-lg">
+                    <Text style={tw`text-lg font-bold text-yellow-700 mb-2`}>{rotiSabzi.sabzi}</Text>
+                    <View style={tw`flex-row mb-4 bg-gray-50 p-1 rounded-lg`}>
                         <TouchableOpacity
-                            className={`flex-1 p-3 items-center rounded-lg ${variant === 'half' ? 'bg-white shadow-sm border border-gray-200' : ''}`}
+                            style={[
+                                tw`flex-1 p-3 items-center rounded-lg`,
+                                variant === 'half' ? tw`bg-white shadow-sm border border-gray-200` : null
+                            ]}
                             onPress={() => setVariant('half')}
                         >
-                            <Text className="font-bold">Half - ₹{rotiSabzi.halfPrice}</Text>
+                            <Text style={tw`font-bold`}>Half - ₹{rotiSabzi.halfPrice}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            className={`flex-1 p-3 items-center rounded-lg ${variant === 'full' ? 'bg-white shadow-sm border border-gray-200' : ''}`}
+                            style={[
+                                tw`flex-1 p-3 items-center rounded-lg`,
+                                variant === 'full' ? tw`bg-white shadow-sm border border-gray-200` : null
+                            ]}
                             onPress={() => setVariant('full')}
                         >
-                            <Text className="font-bold">Full - ₹{rotiSabzi.fullPrice}</Text>
+                            <Text style={tw`font-bold`}>Full - ₹{rotiSabzi.fullPrice}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             ) : (
-                <View className="flex-row justify-between mb-4">
-                    <Text className="text-lg font-bold text-gray-800">{other.itemName}</Text>
-                    <Text className="text-lg font-bold text-yellow-600">₹{other.price}</Text>
+                <View style={tw`flex-row justify-between mb-4`}>
+                    <Text style={tw`text-lg font-bold text-gray-800`}>{other.itemName}</Text>
+                    <Text style={tw`text-lg font-bold text-yellow-600`}>₹{other.price}</Text>
                 </View>
             )}
 
             <TouchableOpacity
-                className="bg-yellow-400 p-4 rounded-xl items-center"
+                style={tw`bg-yellow-400 p-4 rounded-xl items-center`}
                 onPress={() => onOrder({
                     slot: slotName.toLowerCase(),
                     type,
@@ -61,7 +68,7 @@ const TrialSlotCard = ({ slotName, slotData, onOrder }) => {
                     totalAmount: calculateTotal(),
                 })}
             >
-                <Text className="font-bold text-black text-lg">Order {slotName} - ₹{calculateTotal()}</Text>
+                <Text style={tw`font-bold text-black text-lg`}>Order {slotName} - ₹{calculateTotal()}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -138,38 +145,44 @@ export const TrialOrderScreen = ({ route, navigation }) => {
     };
 
     return (
-        <ScrollView className="flex-1 bg-gray-50 p-4">
-            <View className="mb-6 pt-8">
-                <Text className="text-gray-500 font-medium">Ordering Trial from</Text>
-                <Text className="text-3xl font-extrabold text-gray-800">{kitchen.name}</Text>
-                <Text className="text-gray-500">{kitchen.area || kitchen.locality}</Text>
+        <ScrollView style={tw`flex-1 bg-gray-50 p-4`}>
+            <View style={tw`mb-6 pt-8`}>
+                <Text style={tw`text-gray-500 font-medium`}>Ordering Trial from</Text>
+                <Text style={tw`text-3xl font-extrabold text-gray-800`}>{kitchen.name}</Text>
+                <Text style={tw`text-gray-500`}>{kitchen.area || kitchen.locality}</Text>
             </View>
 
-            <View className="bg-white p-4 rounded-xl mb-6 shadow-sm border border-gray-100">
-                <Text className="font-bold text-gray-800 mb-2">Payment Method</Text>
-                <View className="flex-row space-x-2">
+            <View style={tw`bg-white p-4 rounded-xl mb-6 shadow-sm border border-gray-100`}>
+                <Text style={tw`font-bold text-gray-800 mb-2`}>Payment Method</Text>
+                <View style={tw`flex-row gap-2`}>
                     <TouchableOpacity
-                        className={`flex-1 p-3 rounded-lg border ${paymentMethod === 'cash' ? 'bg-yellow-50 border-yellow-400' : 'bg-gray-50 border-gray-200'}`}
+                        style={[
+                            tw`flex-1 p-3 rounded-lg border`,
+                            paymentMethod === 'cash' ? tw`bg-yellow-50 border-yellow-400` : tw`bg-gray-50 border-gray-200`
+                        ]}
                         onPress={() => setPaymentMethod('cash')}
                     >
-                        <Text className={`text-center font-bold ${paymentMethod === 'cash' ? 'text-yellow-800' : 'text-gray-500'}`}>Cash on Pickup</Text>
+                        <Text style={[tw`text-center font-bold`, paymentMethod === 'cash' ? tw`text-yellow-800` : tw`text-gray-500`]}>Cash on Pickup</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        className={`flex-1 p-3 rounded-lg border ${paymentMethod === 'upi' ? 'bg-yellow-50 border-yellow-400' : 'bg-gray-50 border-gray-200'}`}
+                        style={[
+                            tw`flex-1 p-3 rounded-lg border`,
+                            paymentMethod === 'upi' ? tw`bg-yellow-50 border-yellow-400` : tw`bg-gray-50 border-gray-200`
+                        ]}
                         onPress={() => setPaymentMethod('upi')}
                     >
-                        <Text className={`text-center font-bold ${paymentMethod === 'upi' ? 'text-yellow-800' : 'text-gray-500'}`}>Pay Online (UPI)</Text>
+                        <Text style={[tw`text-center font-bold`, paymentMethod === 'upi' ? tw`text-yellow-800` : tw`text-gray-500`]}>Pay Online (UPI)</Text>
                     </TouchableOpacity>
                 </View>
                 {paymentMethod === 'upi' && (
-                    <View className="mt-4 p-4 bg-gray-50 rounded-lg items-center">
-                        <Text className="text-gray-600 mb-2 text-center">Scan QR at counter or upload screenshot after paying.</Text>
+                    <View style={tw`mt-4 p-4 bg-gray-50 rounded-lg items-center`}>
+                        <Text style={tw`text-gray-600 mb-2 text-center`}>Scan QR at counter or upload screenshot after paying.</Text>
 
                         <TouchableOpacity
-                            className="bg-gray-200 p-3 rounded-lg w-full items-center mb-2"
+                            style={tw`bg-gray-200 p-3 rounded-lg w-full items-center mb-2`}
                             onPress={pickImage}
                         >
-                            <Text className="text-sm font-bold text-gray-700">
+                            <Text style={tw`text-sm font-bold text-gray-700`}>
                                 {screenshotUri ? "Change Screenshot" : "Upload Payment Proof"}
                             </Text>
                         </TouchableOpacity>
@@ -185,19 +198,19 @@ export const TrialOrderScreen = ({ route, navigation }) => {
                 )}
             </View>
 
-            <Text className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-yellow-400 pl-3">Today's Menu</Text>
+            <Text style={tw`text-lg font-bold text-gray-800 mb-4 border-l-4 border-yellow-400 pl-3`}>Today's Menu</Text>
 
             {loading ? (
-                <View className="py-10 items-center">
+                <View style={tw`py-10 items-center`}>
                     <ActivityIndicator size="large" color="#EAB308" />
                 </View>
             ) : !menu ? (
-                <View className="py-10 items-center">
+                <View style={tw`py-10 items-center`}>
                     <ActivityIndicator size="large" color="#EAB308" />
                 </View>
             ) : (!menu.lunch && !menu.dinner) ? (
-                <View className="bg-white p-10 rounded-xl items-center">
-                    <Text className="text-gray-400">No menu available for today.</Text>
+                <View style={tw`bg-white p-10 rounded-xl items-center`}>
+                    <Text style={tw`text-gray-400`}>No menu available for today.</Text>
                 </View>
             ) : (
                 <>
@@ -206,7 +219,7 @@ export const TrialOrderScreen = ({ route, navigation }) => {
                 </>
             )}
 
-            <View className="h-10" />
+            <View style={tw`h-10`} />
         </ScrollView>
     );
 };

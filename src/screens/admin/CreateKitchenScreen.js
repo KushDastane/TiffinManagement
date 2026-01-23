@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { createKitchen } from '../../services/kitchenService';
+import tw from 'twrnc';
 
 export const CreateKitchenScreen = () => {
     const { user } = useAuth();
@@ -46,17 +47,17 @@ export const CreateKitchenScreen = () => {
     };
 
     return (
-        <ScrollView className="flex-1 bg-white p-6" showsVerticalScrollIndicator={false}>
-            <View className="pt-8 pb-6">
-                <Text className="text-4xl font-black text-gray-900 leading-tight">Create Your Kitchen</Text>
-                <Text className="text-gray-500 font-medium text-lg">Setup your brand in seconds.</Text>
+        <ScrollView style={tw`flex-1 bg-white p-6`} showsVerticalScrollIndicator={false}>
+            <View style={tw`pt-8 pb-6`}>
+                <Text style={tw`text-4xl font-black text-gray-900 leading-tight`}>Create Your Kitchen</Text>
+                <Text style={tw`text-gray-500 font-medium text-lg`}>Setup your brand in seconds.</Text>
             </View>
 
             {/* General Info */}
-            <View className="mb-8">
-                <Text className="text-gray-400 mb-2 font-black uppercase tracking-widest text-[10px]">Kitchen Name</Text>
+            <View style={tw`mb-8`}>
+                <Text style={tw`text-gray-400 mb-2 font-black uppercase tracking-widest text-[10px]`}>Kitchen Name</Text>
                 <TextInput
-                    className="w-full border-2 border-gray-100 rounded-2xl p-4 text-xl bg-gray-50 focus:border-yellow-400 font-bold"
+                    style={tw`w-full border-2 border-gray-100 rounded-2xl p-4 text-xl bg-gray-50 focus:border-yellow-400 font-bold`}
                     placeholder="e.g. Grandma's Tiffin"
                     value={name}
                     onChangeText={setName}
@@ -64,50 +65,47 @@ export const CreateKitchenScreen = () => {
             </View>
 
             {/* Kitchen Type Selection */}
-            <View className="mb-8">
-                <Text className="text-gray-400 mb-3 font-black uppercase tracking-widest text-[10px]">What do you serve?</Text>
-                <View className="flex-row gap-4">
+            <View style={tw`mb-8`}>
+                <Text style={tw`text-gray-400 mb-3 font-black uppercase tracking-widest text-[10px]`}>What do you serve?</Text>
+                <View style={tw`flex-row gap-4`}>
                     {types.map((t) => (
                         <TouchableOpacity
                             key={t.id}
                             onPress={() => setKitchenType(t.id)}
-                            style={{
-                                flex: 1,
-                                padding: 16,
-                                borderRadius: 16,
-                                borderWidth: 2,
-                                alignItems: 'center',
-                                backgroundColor: kitchenType === t.id ? '#111827' : '#FFFFFF',
-                                borderColor: kitchenType === t.id ? '#111827' : '#F3F4F6'
-                            }}
+                            style={[
+                                tw`flex-1 p-4 rounded-2xl border-2 items-center`,
+                                {
+                                    backgroundColor: kitchenType === t.id ? '#111827' : '#FFFFFF',
+                                    borderColor: kitchenType === t.id ? '#111827' : '#F3F4F6'
+                                }
+                            ]}
                         >
-                            <Text className="text-2xl mb-1">{t.icon}</Text>
-                            <Text className={`font-black text-center ${kitchenType === t.id ? 'text-white' : 'text-gray-900'}`}>{t.label}</Text>
-                            <Text className={`text-[10px] text-center mt-1 font-medium ${kitchenType === t.id ? 'text-gray-400' : 'text-gray-500'}`}>{t.desc}</Text>
+                            <Text style={tw`text-2xl mb-1`}>{t.icon}</Text>
+                            <Text style={[tw`font-black text-center`, { color: kitchenType === t.id ? 'white' : '#111827' }]}>{t.label}</Text>
+                            <Text style={[tw`text-[10px] text-center mt-1 font-medium`, { color: kitchenType === t.id ? '#9ca3af' : '#6b7280' }]}>{t.desc}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
             </View>
 
             {/* Brand Branding */}
-            <View className="mb-10">
-                <Text className="text-gray-400 mb-3 font-black uppercase tracking-widest text-[10px]">Brand Color</Text>
-                <View className="flex-row flex-wrap gap-4">
+            <View style={tw`mb-10`}>
+                <Text style={tw`text-gray-400 mb-3 font-black uppercase tracking-widest text-[10px]`}>Brand Color</Text>
+                <View style={tw`flex-row flex-wrap gap-4`}>
                     {colors.map((c) => (
                         <TouchableOpacity
                             key={c.code}
                             onPress={() => setPrimaryColor(c.code)}
-                            style={{ alignItems: 'center', justifyContent: 'center' }}
+                            style={tw`items-center justify-center`}
                         >
                             <View
-                                style={{
-                                    backgroundColor: c.code,
-                                    width: 48,
-                                    height: 48,
-                                    borderRadius: 24,
-                                    borderWidth: 4,
-                                    borderColor: primaryColor === c.code ? '#111827' : 'transparent'
-                                }}
+                                style={[
+                                    tw`w-12 h-12 rounded-full border-4`,
+                                    {
+                                        backgroundColor: c.code,
+                                        borderColor: primaryColor === c.code ? '#111827' : 'transparent'
+                                    }
+                                ]}
                             />
                         </TouchableOpacity>
                     ))}
@@ -117,25 +115,18 @@ export const CreateKitchenScreen = () => {
             <TouchableOpacity
                 onPress={handleCreate}
                 disabled={loading}
-                style={{
-                    width: '100%',
-                    backgroundColor: primaryColor,
-                    borderRadius: 16,
-                    padding: 20,
-                    alignItems: 'center',
-                    marginBottom: 48,
-                    opacity: loading ? 0.7 : 1,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                    elevation: 2
-                }}
+                style={[
+                    tw`w-full rounded-2xl p-5 items-center mb-12 shadow-sm`,
+                    {
+                        backgroundColor: primaryColor,
+                        opacity: loading ? 0.7 : 1,
+                    }
+                ]}
             >
                 {loading ? (
                     <ActivityIndicator color="black" />
                 ) : (
-                    <Text style={{ color: '#000', fontWeight: '900', fontSize: 20 }}>Start My Kitchen</Text>
+                    <Text style={tw`text-black font-black text-xl`}>Start My Kitchen</Text>
                 )}
             </TouchableOpacity>
         </ScrollView>

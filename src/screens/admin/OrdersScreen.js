@@ -107,54 +107,73 @@ export const OrdersScreen = () => {
             >
 
                 <View>
-                    {filteredOrders.map(o => {
-                        const isConfirmed = o.status === 'CONFIRMED';
-                        return (
-                            <View key={o.id} style={[tw`bg-white rounded-[30px] p-6 shadow-sm border mb-4`, isConfirmed ? tw`border-gray-50` : tw`border-yellow-200/50`]}>
-                                <View style={tw`flex-row justify-between items-start mb-6`}>
-                                    <View style={tw`flex-row items-center gap-3`}>
-                                        <View style={[tw`w-10 h-10 rounded-2xl items-center justify-center`, isConfirmed ? tw`bg-gray-100` : tw`bg-yellow-100`]}>
-                                            {isConfirmed ? <Check size={18} color="#4b5563" /> : <Clock size={18} color="#ca8a04" />}
-                                        </View>
-                                        <View>
-                                            <Text style={tw`text-base font-black text-gray-900`}>{o.userDisplayName || 'Student'}</Text>
-                                            <View style={tw`flex-row items-center gap-1`}>
-                                                <User size={10} color="#9ca3af" />
-                                                <Text style={tw`text-[10px] font-bold text-gray-400 uppercase`}>{o.slot} • {o.type?.replace('_', ' ')}</Text>
-                                            </View>
-                                        </View>
-                                    </View>
-                                    {!isConfirmed && <View style={tw`bg-yellow-100 px-3 py-1 rounded-full`}><Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>Pending</Text></View>}
-                                </View>
+                    const isConfirmed = o.status === 'CONFIRMED';
+                    const isPriority = o.isPriority === true;
 
-                                <View style={tw`bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-4`}>
-                                    <Text style={tw`text-xs font-black text-gray-900`}>{o.quantity} × {o.mainItem}</Text>
-                                    {o.componentsSnapshot && o.componentsSnapshot.length > 0 && (
-                                        <Text style={tw`text-[10px] text-gray-400 mt-1`}>Extras: {o.componentsSnapshot.map(c => `${c.name} x${c.quantity}`).join(', ')}</Text>
-                                    )}
-                                </View>
-
-                                {!isConfirmed ? (
-                                    <Pressable
-                                        onPress={() => handleConfirm(o.id)}
-                                        disabled={confirmingId === o.id}
-                                        style={tw`bg-yellow-400 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
-                                    >
-                                        {confirmingId === o.id ? <ActivityIndicator color="#111827" size="small" /> : (
-                                            <>
-                                                <Text style={tw`text-gray-900 font-black text-sm uppercase`}>Confirm Order</Text>
-                                                <ChevronRight size={18} color="#111827" />
-                                            </>
-                                        )}
-                                    </Pressable>
-                                ) : (
-                                    <View style={tw`flex-row items-center gap-2 mt-2 w-full justify-center`}>
-                                        <Check size={14} color="#059669" />
-                                        <Text style={tw`text-[10px] font-bold text-emerald-600 uppercase`}>Order Confirmed</Text>
-                                    </View>
-                                )}
+                    return (
+                    <View
+                        key={o.id}
+                        style={[
+                            tw`bg-white rounded-[30px] p-6 shadow-sm border mb-4`,
+                            isConfirmed ? tw`border-gray-50` : (isPriority ? tw`border-orange-300 bg-orange-50/10` : tw`border-yellow-200/50`)
+                        ]}
+                    >
+                        {isPriority && (
+                            <View style={tw`absolute -top-3 -right-2 bg-orange-500 px-3 py-1 rounded-full shadow-lg z-20 flex-row items-center gap-1.5`}>
+                                <Clock size={10} color="white" />
+                                <Text style={tw`text-white text-[8px] font-black uppercase tracking-widest`}>Early Collection</Text>
                             </View>
-                        );
+                        )}
+                        <View style={tw`flex-row justify-between items-start mb-6`}>
+                            <View style={tw`flex-row items-center gap-3`}>
+                                <View style={[tw`w-10 h-10 rounded-2xl items-center justify-center`, isConfirmed ? tw`bg-gray-100` : (isPriority ? tw`bg-orange-100` : tw`bg-yellow-100`)]}>
+                                    {isConfirmed ? <Check size={18} color="#4b5563" /> : (isPriority ? <Clock size={18} color="#ea580c" /> : <Clock size={18} color="#ca8a04" />)}
+                                </View>
+                                <View>
+                                    <Text style={tw`text-base font-black text-gray-900`}>{o.userDisplayName || 'Student'}</Text>
+                                    <View style={tw`flex-row items-center gap-1`}>
+                                        <User size={10} color="#9ca3af" />
+                                        <Text style={tw`text-[10px] font-bold text-gray-400 uppercase`}>{o.slot} • {o.type?.replace('_', ' ')}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                            <View style={tw`flex-row gap-2`}>
+                                {isPriority && <View style={tw`bg-orange-100 px-2 py-1 rounded-full`}><Text style={tw`text-[8px] font-black text-orange-700 uppercase`}>Priority</Text></View>}
+                                {!isConfirmed && <View style={tw`bg-yellow-100 px-3 py-1 rounded-full`}><Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>Pending</Text></View>}
+                            </View>
+                        </View>
+
+                        <View style={tw`bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-4`}>
+                            <Text style={tw`text-xs font-black text-gray-900`}>{o.quantity} × {o.mainItem}</Text>
+                            {o.componentsSnapshot && o.componentsSnapshot.length > 0 && (
+                                <Text style={tw`text-[10px] text-gray-400 mt-1`}>Extras: {o.componentsSnapshot.map(c => `${c.name} x${c.quantity}`).join(', ')}</Text>
+                            )}
+                        </View>
+
+                        {!isConfirmed ? (
+                            <Pressable
+                                onPress={() => handleConfirm(o.id)}
+                                disabled={confirmingId === o.id}
+                                style={[
+                                    tw`rounded-2xl py-3 items-center justify-center flex-row gap-2`,
+                                    isPriority ? tw`bg-orange-500` : tw`bg-yellow-400`
+                                ]}
+                            >
+                                {confirmingId === o.id ? <ActivityIndicator color={isPriority ? "#fff" : "#111827"} size="small" /> : (
+                                    <>
+                                        <Text style={[tw`font-black text-sm uppercase`, isPriority ? tw`text-white` : tw`text-gray-900`]}>Confirm Order</Text>
+                                        <ChevronRight size={18} color={isPriority ? "white" : "#111827"} />
+                                    </>
+                                )}
+                            </Pressable>
+                        ) : (
+                            <View style={tw`flex-row items-center gap-2 mt-2 w-full justify-center`}>
+                                <Check size={14} color="#059669" />
+                                <Text style={tw`text-[10px] font-bold text-emerald-600 uppercase`}>Order Confirmed</Text>
+                            </View>
+                        )}
+                    </View>
+                    );
                     })}
 
                     {filteredOrders.length === 0 && (

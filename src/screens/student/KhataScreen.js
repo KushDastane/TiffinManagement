@@ -19,7 +19,7 @@ import {
 const LedgerEntryCard = ({ type, amount, label, date }) => {
     const isCredit = type === "CREDIT";
     return (
-        <View style={tw`bg-white rounded-2xl p-4 flex-row justify-between items-center mb-3 border border-gray-100 shadow-sm/30`}>
+        <View style={tw`bg-white rounded-2xl p-4 flex-row justify-between items-center mb-3 border border-gray-100 shadow-sm`}>
             <View style={tw`flex-row items-center gap-3`}>
                 <View style={[
                     tw`w-10 h-10 rounded-xl items-center justify-center`,
@@ -111,6 +111,8 @@ export const KhataScreen = () => {
         const unsub = onSnapshot(q, (snap) => {
             const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setPayments(list);
+        }, (error) => {
+            console.error("KhataScreen: payments listener error:", error);
         });
 
         return () => unsub();

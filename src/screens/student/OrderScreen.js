@@ -30,7 +30,9 @@ import {
     Coffee,
     Sun,
     UtensilsCrossed,
-    Moon
+    Moon,
+    Clock,
+    CheckCircle
 } from 'lucide-react-native';
 
 const MenuCard = ({ title, description, price, selected, quantity, onSelect, onQtyChange }) => {
@@ -107,6 +109,7 @@ export const OrderScreen = () => {
     const [selectedItem, setSelectedItem] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [extrasQty, setExtrasQty] = useState({});
+    const [isPriority, setIsPriority] = useState(false);
 
     useEffect(() => {
         if (!tenant) return;
@@ -169,6 +172,7 @@ export const OrderScreen = () => {
             studentId: user.uid,
             mealType: selectedSlot.toUpperCase(),
             slot: selectedSlot,
+            isPriority: selectedSlot === 'lunch' ? isPriority : false,
             items: {
                 item: selectedItem.label,
                 unitPrice: selectedItem.price,
@@ -188,6 +192,7 @@ export const OrderScreen = () => {
             setSelectedItem(null);
             setQuantity(1);
             setExtrasQty({});
+            setIsPriority(false);
         } else {
             Alert.alert("Error", result.error || "Failed to place order.");
         }
@@ -302,7 +307,7 @@ export const OrderScreen = () => {
                 </ScrollView>
             </View>
 
-            <ScrollView style={tw`flex-1 p-6 -mt-4`} showsVerticalScrollIndicator={false}>
+            <ScrollView style={tw`flex-1 p-6 -mt-4`} contentContainerStyle={tw`pb-40`} showsVerticalScrollIndicator={false}>
 
                 {menu.type === "ROTI_SABZI" && menu.rotiSabzi ? (
                     <View style={tw`gap-4`}>
@@ -340,31 +345,69 @@ export const OrderScreen = () => {
                     </View>
                 )}
 
-                {menu.extras?.length > 0 && selectedItem && (
-                    <View style={tw`mt-8 mb-40`}>
+                {selectedSlot === 'lunch' && selectedItem && (
+                    <View style={tw`mt-8`}>
                         <View style={tw`flex-row items-center gap-2 mb-4`}>
-                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Add-ons (Optional)</Text>
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Priority Preparation</Text>
                             <View style={tw`h-[1px] flex-1 bg-gray-100`} />
                         </View>
-                        {menu.extras.map((e, idx) => (
-                            e && (
-                                <View key={e.name || idx} style={tw`flex-row justify-between items-center bg-white p-4 rounded-2xl mb-3 shadow-sm border border-gray-100`}>
+                        <Pressable
+                            onPress={() => setIsPriority(!isPriority)}
+                            style={[
+                                tw`flex-row items-center justify-between p-4 rounded-2xl border`,
+                                isPriority ? tw`bg-orange-50 border-orange-200 shadow-sm shadow-orange-100` : tw`bg-white border-gray-100 shadow-sm`
+                            ]}
+                        >
+                            <View style={tw`flex-row items-center gap-3`}>
+                                <View style={[tw`w-10 h-10 rounded-xl items-center justify-center`, isPriority ? tw`bg-orange-100` : tw`bg-gray-50`]}>
+                                    <Clock size={20} color={isPriority ? "#ea580c" : "#9ca3af"} />
+                                </View>
+                                <View>
+                                    <Text style={[tw`text-sm font-black`, isPriority ? tw`text-orange-900` : tw`text-gray-900`]}>Early Collection</Text>
+                                    <Text style={tw`text-[9px] font-bold text-gray-400 uppercase`}>Before College / Early Lunch</Text>
+                                </View>
+                            </View>
+                            <View style={[tw`w-6 h-6 rounded-full border-2 items-center justify-center`, isPriority ? tw`bg-orange-500 border-orange-500` : tw`border-gray-200`]}>
+                                {isPriority && <CheckCircle size={14} color="white" />}
+                            </View>
+                        </Pressable>
+                    </View>
+                )}
+
+                {/* Extras Section */}
+                {selectedItem && menu?.extras && menu.extras.length > 0 && (
+                    <View style={tw`mt-8`}>
+                        <View style={tw`flex-row items-center gap-2 mb-4`}>
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Add-ons & Extras</Text>
+                            <View style={tw`h-[1px] flex-1 bg-gray-100`} />
+                        </View>
+                        <View style={tw`gap-3`}>
+                            {menu.extras.map((extra, idx) => (
+                                <View key={idx} style={tw`flex-row justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm`}>
                                     <View>
-                                        <Text style={tw`font-black text-gray-900 text-sm`}>{e.name}</Text>
-                                        <Text style={tw`text-[9px] font-bold text-gray-400 uppercase`}>₹{e.price}</Text>
+                                        <Text style={tw`font-black text-gray-900`}>{extra.name}</Text>
+                                        <View style={tw`bg-yellow-100 px-2 py-0.5 rounded-md self-start mt-1`}>
+                                            <Text style={tw`text-[9px] font-black text-yellow-800`}>+₹{extra.price}</Text>
+                                        </View>
                                     </View>
-                                    <View style={tw`flex-row items-center bg-gray-50 rounded-xl p-1`}>
-                                        <Pressable onPress={() => updateExtraQty(e.name, -1)} style={tw`w-8 h-8 rounded-lg items-center justify-center`}>
-                                            <Text style={tw`text-lg font-black text-gray-400`}>−</Text>
+                                    <View style={tw`flex-row items-center gap-3`}>
+                                        <Pressable
+                                            onPress={() => updateExtraQty(extra.name, -1)}
+                                            style={tw`w-8 h-8 rounded-lg bg-gray-50 items-center justify-center border border-gray-100`}
+                                        >
+                                            <Minus size={14} color="#9ca3af" />
                                         </Pressable>
-                                        <Text style={tw`mx-3 font-black text-gray-900 text-[11px]`}>{extrasQty[e.name] || 0}</Text>
-                                        <Pressable onPress={() => updateExtraQty(e.name, 1)} style={tw`w-8 h-8 rounded-lg items-center justify-center`}>
-                                            <Text style={tw`text-lg font-black text-gray-400`}>+</Text>
+                                        <Text style={tw`font-black text-gray-900 w-4 text-center`}>{extrasQty[extra.name] || 0}</Text>
+                                        <Pressable
+                                            onPress={() => updateExtraQty(extra.name, 1)}
+                                            style={tw`w-8 h-8 rounded-lg bg-gray-900 items-center justify-center`}
+                                        >
+                                            <Plus size={14} color="white" />
                                         </Pressable>
                                     </View>
                                 </View>
-                            )
-                        ))}
+                            ))}
+                        </View>
                     </View>
                 )}
             </ScrollView>
