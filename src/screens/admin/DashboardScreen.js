@@ -196,7 +196,7 @@ export const DashboardScreen = ({ navigation }) => {
                                             <CheckCircle size={14} color="#a7f3d0" />
                                             <Text style={tw`text-xs font-bold text-emerald-100`}>Active</Text>
                                         </View>
-                                        <Text style={tw`text-[9px] text-white/40`}>{orders.length} orders</Text>
+                                        <Text style={tw`text-[9px] text-white/40`}>{orders.filter(o => o.slot === slot).length} orders</Text>
                                     </>
                                 )}
                             </View>
@@ -293,7 +293,7 @@ export const DashboardScreen = ({ navigation }) => {
                                     )}
                                     <View style={tw`items-center flex-1`}>
                                         <Text style={tw`text-3xl font-black text-gray-900`}>{count || 0}</Text>
-                                        <Text style={[tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`, { width: '80%', textAlign: 'center' }]} numberOfLines={1}>{name}</Text>
+                                        <Text style={[tw`text-[10px] font-black text-gray-400 tracking-widest mt-1.5 uppercase`, { width: '80%', textAlign: 'center' }]} numberOfLines={1}>Extra {name}</Text>
                                     </View>
                                 </React.Fragment>
                             ))}
