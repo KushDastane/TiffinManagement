@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Animated, Dimensions } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, getLunchDateKey, getDinnerDateKey } from '../../services/menuService';
+import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, getLunchDateKey, getDinnerDateKey, getEffectiveMenuDateKey, getSlotDateKey } from '../../services/menuService';
 import tw from 'twrnc';
 import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,6 +43,15 @@ export const MenuScreen = () => {
 
     const todayKey = useMemo(() => getTodayKey(), []);
     const tomorrowKey = useMemo(() => getTomorrowKey(), []);
+    const effectiveDateKey = useMemo(() => getEffectiveMenuDateKey(tenant), [tenant]);
+
+    // Get Active Slots
+    const activeSlots = useMemo(() => {
+        if (!tenant?.mealSlots) return [];
+        return Object.entries(tenant.mealSlots)
+            .filter(([_, s]) => s.active)
+            .map(([id, s]) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
+    }, [tenant?.mealSlots]);
 
     useEffect(() => {
         if (!tenant?.id) return;
@@ -64,7 +73,7 @@ export const MenuScreen = () => {
     }, [tenant?.id, todayKey, tomorrowKey]);
 
     const getSlotData = (slot) => {
-        const key = slot === 'lunch' ? getLunchDateKey() : getDinnerDateKey();
+        const key = getSlotDateKey(slot, tenant);
         return menuCache[key]?.[slot];
     };
 
@@ -149,7 +158,7 @@ export const MenuScreen = () => {
             payload.other = { name: otherName, price: Number(otherPrice) };
         }
 
-        const targetDate = editingSlot === 'lunch' ? getLunchDateKey() : getDinnerDateKey();
+        const targetDate = getSlotDateKey(editingSlot, tenant);
         const result = await saveMenu(tenant.id, targetDate, { [editingSlot]: payload });
         setIsSaving(false);
         if (result.success) {
@@ -187,7 +196,7 @@ export const MenuScreen = () => {
                         style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
                     >
                         <Text style={tw`text-2xl font-black text-gray-900`}>Daily Menu</Text>
-                        <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Meals for {todayKey}</Text>
+                        <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Meals for {effectiveDateKey}</Text>
                     </LinearGradient>
                 </View>
 
@@ -196,10 +205,10 @@ export const MenuScreen = () => {
                     style={tw`flex-1`}
                     showsVerticalScrollIndicator={false}
                 >
-                    {['lunch', 'dinner'].map(slot => {
+                    {activeSlots.map(m => {
+                        const slot = m.id;
                         const data = getSlotData(slot);
-                        const Icon = slot === 'lunch' ? Sun : Moon;
-                        const accent = slot === 'lunch' ? 'yellow-400' : 'amber-500';
+                        const accent = slot === 'lunch' || slot === 'breakfast' ? 'yellow-400' : 'amber-500';
 
                         return (
                             <View key={slot} style={tw`mb-8`}>

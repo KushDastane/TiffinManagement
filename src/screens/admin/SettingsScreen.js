@@ -7,15 +7,19 @@ import { getKitchenConfig, updateKitchenConfig } from '../../services/kitchenSer
 import { logoutUser } from '../../services/authService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck } from 'lucide-react-native';
+import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed } from 'lucide-react-native';
 
 // Helper Component for Triggers
-const InputTrigger = ({ label, value, onPress, placeholder }) => (
+const InputTrigger = ({ label, value, onPress, placeholder, disabled }) => (
     <View style={tw`flex-1`}>
         <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>{label}</Text>
         <Pressable
             onPress={onPress}
-            style={tw`bg-white rounded-2xl px-4 py-3 border border-gray-100`}
+            disabled={disabled}
+            style={[
+                tw`bg-white rounded-2xl px-4 py-3 border border-gray-100`,
+                disabled && tw`bg-gray-50 opacity-50`
+            ]}
         >
             <Text style={tw`font-bold text-gray-900`}>{value || placeholder}</Text>
         </Pressable>
@@ -81,6 +85,18 @@ export const SettingsScreen = () => {
             // Update Config
             if (picker.field === 'holiday') {
                 setConfig(prev => ({ ...prev, holiday: { ...prev.holiday, [picker.subField]: newValue } }));
+            } else if (picker.field === 'mealSlots' && picker.subField) {
+                const [slotId, timeField] = picker.subField.split('.');
+                setConfig(prev => ({
+                    ...prev,
+                    mealSlots: {
+                        ...prev.mealSlots,
+                        [slotId]: {
+                            ...(prev.mealSlots?.[slotId] || {}),
+                            [timeField]: newValue
+                        }
+                    }
+                }));
             } else {
                 setConfig(prev => ({ ...prev, [picker.field]: newValue }));
             }
@@ -152,16 +168,64 @@ export const SettingsScreen = () => {
                     </Pressable>
                 </View>
 
-                {/* Timings */}
+                {/* Meal Slots */}
                 <View style={tw`bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-5`}>
-                    <View style={tw`flex-row items-center gap-2 mb-4`}>
+                    <View style={tw`flex-row items-center gap-2 mb-6`}>
                         <Clock size={16} color="#ca8a04" />
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Operational Hours</Text>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Meal Timings</Text>
                     </View>
-                    <View style={tw`flex-row gap-4`}>
-                        <InputTrigger label="Opens At" value={config?.openTime} onPress={() => openPicker('time', 'openTime', null, config?.openTime)} placeholder="00:00" />
-                        <InputTrigger label="Closes At" value={config?.closeTime} onPress={() => openPicker('time', 'closeTime', null, config?.closeTime)} placeholder="00:00" />
-                    </View>
+
+                    {[
+                        { id: 'breakfast', label: 'Breakfast', icon: Coffee },
+                        { id: 'lunch', label: 'Lunch', icon: Sun },
+                        { id: 'snacks', label: 'Snacks', icon: UtensilsCrossed },
+                        { id: 'dinner', label: 'Dinner', icon: Moon }
+                    ].map((m) => {
+                        const slot = config?.mealSlots?.[m.id] || { active: false, start: '08:00', end: '10:00' };
+                        const Icon = m.icon;
+
+                        return (
+                            <View key={m.id} style={tw`mb-6 last:mb-0`}>
+                                <View style={tw`flex-row items-center justify-between mb-3`}>
+                                    <View style={tw`flex-row items-center gap-3`}>
+                                        <View style={tw`w-8 h-8 rounded-lg ${slot.active ? 'bg-yellow-50' : 'bg-gray-50'} items-center justify-center`}>
+                                            <Icon size={16} color={slot.active ? "#ca8a04" : "#9ca3af"} />
+                                        </View>
+                                        <Text style={tw`font-bold ${slot.active ? 'text-gray-900' : 'text-gray-400'}`}>{m.label}</Text>
+                                    </View>
+                                    <Switch
+                                        value={slot.active}
+                                        onValueChange={(v) => setConfig({
+                                            ...config,
+                                            mealSlots: {
+                                                ...config.mealSlots,
+                                                [m.id]: { ...slot, active: v }
+                                            }
+                                        })}
+                                        trackColor={{ false: "#e5e7eb", true: "#fde68a" }}
+                                        thumbColor={slot.active ? "#ca8a04" : "#f4f3f4"}
+                                    />
+                                </View>
+
+                                {slot.active && (
+                                    <View style={tw`flex-row gap-4 pl-11`}>
+                                        <InputTrigger
+                                            label="From"
+                                            value={slot.start}
+                                            onPress={() => openPicker('time', 'mealSlots', `${m.id}.start`, slot.start)}
+                                            placeholder="00:00"
+                                        />
+                                        <InputTrigger
+                                            label="To"
+                                            value={slot.end}
+                                            onPress={() => openPicker('time', 'mealSlots', `${m.id}.end`, slot.end)}
+                                            placeholder="00:00"
+                                        />
+                                    </View>
+                                )}
+                            </View>
+                        );
+                    })}
                 </View>
 
                 {/* Holiday */}

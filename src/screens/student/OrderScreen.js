@@ -13,7 +13,9 @@ import {
     subscribeToMenu,
     getEffectiveMenuDateKey,
     getEffectiveMealSlot,
-    isAfterResetTime
+    isAfterResetTime,
+    getAvailableSlots,
+    getSlotDateKey
 } from "../../services/menuService";
 import {
     placeStudentOrder,
@@ -25,6 +27,10 @@ import {
     ArrowLeft,
     Plus,
     Minus,
+    Coffee,
+    Sun,
+    UtensilsCrossed,
+    Moon
 } from 'lucide-react-native';
 
 const MenuCard = ({ title, description, price, selected, quantity, onSelect, onQtyChange }) => {
@@ -93,21 +99,33 @@ export const OrderScreen = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    const [selectedSlot, setSelectedSlot] = useState(null);
+    const [availableSlots, setAvailableSlots] = useState([]);
+    const [activeDateKey, setActiveDateKey] = useState(null);
+
     // Selection State
     const [selectedItem, setSelectedItem] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [extrasQty, setExtrasQty] = useState({});
 
-    const dateId = getEffectiveMenuDateKey();
-    const activeSlot = getEffectiveMealSlot();
+    useEffect(() => {
+        if (!tenant) return;
+        const slots = getAvailableSlots(tenant);
+        setAvailableSlots(slots);
+        if (slots.length > 0 && !selectedSlot) {
+            setSelectedSlot(slots[0].id);
+        }
+        setActiveDateKey(getEffectiveMenuDateKey(tenant));
+    }, [tenant]);
 
     useEffect(() => {
-        if (!tenant?.id || !user?.uid) return;
+        if (!tenant?.id || !user?.uid || !selectedSlot) return;
 
         setLoading(true);
+        const dateId = getSlotDateKey(selectedSlot, tenant);
         const unsubMenu = subscribeToMenu(tenant.id, dateId, (data) => {
-            if (data && activeSlot) {
-                setMenu(data[activeSlot]);
+            if (data && data[selectedSlot]) {
+                setMenu(data[selectedSlot]);
             } else {
                 setMenu(null);
             }
@@ -117,7 +135,7 @@ export const OrderScreen = () => {
         return () => {
             unsubMenu();
         };
-    }, [tenant?.id, user?.uid, dateId, activeSlot]);
+    }, [tenant?.id, user?.uid, selectedSlot]);
 
     // Always allow placing order if menu is present
     const canPlaceOrder = true;
@@ -139,7 +157,8 @@ export const OrderScreen = () => {
         setSaving(true);
         const orderData = {
             studentId: user.uid,
-            mealType: activeSlot.toUpperCase(),
+            mealType: selectedSlot.toUpperCase(),
+            slot: selectedSlot,
             items: {
                 item: selectedItem.label,
                 unitPrice: selectedItem.price,
@@ -174,16 +193,63 @@ export const OrderScreen = () => {
     if (loading) return <View style={tw`flex-1 items-center justify-center bg-gray-50`}><ActivityIndicator color={primaryColor} /></View>;
     if (!tenant) return null;
 
-    if (!activeSlot || !menu || menu.status !== 'SET') {
+    if (availableSlots.length === 0 || !selectedSlot) {
         return (
             <View style={tw`flex-1 bg-white items-center justify-center p-10`}>
                 <Text style={tw`text-6xl mb-6`}>👨‍🍳</Text>
                 <Text style={tw`text-2xl font-black text-gray-900 text-center mb-2`}>
-                    Menu Updating...
+                    Kitchen Resting
                 </Text>
-                <Text style={tw`text-gray-400 text-center font-bold`}>
-                    The kitchen is deciding the menu for {activeSlot}.{'\n'}Please check back shortly!
+                <Text style={tw`text-gray-400 text-center font-bold uppercase tracking-widest text-[10px]`}>
+                    No active meal slots available right now.
                 </Text>
+                <Pressable onPress={() => navigation.goBack()} style={tw`mt-8 bg-gray-900 px-8 py-4 rounded-2xl`}>
+                    <Text style={tw`text-white font-black text-xs uppercase tracking-widest`}>Go Back</Text>
+                </Pressable>
+            </View>
+        );
+    }
+
+    if (!menu || menu.status !== 'SET') {
+        const SlotIcon = selectedSlot === 'breakfast' ? Coffee : (selectedSlot === 'lunch' ? Sun : (selectedSlot === 'snacks' ? UtensilsCrossed : Moon));
+        return (
+            <View style={tw`flex-1 bg-white`}>
+                <View style={tw`px-6 pt-14 flex-row items-center gap-4`}>
+                    <Pressable onPress={() => navigation.goBack()} style={tw`w-10 h-10 rounded-xl bg-gray-50 items-center justify-center border border-gray-100`}>
+                        <ArrowLeft size={20} color="#111827" />
+                    </Pressable>
+                    <Text style={tw`text-xl font-black text-gray-900`}>Build Meal</Text>
+                </View>
+
+                {/* Slot Selector also here */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={tw`px-6 py-6 gap-3`}>
+                    {availableSlots.map(s => {
+                        const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
+                        const isSelected = selectedSlot === s.id;
+                        return (
+                            <Pressable
+                                key={s.id}
+                                onPress={() => setSelectedSlot(s.id)}
+                                style={[tw`flex-row items-center gap-2 px-5 py-3 rounded-2xl border`, isSelected ? tw`bg-yellow-400 border-yellow-400` : tw`bg-white border-gray-100 shadow-sm`]}
+                            >
+                                <Icon size={14} color={isSelected ? "#111827" : "#9ca3af"} />
+                                <Text style={[tw`text-[10px] font-black uppercase tracking-widest`, isSelected ? tw`text-gray-900` : tw`text-gray-400`]}>{s.id}</Text>
+                            </Pressable>
+                        );
+                    })}
+                </ScrollView>
+
+                <View style={tw`flex-1 items-center justify-center p-10`}>
+                    <View style={tw`w-20 h-20 rounded-3xl bg-gray-50 items-center justify-center mb-6`}>
+                        <SlotIcon size={32} color="#9ca3af" />
+                    </View>
+                    <Text style={tw`text-2xl font-black text-gray-900 text-center mb-2`}>
+                        Menu Updating...
+                    </Text>
+                    <Text style={tw`text-gray-400 text-center font-bold uppercase tracking-widest text-[9px]`}>
+                        The kitchen is deciding the menu for {selectedSlot}.{'\n'}Please check back shortly!
+                    </Text>
+                </View>
             </View>
         );
     }
@@ -200,11 +266,31 @@ export const OrderScreen = () => {
 
                 <View>
                     <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-0.5`}>
-                        {isAfterResetTime() ? "TOMORROW" : "TODAY"} • {activeSlot?.toUpperCase()}
+                        {activeDateKey} • AVAILABLE MEALS
                     </Text>
                     <Text style={tw`text-2xl font-black text-gray-900`}>Build Meal</Text>
                 </View>
             </LinearGradient>
+
+            {/* Slot Selector Carousel */}
+            <View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={tw`px-6 py-4 gap-3`}>
+                    {availableSlots.map(s => {
+                        const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
+                        const isSelected = selectedSlot === s.id;
+                        return (
+                            <Pressable
+                                key={s.id}
+                                onPress={() => setSelectedSlot(s.id)}
+                                style={[tw`flex-row items-center gap-2 px-5 py-3 rounded-2xl border`, isSelected ? tw`bg-yellow-400 border-yellow-400` : tw`bg-white border-gray-100 shadow-sm`]}
+                            >
+                                <Icon size={14} color={isSelected ? "#111827" : "#9ca3af"} />
+                                <Text style={[tw`text-[10px] font-black uppercase tracking-widest`, isSelected ? tw`text-gray-900` : tw`text-gray-400`]}>{s.id}</Text>
+                            </Pressable>
+                        );
+                    })}
+                </ScrollView>
+            </View>
 
             <ScrollView style={tw`flex-1 p-6 -mt-4`} showsVerticalScrollIndicator={false}>
 
@@ -275,7 +361,7 @@ export const OrderScreen = () => {
 
             {/* Bottom Bar - High Impact */}
             <View style={tw`absolute bottom-10 left-6 right-6`}>
-                
+
                 <Pressable
                     disabled={!selectedItem || !canPlaceOrder || saving}
                     onPress={handlePlaceOrder}

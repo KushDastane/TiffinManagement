@@ -19,14 +19,6 @@ export const getTomorrowKey = () => {
     return getMenuDateId(tomorrow);
 };
 
-export const isAfterResetTime = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    // After 9 PM (21:00), show tomorrow's menu. 
-    // Midnight to morning (0-6) is considered "Today" so strict >= 21.
-    return currentHour >= 21;
-};
-
 /**
  * Saves a detailed menu for a specific date.
  */
@@ -62,29 +54,78 @@ export const subscribeToMenu = (kitchenId, date, callback) => {
         console.error("Menu subscription error:", error);
     });
 };
-export const getEffectiveMenuDateKey = () => {
-    return isAfterResetTime() ? getTomorrowKey() : getTodayKey();
+
+/**
+ * Checks if current time is past the end of the last active meal slot.
+ */
+export const isAfterResetTime = (kitchenConfig) => {
+    if (!kitchenConfig?.mealSlots) return false;
+
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // Find the latest end time among active slots
+    const activeSlots = Object.values(kitchenConfig.mealSlots).filter(s => s.active);
+    if (activeSlots.length === 0) return false;
+
+    const lastSlot = activeSlots.reduce((latest, current) => {
+        return (current.end > latest.end) ? current : latest;
+    });
+
+    return currentTime > lastSlot.end;
 };
 
-export const getEffectiveMealSlot = () => {
-    const currentHour = new Date().getHours();
+/**
+ * Gets all currently available meal slots for a student to order.
+ */
+export const getAvailableSlots = (kitchenConfig) => {
+    if (!kitchenConfig?.mealSlots) return [];
 
-    // Logic:
-    // < 15 (3 PM) -> Lunch
-    // < 21 (9 PM) -> Dinner
-    // >= 21 (9 PM) -> Lunch (Cycle resets to next day via Date Key)
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    if (currentHour < 15) return "lunch";
-    if (currentHour < 21) return "dinner";
-    return "lunch";
+    return Object.entries(kitchenConfig.mealSlots)
+        .filter(([id, slot]) => slot.active && currentTime <= slot.end)
+        .map(([id, slot]) => ({ id, ...slot }))
+        .sort((a, b) => a.start.localeCompare(b.start));
 };
 
-export const getLunchDateKey = () => {
-    const currentHour = new Date().getHours();
-    return currentHour < 15 ? getTodayKey() : getTomorrowKey();
+export const getEffectiveMenuDateKey = (kitchenConfig) => {
+    return isAfterResetTime(kitchenConfig) ? getTomorrowKey() : getTodayKey();
 };
 
-export const getDinnerDateKey = () => {
-    const currentHour = new Date().getHours();
-    return currentHour < 21 ? getTodayKey() : getTomorrowKey();
+export const getEffectiveMealSlot = (kitchenConfig) => {
+    if (!kitchenConfig?.mealSlots) return null;
+
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const activeSlots = Object.entries(kitchenConfig.mealSlots)
+        .filter(([id, slot]) => slot.active)
+        .map(([id, slot]) => ({ id, ...slot }))
+        .sort((a, b) => a.start.localeCompare(b.start));
+
+    if (activeSlots.length === 0) return null;
+
+    // 1. Check for current slots (now <= end)
+    const current = activeSlots.filter(s => currentTime <= s.end);
+    if (current.length > 0) return current[0].id;
+
+    // 2. If nothing is "Current", return the very first slot of the day (for the next cycle)
+    return activeSlots[0].id;
 };
+
+// Generic slot date keys - now generic
+export const getSlotDateKey = (slotId, kitchenConfig) => {
+    if (!kitchenConfig?.mealSlots?.[slotId]) return getTodayKey();
+
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const slot = kitchenConfig.mealSlots[slotId];
+
+    return currentTime <= slot.end ? getTodayKey() : getTomorrowKey();
+};
+
+// Keep these for backward compatibility if needed, but they are now thin wrappers
+export const getLunchDateKey = (kitchenConfig) => getSlotDateKey('lunch', kitchenConfig);
+export const getDinnerDateKey = (kitchenConfig) => getSlotDateKey('dinner', kitchenConfig);

@@ -14,6 +14,7 @@ import {
     subscribeToMenu,
     getEffectiveMenuDateKey,
     getEffectiveMealSlot,
+    getAvailableSlots,
 } from "../../services/menuService";
 import {
     subscribeToMyOrders,
@@ -29,6 +30,10 @@ import {
     ArrowRight,
     CreditCard,
     Plus,
+    Coffee,
+    Sun,
+    UtensilsCrossed,
+    Moon
 } from 'lucide-react-native';
 
 const WalletCard = ({ balance, loading }) => {
@@ -180,8 +185,8 @@ export const HomeScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const activeSlot = getEffectiveMealSlot(); // 'lunch' or 'dinner'
-    const dateId = getEffectiveMenuDateKey();
+    const activeSlot = getEffectiveMealSlot(tenant);
+    const dateId = getEffectiveMenuDateKey(tenant);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -220,8 +225,8 @@ export const HomeScreen = () => {
         setRefreshing(false);
     };
 
-    // Kitchen is considered open if there is an active slot (which is always true now)
-    const kitchenOpen = !!activeSlot;
+    // Kitchen is considered open if there is an active slot currently available for ordering
+    const kitchenOpen = getAvailableSlots(tenant).length > 0;
 
     return (
         <View style={tw`flex-1  bg-[#faf9f6]`}>
@@ -256,7 +261,7 @@ export const HomeScreen = () => {
                                 </Text>
                             </View>
                             <View style={tw`w-14 h-14 rounded-[20px] bg-white items-center justify-center shadow-lg shadow-yellow-100 border border-white`}>
-                                <Text style={tw`text-2xl`}>🍛</Text>
+                                {activeSlot === 'breakfast' ? <Coffee size={24} color="#ca8a04" /> : (activeSlot === 'lunch' ? <Sun size={24} color="#ca8a04" /> : (activeSlot === 'snacks' ? <UtensilsCrossed size={24} color="#ca8a04" /> : <Moon size={24} color="#ca8a04" />))}
                             </View>
                         </View>
                     </View>
@@ -276,9 +281,9 @@ export const HomeScreen = () => {
                     <View style={tw`flex-row justify-between items-center mb-8`}>
                         <View style={tw`flex-row items-center gap-4`}>
                             <View style={tw`w-14 h-14 rounded-2xl bg-gray-900 items-center justify-center shadow-lg shadow-gray-200`}>
-                                <Text style={tw`text-2xl`}>
-                                    {!todaysOrder ? "🍱" : (todaysOrder.status === 'CONFIRMED' ? "�" : "⏳")}
-                                </Text>
+                                <View style={tw`items-center justify-center`}>
+                                    {activeSlot === 'breakfast' ? <Coffee size={24} color="#fbbf24" /> : (activeSlot === 'lunch' ? <Sun size={24} color="#fbbf24" /> : (activeSlot === 'snacks' ? <UtensilsCrossed size={24} color="#fbbf24" /> : <Moon size={24} color="#fbbf24" />))}
+                                </View>
                             </View>
                             <View>
                                 <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>

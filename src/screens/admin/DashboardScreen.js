@@ -6,7 +6,7 @@ import { listenToAdminStats, getCookingSummary } from '../../services/adminServi
 import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot } from '../../services/menuService';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import tw from 'twrnc';
-import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle, Coffee, UtensilsCrossed } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
@@ -27,8 +27,8 @@ export const DashboardScreen = ({ navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [confirmingId, setConfirmingId] = useState(null);
 
-    const slot = useMemo(() => getEffectiveMealSlot(), []);
-    const dateKey = useMemo(() => getEffectiveMenuDateKey(), []);
+    const slot = useMemo(() => getEffectiveMealSlot(tenant), [tenant]);
+    const dateKey = useMemo(() => getEffectiveMenuDateKey(tenant), [tenant]);
 
     useEffect(() => {
         if (!tenant?.id) return;
@@ -100,8 +100,17 @@ export const DashboardScreen = ({ navigation }) => {
         if (!slot) return { label: "Off Hours", color: "gray", subLabel: "Kitchen is resting" };
         const slotData = menuData?.[slot];
         if (!slotData) return { label: `${slot.toUpperCase()} Menu Not Set`, color: "red", subLabel: "" };
-        return { label: "Ready to Serve", color: "yellow", subLabel: slotData.mainItem };
+        const mainItem = slotData.type === 'ROTI_SABZI' ? slotData.rotiSabzi?.sabzi : slotData.other?.name;
+        return { label: "Ready to Serve", color: "yellow", subLabel: mainItem };
     }, [menuData, slot]);
+
+    const SlotIcon = useMemo(() => {
+        if (!slot) return Clock; // Default icon for off hours
+        if (slot === 'breakfast') return Coffee;
+        if (slot === 'lunch') return Sun;
+        if (slot === 'snacks') return UtensilsCrossed;
+        return Moon;
+    }, [slot]);
 
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
@@ -129,19 +138,25 @@ export const DashboardScreen = ({ navigation }) => {
                     {/* Live Status Card - Dashboard Redesign */}
                     <Pressable onPress={() => navigation.navigate('Menu')}>
                         <LinearGradient
-                            colors={menuStatus.color === 'red' ? ['#450a0a', '#7f1d1d'] : ['#064e3b', '#059669']}
-                            start={{ x: 0, y: 0.5 }}
-                            end={{ x: 1, y: 0.5 }}
+                            colors={
+                                menuStatus.color === 'red' ? ['#450a0a', '#7f1d1d'] :
+                                    menuStatus.color === 'gray' ? ['#334155', '#1e293b'] : // Slate/Gray for Off Hours
+                                        ['#064e3b', '#059669']
+                            }
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
                             style={tw`rounded-3xl p-5 shadow-lg flex-row items-center justify-between border border-white/10`}
                         >
                             <View style={tw`flex-row items-center gap-4 flex-1`}>
                                 <View style={tw`w-12 h-12 rounded-2xl bg-white/10 items-center justify-center border border-white/5`}>
-                                    {slot === 'dinner' ? <Moon size={22} color="#fbbf24" fill="#fbbf24" /> : <Sun size={24} color="#fbbf24" />}
+                                    <SlotIcon size={22} color="#fbbf24" fill={slot === 'dinner' || slot === 'snacks' ? "#fbbf24" : "transparent"} />
                                 </View>
                                 <View style={tw`flex-1`}>
 
-                                    <Text style={tw`text-2xl font-black text-white capitalize`}>{slot || 'Unknown'}</Text>
-                                    <Text style={tw`text-[10px] text-white/80 font-medium`} numberOfLines={1}>{menuStatus.color === 'red' ? 'Upload menu' : 'Menu is live • Receiving orders'}</Text>
+                                    <Text style={tw`text-2xl font-black text-white capitalize`}>{slot || 'Resting'}</Text>
+                                    <Text style={tw`text-[10px] text-white/80 font-medium`} numberOfLines={1}>
+                                        {menuStatus.color === 'red' ? 'Upload menu' : (slot ? 'Menu is live • Receiving orders' : 'Waiting for next slot...')}
+                                    </Text>
                                 </View>
                             </View>
 
@@ -150,9 +165,17 @@ export const DashboardScreen = ({ navigation }) => {
                                     <>
                                         <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
                                             <AlertTriangle size={14} color="#fca5a5" />
-                                            <Text style={tw`text-xs font-bold text-red-100`}>Menu Missing</Text>
+                                            <Text style={tw`text-xs font-bold text-red-100`}>Missing</Text>
                                         </View>
-
+                                        <Text style={tw`text-[9px] text-white/40`}>Not Uploaded</Text>
+                                    </>
+                                ) : menuStatus.color === 'gray' ? (
+                                    <>
+                                        <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
+                                            <Clock size={14} color="#cbd5e1" />
+                                            <Text style={tw`text-xs font-bold text-slate-100`}>Resting</Text>
+                                        </View>
+                                        <Text style={tw`text-[9px] text-white/40`}>Off Hours</Text>
                                     </>
                                 ) : (
                                     <>

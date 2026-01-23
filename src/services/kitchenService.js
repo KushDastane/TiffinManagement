@@ -151,7 +151,8 @@ export const getKitchenConfig = async (kitchenId) => {
             return {
                 openTime: data.openTime || '07:00',
                 closeTime: data.closeTime || '21:00',
-                holiday: data.holiday || { active: false, from: '', to: '', reason: '' }
+                holiday: data.holiday || { active: false, from: '', to: '', reason: '' },
+                mealSlots: data.mealSlots || {}
             };
         }
         return null;
