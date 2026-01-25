@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useTenant } from '../../contexts/TenantContext';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Search, Users, ChevronRight, Phone } from 'lucide-react-native';
@@ -9,13 +10,16 @@ import { Search, Users, ChevronRight, Phone } from 'lucide-react-native';
 export const StudentsScreen = ({ navigation }) => {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [refreshing, setRefreshing] = useState(false);
+    const { tenant } = useTenant();
 
     useEffect(() => {
+        if (!tenant?.id) return;
+
+        // Query students who have this kitchen in their joinedKitchens array
         const q = query(
             collection(db, 'users'),
-            where('role', '==', 'student')
+            where('role', '==', 'student'),
+            where('joinedKitchens', 'array-contains', tenant.id)
         );
 
         const unsub = onSnapshot(q, (snap) => {
@@ -30,7 +34,7 @@ export const StudentsScreen = ({ navigation }) => {
         });
 
         return unsub;
-    }, []);
+    }, [tenant?.id]);
 
     const filteredStudents = useMemo(() => {
         return students.filter(s =>

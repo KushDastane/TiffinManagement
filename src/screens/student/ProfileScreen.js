@@ -1,15 +1,33 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Image, TextInput } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { logoutUser } from '../../services/authService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Phone, LogOut, ChefHat } from 'lucide-react-native';
+import { User, Phone, LogOut, ChefHat, Edit2, Check } from 'lucide-react-native';
+import { updateUserProfile } from '../../services/authService';
 
 export const ProfileScreen = () => {
     const { user, userProfile } = useAuth();
     const { tenant } = useTenant();
+
+    // Edit State
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [editedName, setEditedName] = React.useState(userProfile?.name || '');
+    const [saving, setSaving] = React.useState(false);
+
+    React.useEffect(() => {
+        setEditedName(userProfile?.name || '');
+    }, [userProfile?.name]);
+
+    const handleSaveProfile = async () => {
+        if (!editedName.trim()) return;
+        setSaving(true);
+        await updateUserProfile(user.uid, { name: editedName.trim() });
+        setSaving(false);
+        setIsEditing(false);
+    };
 
     const handleLogout = async () => {
         Alert.alert(
@@ -51,12 +69,38 @@ export const ProfileScreen = () => {
                         <View style={tw`w-16 h-16 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}>
                             <User size={28} color="#111827" />
                         </View>
-                        <View>
+                        <View style={tw`flex-1`}>
                             <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>Student Profile</Text>
-                            <Text style={tw`text-2xl font-black text-gray-900`}>
-                                {userProfile?.name?.split(' ')[0] || 'Student'}
-                                <Text style={tw`text-gray-400 font-bold`}> {userProfile?.name?.split(' ').slice(1).join(' ')}</Text>
-                            </Text>
+
+                            {isEditing ? (
+                                <View style={tw`flex-row items-center gap-2`}>
+                                    <TextInput
+                                        style={tw`flex-1 text-xl font-black text-gray-900 border-b border-yellow-400 pb-1`}
+                                        value={editedName}
+                                        onChangeText={setEditedName}
+                                        autoFocus
+                                    />
+                                    <Pressable
+                                        onPress={handleSaveProfile}
+                                        style={tw`bg-gray-900 p-2 rounded-lg`}
+                                        disabled={saving}
+                                    >
+                                        <Check size={14} color="white" />
+                                    </Pressable>
+                                </View>
+                            ) : (
+                                <View style={tw`flex-row items-center justify-between`}>
+                                    <View>
+                                        <Text style={tw`text-2xl font-black text-gray-900`}>
+                                            {userProfile?.name?.split(' ')[0] || 'Student'}
+                                        </Text>
+                                        <Text style={tw`text-gray-400 font-bold text-sm`}>{userProfile?.name?.split(' ').slice(1).join(' ')}</Text>
+                                    </View>
+                                    <Pressable onPress={() => setIsEditing(true)} style={tw`bg-gray-50 p-2 rounded-xl`}>
+                                        <Edit2 size={16} color="#9ca3af" />
+                                    </Pressable>
+                                </View>
+                            )}
                         </View>
                     </View>
 
@@ -67,7 +111,7 @@ export const ProfileScreen = () => {
                         </View>
                         <View>
                             <Text style={tw`text-[8px] font-black text-gray-300 uppercase tracking-widest`}>Phone Number</Text>
-                            <Text style={tw`text-xs font-black text-gray-900`}>{userProfile?.phoneNumber || "Not Set"}</Text>
+                            <Text style={tw`text-xs font-black text-gray-900`}>{userProfile?.phoneNumber || user?.phoneNumber || "Not Set"}</Text>
                         </View>
                     </View>
                 </View>

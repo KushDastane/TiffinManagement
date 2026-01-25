@@ -2,6 +2,12 @@ import React, { useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { LogBox } from 'react-native';
+
+// Suppress specific warnings
+LogBox.ignoreLogs([
+  'FirebaseRecaptcha: Support for defaultProps will be removed',
+]);
 import { AuthProvider } from "./contexts/AuthContext";
 import { TenantProvider } from "./contexts/TenantContext";
 import { ThemeProvider } from "./contexts/ThemeContext";

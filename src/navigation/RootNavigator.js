@@ -13,6 +13,7 @@ import { UnjoinedStudentStack } from './UnjoinedStudentStack';
 import { RoleSelectScreen } from '../screens/RoleSelectScreen';
 import { CreateKitchenScreen } from '../screens/admin/CreateKitchenScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
+import { StudentSetupScreen } from '../screens/StudentSetupScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,17 +27,22 @@ export const RootNavigator = () => {
                 <Stack.Screen name="Loading" component={LoadingScreen} />
             ) : !user ? (
                 <Stack.Screen name="Auth" component={AuthStack} />
-            ) : (!userProfile || !userProfile.role) ? (
+            ) : (!userProfile?.role) ? (
+                // 1. First, select role (Admin vs Student)
                 <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
             ) : userProfile.role === 'admin' ? (
+                // 2a. Admin Flow
                 !userProfile.currentKitchenId ? (
                     <Stack.Screen name="CreateKitchen" component={CreateKitchenScreen} options={{ title: 'Create Your Kitchen' }} />
                 ) : (
                     <Stack.Screen name="AdminRoot" component={AdminStack} />
                 )
             ) : (
-                // Student
-                !userProfile.currentKitchenId ? (
+                // 2b. Student Flow
+                !userProfile.name ? (
+                    // Only ask for name IF they are a student and haven't set it yet
+                    <Stack.Screen name="Setup" component={StudentSetupScreen} />
+                ) : !userProfile.currentKitchenId ? (
                     <Stack.Screen name="UnjoinedRoot" component={UnjoinedStudentStack} />
                 ) : (
                     <Stack.Screen name="StudentRoot" component={StudentStack} />

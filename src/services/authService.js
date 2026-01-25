@@ -1,7 +1,8 @@
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    signOut as firebaseSignOut
+    signOut as firebaseSignOut,
+    signInWithPhoneNumber
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
@@ -30,6 +31,24 @@ export const logoutUser = async () => {
         return { error: null };
     } catch (error) {
         return { error: error.message };
+    }
+};
+
+export const loginWithPhone = async (phoneNumber, recaptchaVerifier) => {
+    try {
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+        return { confirmationResult, error: null };
+    } catch (error) {
+        return { error: error.message };
+    }
+};
+
+export const verifyOTP = async (confirmationResult, code) => {
+    try {
+        const result = await confirmationResult.confirm(code);
+        return { user: result.user, error: null };
+    } catch (error) {
+        return { user: null, error: error.message };
     }
 };
 

@@ -3,11 +3,11 @@ import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator,
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { getKitchenConfig, updateKitchenConfig } from '../../services/kitchenService';
+import { getKitchenConfig, updateKitchenConfig, updateKitchen } from '../../services/kitchenService';
 import { logoutUser } from '../../services/authService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed } from 'lucide-react-native';
+import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check } from 'lucide-react-native';
 
 // Helper Component for Triggers
 const InputTrigger = ({ label, value, onPress, placeholder, disabled }) => (
@@ -33,6 +33,14 @@ export const SettingsScreen = () => {
     const [config, setConfig] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    // Kitchen Name Edit State
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedKitchenName, setEditedKitchenName] = useState(tenant?.name || '');
+
+    useEffect(() => {
+        setEditedKitchenName(tenant?.name || '');
+    }, [tenant?.name]);
 
     useEffect(() => {
         const load = async () => {
@@ -148,19 +156,50 @@ export const SettingsScreen = () => {
             >
                 {/* Kitchen Brief */}
                 <View style={tw`bg-white rounded-[30px] p-5 shadow-sm border border-gray-100 mb-5 flex-row items-center justify-between`}>
-                    <View style={tw`flex-row items-center gap-4`}>
+                    <View style={tw`flex-row items-center gap-4 flex-1`}>
                         <View style={tw`w-12 h-12 rounded-2xl bg-yellow-100 items-center justify-center`}>
                             <ChefHat size={22} color="#ca8a04" />
                         </View>
-                        <View>
-                            <Text style={tw`text-lg font-black text-gray-900`}>{tenant?.name}</Text>
+                        <View style={tw`flex-1`}>
                             <Text style={tw`text-[10px] text-gray-400 font-bold uppercase tracking-widest`}>Kitchen Administrator</Text>
+                            {isEditingName ? (
+                                <View style={tw`flex-row items-center gap-2 mt-1`}>
+                                    <TextInput
+                                        style={tw`flex-1 text-lg font-black text-gray-900 border-b border-yellow-400 pb-0.5`}
+                                        value={editedKitchenName}
+                                        onChangeText={setEditedKitchenName}
+                                        autoFocus
+                                    />
+                                    <Pressable
+                                        onPress={async () => {
+                                            if (!editedKitchenName.trim()) return;
+                                            setSaving(true);
+                                            await updateKitchen(tenant.id, { name: editedKitchenName.trim() });
+                                            // Optimistic update locally if needed, but tenant context should auto-update if listening?
+                                            // Actually tenant context listens to doc. so it should be fine.
+                                            setSaving(false);
+                                            setIsEditingName(false);
+                                        }}
+                                        style={tw`bg-gray-900 p-1.5 rounded-lg`}
+                                        disabled={saving}
+                                    >
+                                        <Check size={14} color="white" />
+                                    </Pressable>
+                                </View>
+                            ) : (
+                                <Pressable onLongPress={() => setIsEditingName(true)} delayLongPress={500} style={tw`flex-row items-center gap-2`}>
+                                    <Text style={tw`text-lg font-black text-gray-900`}>{tenant?.name}</Text>
+                                    <Pressable onPress={() => setIsEditingName(true)} style={tw`bg-gray-50 p-1.5 rounded-md`}>
+                                        <Edit2 size={12} color="#9ca3af" />
+                                    </Pressable>
+                                </Pressable>
+                            )}
                         </View>
                     </View>
                     <Pressable
                         onPress={handleLogout}
                         style={({ pressed }) => [
-                            tw`w-10 h-10 rounded-xl bg-red-50 items-center justify-center border border-red-100`,
+                            tw`w-10 h-10 rounded-xl bg-red-50 items-center justify-center border border-red-100 ml-2`,
                             pressed && tw`opacity-70 scale-90`
                         ]}
                     >
