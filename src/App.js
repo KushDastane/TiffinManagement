@@ -6,7 +6,6 @@ import { LogBox } from 'react-native';
 
 // Suppress specific warnings
 LogBox.ignoreLogs([
-  'FirebaseRecaptcha: Support for defaultProps will be removed',
 ]);
 import { AuthProvider } from "./contexts/AuthContext";
 import { TenantProvider } from "./contexts/TenantContext";

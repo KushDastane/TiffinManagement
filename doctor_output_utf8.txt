@@ -1,0 +1,38 @@
+﻿env: load .env
+env: export EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+Running 17 checks on your project...
+13/17 checks passed. 4 checks failed. Possible issues detected:
+Use the --verbose flag to see more details about passed checks.
+
+Γ£û Check Expo config (app.json/ app.config.js) schema
+Errors validating fields in C:\Users\kushd\OneDrive\Desktop\TiffinCRM\TiffinCRM\app.json:
+ Field: android - should NOT have additional property 'edgeToEdgeEnabled'.
+ Field: android - should NOT have additional property 'predictiveBackGestureEnabled'.
+Advice:
+Resolve schema errors in your app config. Learn more: https://docs.expo.dev/workflow/configuration/
+
+Γ£û Check dependencies for packages that should not be installed directly
+The package "expo-firebase-recaptcha" has been removed as of SDK 48. You should use the Firebase JS SDK or React Native Firebase directly. Learn more: https://expo.fyi/firebase-migration-guide
+Advice:
+Remove these packages from your package.json.
+
+Γ£û Check that native modules use compatible support package versions for installed Expo SDK
+Expected package @expo/config-plugins@~9.0.0
+Found invalid:
+  @expo/config-plugins@5.0.4
+  (for more info, run: npm why @expo/config-plugins)
+Advice:
+Upgrade dependencies that are using the invalid package versions.
+
+Γ£û Check that packages match versions required by installed Expo SDK
+The following packages should be updated for best compatibility with the installed expo version:
+  expo-linear-gradient@15.0.8 - expected version: ~14.0.2
+  react-native@0.76.3 - expected version: 0.76.9
+  react-native-screens@4.1.0 - expected version: ~4.4.0
+  react-native-svg@15.15.1 - expected version: 15.8.0
+Your project may not work correctly until you install the expected versions of the packages.
+Found outdated dependencies
+Advice:
+Use 'npx expo install --check' to review and upgrade your dependencies.
+To ignore specific packages, add them to "expo.install.exclude" in package.json. Learn more: https://expo.fyi/dependency-validation
+
