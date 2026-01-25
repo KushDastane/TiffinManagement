@@ -9,6 +9,10 @@ import Animated, {
     FadeOut
 } from 'react-native-reanimated';
 import tw from 'twrnc';
+import { useAuth } from '../contexts/AuthContext';
+import { useTenant } from '../contexts/TenantContext';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -20,6 +24,30 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
 
     // Animated value for the yellow indicator's position
     const translateX = useSharedValue(state.index * tabWidth);
+
+    const [pendingCount, setPendingCount] = React.useState(0);
+    const { user } = useAuth();
+    const { tenant } = useTenant();
+
+    useEffect(() => {
+        if (!tenant?.id) return;
+
+        const dateId = new Date().toISOString().split('T')[0];
+        const ordersRef = collection(db, 'kitchens', tenant.id, 'orders');
+        const q = query(
+            ordersRef,
+            where('dateId', '==', dateId),
+            where('status', 'in', ['PENDING', 'placed'])
+        );
+
+        const unsub = onSnapshot(q, (snapshot) => {
+            setPendingCount(snapshot.size);
+        }, (error) => {
+            console.error("CustomTabBar: Error listening to orders:", error);
+        });
+
+        return () => unsub();
+    }, [tenant?.id]);
 
     useEffect(() => {
         translateX.value = withSpring(state.index * tabWidth, {
@@ -80,6 +108,15 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
                         <View style={tw`w-10 h-10 items-center justify-center mb-0.5`}>
                             {options.tabBarIcon ? options.tabBarIcon({ focused: isFocused }) : (
                                 <Text style={tw`${isFocused ? 'text-black font-black' : 'text-gray-400'}`}>•</Text>
+                            )}
+
+                            {/* Global Pending Signal (on Orders) */}
+                            {route.name === 'Orders' && pendingCount > 0 && (
+                                <View style={tw`absolute -top-1 -right-1 bg-red-600 min-w-[16px] h-4 rounded-full px-1 items-center justify-center border-2 border-white`}>
+                                    <Text style={tw`text-[8px] font-black text-white`}>
+                                        {pendingCount > 9 ? '9+' : pendingCount}
+                                    </Text>
+                                </View>
                             )}
                         </View>
 

@@ -210,7 +210,15 @@ export const HomeScreen = () => {
 
         const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, (data) => {
             setMyOrders(data);
-            const today = data.find(o => o.dateId === dateId && o.slot === activeSlot);
+            // 1. Try to find order for the SPECIFIC active slot
+            let today = data.find(o => o.dateId === dateId && o.slot === activeSlot);
+
+            // 2. Fallback: If no order for active slot, check for any COMPLETED order from today
+            // (This handles case where Lunch slot ends but student hasn't collected Lunch yet)
+            if (!today) {
+                today = data.find(o => o.dateId === dateId && o.status === 'COMPLETED');
+            }
+
             setTodaysOrder(today);
         });
 
@@ -227,6 +235,81 @@ export const HomeScreen = () => {
 
     // Kitchen is considered open if there is an active slot currently available for ordering
     const kitchenOpen = getAvailableSlots(tenant).length > 0;
+
+    // Menu State
+    const [todaysMenu, setTodaysMenu] = useState(null);
+
+    useEffect(() => {
+        if (!tenant?.id) return;
+        const unsubMenu = subscribeToMenu(tenant.id, dateId, (menu) => {
+            setTodaysMenu(menu);
+        });
+        return () => unsubMenu();
+    }, [tenant?.id, dateId]);
+
+    // Derived Status for UI
+    const orderStatus = todaysOrder ? todaysOrder.status : 'NO_ORDER';
+    // Statuses: NO_ORDER, PENDING, CONFIRMED, COMPLETED
+
+    const getStatusConfig = () => {
+        switch (orderStatus) {
+            case 'PENDING':
+                return {
+                    // Creative: Subtle Red/Orange Gradient
+                    gradient: ['#fff1f2', '#fff'],
+                    border: 'border-red-100',
+                    iconBg: tw`bg-red-100`,
+                    icon: <Clock size={24} color="#dc2626" />,
+                    title: 'Waiting for Verification',
+                    subtitle: 'Your order is awaiting admin confirmation.',
+                    titleColor: tw`text-gray-900`,
+                    subtitleColor: tw`text-gray-500`,
+                    accentColor: '#fca5a5'
+                };
+            case 'CONFIRMED':
+                return {
+                    // Creative: Warm Yellow/Amber Gradient - INTENSIFIED
+                    gradient: ['#fef9c3', '#fefce8'], // yellow-100 to yellow-50
+                    border: 'border-yellow-300',
+                    iconBg: tw`bg-yellow-200`,
+                    icon: <UtensilsCrossed size={24} color="#b45309" />, // amber-700
+                    title: 'Meal Being Prepared',
+                    subtitle: 'Chefs are working their magic!',
+                    titleColor: tw`text-gray-900`,
+                    subtitleColor: tw`text-yellow-800`,
+                    accentColor: '#fcd34d' // yellow-300
+                };
+            case 'COMPLETED':
+                return {
+                    // Creative: Fresh Emerald/Teal Gradient
+                    gradient: ['#ecfdf5', '#fff'],
+                    border: 'border-emerald-100',
+                    iconBg: tw`bg-emerald-100`,
+                    icon: <CheckCircle size={24} color="#059669" />,
+                    title: 'Ready to Collect',
+                    subtitle: 'Head to the counter to pick up your meal.',
+                    titleColor: tw`text-gray-900`,
+                    subtitleColor: tw`text-gray-500`,
+                    accentColor: '#6ee7b7'
+                };
+            default: // NO_ORDER
+                return {
+                    // Creative: Clean Gray/Slate Gradient
+                    gradient: ['#ffffff', '#f8fafc'],
+                    border: 'border-gray-100',
+                    iconBg: tw`bg-gray-50`,
+                    icon: <UtensilsCrossed size={24} color="#94a3b8" />,
+                    title: "You haven't ordered yet!",
+                    subtitle: "Check out today's menu below.",
+                    titleColor: tw`text-gray-900`,
+                    subtitleColor: tw`text-gray-500`,
+                    accentColor: '#e2e8f0'
+                };
+        }
+    };
+
+    const config = getStatusConfig();
+    const activeMenu = todaysMenu?.mealSlots?.[activeSlot];
 
     return (
         <View style={tw`flex-1  bg-[#faf9f6]`}>
@@ -274,59 +357,101 @@ export const HomeScreen = () => {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 contentContainerStyle={tw`p-6 pt-72 pb-32`}
             >
-                {/* Today's Meal Status Card - Creative Refresh */}
-                <View style={tw`bg-white rounded-[35px] p-7 shadow-sm border border-gray-100 mt-10 mb-6 overflow-hidden`}>
-                    <View style={tw`absolute -top-10 -right-10 w-32 h-32 bg-yellow-50 rounded-full opacity-40`} />
+                {/* Dynamic Status Card */}
+                <View style={[tw`rounded-[32px] mb-6 shadow-xl shadow-gray-200/50`, { backgroundColor: 'white' }]}>
+                    <LinearGradient
+                        colors={config.gradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[tw`p-7 rounded-[32px] overflow-hidden border`, tw`${config.border}`]}
+                    >
+                        {/* Creative Background Decor */}
+                        <View style={[tw`absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-20`, { backgroundColor: config.accentColor }]} />
+                        <View style={[tw`absolute top-10 -right-4 w-12 h-12 rounded-full opacity-10`, { backgroundColor: config.accentColor }]} />
 
-                    <View style={tw`flex-row justify-between items-center mb-8`}>
-                        <View style={tw`flex-row items-center gap-4`}>
-                            <View style={tw`w-14 h-14 rounded-2xl bg-gray-900 items-center justify-center shadow-lg shadow-gray-200`}>
-                                <View style={tw`items-center justify-center`}>
-                                    {activeSlot === 'breakfast' ? <Coffee size={24} color="#fbbf24" /> : (activeSlot === 'lunch' ? <Sun size={24} color="#fbbf24" /> : (activeSlot === 'snacks' ? <UtensilsCrossed size={24} color="#fbbf24" /> : <Moon size={24} color="#fbbf24" />))}
-                                </View>
+                        <View style={tw`flex-row justify-between items-start mb-6`}>
+                            <View style={tw`flex-1 mr-4`}>
+                                {/* !Important: Exclamation Logic for Empty State */}
+                                {orderStatus === 'NO_ORDER' && (
+                                    <View style={tw`bg-white self-start px-2.5 py-1 rounded-full mb-3 border border-red-50 shadow-sm`}>
+                                        <Text style={tw`text-red-500 text-[9px] font-black uppercase tracking-widest`}>Action Required</Text>
+                                    </View>
+                                )}
+
+                                <Text style={tw`text-[9px] font-black uppercase tracking-widest mb-1 text-gray-400`}>
+                                    Dashboard • {activeSlot?.toUpperCase() || 'MEAL'}
+                                </Text>
+                                <Text style={[tw`text-2xl font-black`, config.titleColor]}>
+                                    {config.title}
+                                </Text>
+                                <Text style={[tw`text-xs font-medium mt-1`, config.subtitleColor]}>
+                                    {config.subtitle}
+                                </Text>
                             </View>
-                            <View>
-                                <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>
-                                    Dashboard • {activeSlot?.toUpperCase() || 'Meal'}
-                                </Text>
-                                <Text style={tw`text-xl font-black text-gray-900`}>
-                                    {!todaysOrder ? "Thali Empty" : (todaysOrder.status === 'CONFIRMED' ? "Order Ready" : "Verifying...")}
-                                </Text>
+                            <View style={[
+                                tw`w-14 h-14 rounded-2xl items-center justify-center shadow-sm bg-white`,
+                            ]}>
+                                {config.icon}
                             </View>
                         </View>
-                    </View>
 
-                    <View style={tw`bg-gray-50 p-5 rounded-2xl mb-8 border border-gray-100/50`}>
-                        <Text style={tw`text-[12px] font-bold text-gray-500 leading-5 uppercase tracking-tighter`}>
-                            {!todaysOrder ? (
-                                kitchenOpen ? "The kitchen is buzzing! Secure your homemade meal before the doors close." : "Kitchen shifts have ended. Make sure to check back tomorrow morning!"
+                        {/* Menu Preview Section (Only show if NO_ORDER and Kitchen is Open) */}
+                        {orderStatus === 'NO_ORDER' && kitchenOpen && activeMenu && (
+                            <View style={tw`bg-white/60 rounded-2xl p-4 border border-white/50 mb-6`}>
+                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3`}>On the Menu Today</Text>
+                                <View style={tw`gap-2`}>
+                                    <View style={tw`flex-row items-center gap-2`}>
+                                        <View style={tw`w-1.5 h-1.5 rounded-full bg-gray-900`} />
+                                        <Text style={tw`text-sm font-bold text-gray-700`}>{activeMenu.mainItem}</Text>
+                                    </View>
+                                    {activeMenu.sabzi && (
+                                        <View style={tw`flex-row items-center gap-2`}>
+                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-gray-900`} />
+                                            <Text style={tw`text-sm font-bold text-gray-700`}>{activeMenu.sabzi}</Text>
+                                        </View>
+                                    )}
+                                    {activeMenu.dal && (
+                                        <View style={tw`flex-row items-center gap-2`}>
+                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-gray-900`} />
+                                            <Text style={tw`text-sm font-bold text-gray-700`}>{activeMenu.dal}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Order Details (For Pending/Confirmed/Completed) */}
+                        {orderStatus !== 'NO_ORDER' && todaysOrder && (
+                            <View style={tw`bg-white/60 rounded-2xl p-4 border border-white/50 mb-2`}>
+                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>Your Order</Text>
+                                <Text style={tw`text-base font-bold text-gray-800`}>
+                                    {todaysOrder.quantity} × {todaysOrder.mainItem}
+                                </Text>
+                                {todaysOrder.componentsSnapshot?.length > 0 && (
+                                    <Text style={tw`text-xs text-gray-500 mt-1`}>
+                                        With: {todaysOrder.componentsSnapshot.map(c => c.name).join(', ')}
+                                    </Text>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Actions - Only for Ordering */}
+                        {orderStatus === 'NO_ORDER' && (
+                            kitchenOpen ? (
+                                <Pressable
+                                    onPress={() => navigation.navigate("Order")}
+                                    style={tw`bg-gray-900 rounded-2xl py-4 flex-row items-center justify-center gap-2 shadow-xl shadow-gray-300`}
+                                >
+                                    <Text style={tw`text-white font-bold text-xs uppercase tracking-widest`}>Place Order</Text>
+                                    <ArrowRight size={14} color="white" />
+                                </Pressable>
                             ) : (
-                                todaysOrder.status === 'CONFIRMED' ?
-                                    "Your meal is being crafted by our best chefs. Standard delivery protocols active." :
-                                    "Patience is a virtue! We are currently synchronizing your order with the kitchen."
-                            )}
-                        </Text>
-                    </View>
-
-                    {kitchenOpen && !todaysOrder && (
-                        <Pressable
-                            onPress={() => navigation.navigate("Order")}
-                            style={tw`bg-gray-900 rounded-2xl py-5 flex-row items-center justify-center gap-3 shadow-xl shadow-gray-300`}
-                        >
-                            <Text style={tw`text-white font-black text-[11px] uppercase tracking-widest`}>Craft My Thali</Text>
-                            <ArrowRight size={16} color="white" />
-                        </Pressable>
-                    )}
-
-                    {todaysOrder && (
-                        <Pressable
-                            onPress={() => navigation.navigate("History")}
-                            style={tw`bg-white rounded-2xl py-5 flex-row items-center justify-center gap-3 border border-gray-200 shadow-sm`}
-                        >
-                            <Text style={tw`text-gray-900 font-black text-[11px] uppercase tracking-widest`}>View Details</Text>
-                            <ArrowRight size={16} color="#111827" />
-                        </Pressable>
-                    )}
+                                <View style={tw`bg-gray-100 rounded-2xl py-3 items-center justify-center`}>
+                                    <Text style={tw`text-gray-400 font-bold text-xs uppercase tracking-widest`}>Kitchen Closed</Text>
+                                </View>
+                            )
+                        )}
+                    </LinearGradient>
                 </View>
 
                 {/* Weekly Summary */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { listenToAdminStats, getCookingSummary } from '../../services/adminService';
@@ -91,6 +91,11 @@ export const DashboardScreen = ({ navigation }) => {
 
         return pending[0] || null;
     }, [orders, slot]);
+
+    const otherPendingCount = useMemo(() => {
+        const pending = orders.filter(o => o.status === 'PENDING' || o.status === 'placed');
+        return Math.max(0, pending.length - (nextPendingOrder ? 1 : 0));
+    }, [orders, nextPendingOrder]);
     const handleQuickConfirm = async (orderId) => {
         try {
             setConfirmingId(orderId);
@@ -334,47 +339,81 @@ export const DashboardScreen = ({ navigation }) => {
                     </Pressable>
                 </View>
 
-                {/* 4. The Action Center: Quick Confirm */}
+                {/* 4. The Action Center: Quick Confirm - Improvised UI */}
                 {nextPendingOrder && (
-                    <View style={[tw`mt-4 rounded-[40px] p-8 shadow-xl overflow-hidden`, nextPendingOrder.isPriority ? tw`bg-orange-600` : tw`bg-gray-900`]}>
-                        <View style={tw`absolute -bottom-10 -left-10 w-40 h-40 bg-white/5 rounded-full`} />
+                    <View style={[
+                        tw`mt-4 rounded-[32px] p-6 shadow-sm border border-gray-100 bg-white relative`,
+                        nextPendingOrder.isPriority ? tw`border-orange-200` : tw`border-gray-100`
+                    ]}>
+                        {/* Elegant Priority Accent */}
+                        {nextPendingOrder.isPriority && (
+                            <View style={tw`absolute top-0 left-0 bottom-0 w-1.5 bg-orange-500`} />
+                        )}
 
-                        <View style={tw`flex-row items-center justify-between mb-6`}>
+                        <View style={tw`flex-row items-center justify-between mb-5`}>
                             <View style={tw`flex-row items-center gap-2.5`}>
-                                <View style={[tw`w-1.5 h-1.5 rounded-full`, nextPendingOrder.isPriority ? tw`bg-white` : tw`bg-yellow-400`]} />
-                                <Text style={tw`text-[10px] font-black text-white/50 uppercase tracking-widest`}>
-                                    {nextPendingOrder.isPriority ? "Priority Order" : "Action Required"}
+                                <View style={[tw`w-2 h-2 rounded-full`, nextPendingOrder.isPriority ? tw`bg-orange-500` : tw`bg-yellow-400`]} />
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>
+                                    {nextPendingOrder.isPriority ? "Priority Assignment" : "Pending Action"}
                                 </Text>
                             </View>
-                            <View style={tw`bg-white/10 px-3 py-1 rounded-full`}>
-                                <Text style={tw`text-[9px] font-black text-white uppercase`}>Latest Order</Text>
+                            <View style={[tw`px-3 py-1 rounded-full flex-row items-center gap-2`, nextPendingOrder.isPriority ? tw`bg-orange-50` : tw`bg-gray-50`]}>
+                                <Text style={[tw`text-[9px] font-black uppercase`, nextPendingOrder.isPriority ? tw`text-orange-700` : tw`text-gray-500`]}>Latest Order</Text>
+                                {otherPendingCount > 0 && (
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate('Orders')}
+                                        style={tw`bg-red-600 px-1.5 py-0 rounded shadow-sm border-b border-red-800 flex-row items-center gap-0.5`}
+                                    >
+                                        <Text style={tw`text-[7px] font-black text-white uppercase tracking-tighter`}>+{otherPendingCount} PENDING</Text>
+                                        <ChevronRight size={6} color="white" strokeWidth={4} />
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </View>
 
-                        <View style={tw`mb-8`}>
-                            <Text style={tw`text-xl font-black text-white`}>{nextPendingOrder.userDisplayName || 'Student'}</Text>
-                            <Text style={tw`text-sm font-bold text-white/60 mt-1`}>
-                                {nextPendingOrder.quantity} × {nextPendingOrder.mainItem} • <Text style={[tw`font-black`, nextPendingOrder.isPriority ? tw`text-white` : tw`text-yellow-400`]}>{nextPendingOrder.slot?.toUpperCase()}</Text>
-                            </Text>
+                        <View style={tw`mb-6 flex-row justify-between items-end`}>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-lg font-black text-gray-900`}>{nextPendingOrder.userDisplayName || 'Student'}</Text>
+                                <View style={tw`flex-row items-center gap-2 mt-1.5`}>
+                                    <View style={tw`bg-gray-100/80 px-2 py-0.5 rounded-md`}>
+                                        <Text style={tw`text-[10px] font-black text-gray-600 uppercase tracking-tighter`}>{nextPendingOrder.slot}</Text>
+                                    </View>
+                                    <Text style={tw`text-sm font-bold text-gray-500`}>
+                                        {nextPendingOrder.quantity} × {nextPendingOrder.mainItem}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {nextPendingOrder.isPriority && (
+                                <View style={tw`bg-orange-100 px-3 py-1 rounded-xl flex-row items-center gap-1.5`}>
+                                    <Clock size={12} color="#ea580c" strokeWidth={2.5} />
+                                    <Text style={tw`text-[10px] font-black text-orange-700 uppercase`}>Early</Text>
+                                </View>
+                            )}
                         </View>
 
-                        <Pressable
-                            onPress={() => handleQuickConfirm(nextPendingOrder.id)}
+                        <View style={tw`h-[1px] bg-gray-50 mb-6`} />
+
+                        <TouchableOpacity
+                            onPress={() => {
+                                console.log("Confirming Order ID:", nextPendingOrder.id);
+                                handleQuickConfirm(nextPendingOrder.id);
+                            }}
                             disabled={confirmingId === nextPendingOrder.id}
-                            style={({ pressed }) => [
-                                tw`bg-white rounded-3xl py-5 items-center justify-center flex-row gap-3`,
-                                pressed && tw`scale-98 opacity-90`
+                            style={[
+                                tw`rounded-2xl py-4 items-center justify-center flex-row gap-3 shadow-md bg-gray-900`,
+                                confirmingId === nextPendingOrder.id ? tw`opacity-70` : tw`opacity-100`
                             ]}
                         >
                             {confirmingId === nextPendingOrder.id ? (
-                                <ActivityIndicator color="#111827" size="small" />
+                                <ActivityIndicator color="#fff" size="small" />
                             ) : (
                                 <>
-                                    <Check size={20} color={nextPendingOrder.isPriority ? "#ea580c" : "#111827"} strokeWidth={3} />
-                                    <Text style={[tw`font-black text-base uppercase tracking-tight`, { color: nextPendingOrder.isPriority ? "#ea580c" : "#111827" }]}>Confirm Order</Text>
+                                    <Check size={18} color="#fff" strokeWidth={3} />
+                                    <Text style={tw`font-black text-sm text-white uppercase tracking-wider`}>Confirm Now</Text>
                                 </>
                             )}
-                        </Pressable>
+                        </TouchableOpacity>
                     </View>
                 )}
 
