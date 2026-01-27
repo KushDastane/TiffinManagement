@@ -4,6 +4,8 @@ import { loginWithPhone, verifyOTP } from '../services/authService';
 import tw from 'twrnc';
 import { Phone, ArrowRight, Lock, ChevronLeft } from 'lucide-react-native';
 import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft, Layout } from 'react-native-reanimated';
+import FirebaseRecaptchaModal from '../components/FirebaseRecaptchaModal';
+import { auth } from '../config/firebase';
 
 const { width } = Dimensions.get('window');
 
@@ -12,6 +14,7 @@ export const LoginScreen = () => {
     const [verificationCode, setVerificationCode] = useState('');
     const [verificationId, setVerificationId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const recaptchaVerifier = useRef(null);
 
     // Step: 'phone' | 'otp'
     const [step, setStep] = useState('phone');
@@ -24,13 +27,11 @@ export const LoginScreen = () => {
         setLoading(true);
         const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
 
-        // Passing null for recaptchaVerifier - this will fail on production without proper setup
-        // but we are removing the problematic component to fix the build first.
-        const result = await loginWithPhone(formattedNumber, null);
+        const result = await loginWithPhone(formattedNumber, recaptchaVerifier.current);
         setLoading(false);
 
         if (result.error) {
-            Alert.alert("Error sending OTP", result.error + "\n\nNote: Recaptcha verification is required for production builds.");
+            Alert.alert("Error sending OTP", result.error);
         } else {
             setVerificationId(result.confirmationResult);
             setStep('otp');
@@ -129,6 +130,11 @@ export const LoginScreen = () => {
                     </Animated.View>
                 )}
             </View>
+            <FirebaseRecaptchaModal
+                ref={recaptchaVerifier}
+                firebaseConfig={auth.app.options}
+                attemptInvisibleVerification={true}
+            />
         </KeyboardAvoidingView>
     );
 };

@@ -4,23 +4,26 @@
     "slug": "DabbaMe",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/appImg.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/appImg.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.kushd.dabbame",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/appImg.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "allowBackup": false,
+      "jsEngine": "hermes"
     },
     "web": {
       "favicon": "./assets/favicon.png",

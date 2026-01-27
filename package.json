@@ -4,8 +4,8 @@
   "main": "expo/AppEntry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -14,16 +14,13 @@
     "@react-navigation/bottom-tabs": "^6.5.11",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
-    "babel-preset-expo": "~12.0.0",
     "expo": "~52.0.0",
     "expo-asset": "~11.0.5",
     "expo-image-picker": "~16.0.3",
     "expo-linear-gradient": "~14.0.2",
     "expo-status-bar": "~2.0.0",
     "firebase": "^10.0.0",
-    "lucide-react-native": "^0.562.0",
-    "nativewind": "^4.0.1",
-    "prettier-plugin-tailwindcss": "^0.5.11",
+    "lucide-react-native": "^0.563.0",
     "react": "18.3.1",
     "react-native": "0.76.9",
     "react-native-reanimated": "~3.16.1",
@@ -36,6 +33,9 @@
   "private": true,
   "devDependencies": {
     "@types/react": "~18.3.12",
+    "babel-preset-expo": "~12.0.0",
+    "lightningcss": "^1.21.0",
+    "prettier-plugin-tailwindcss": "^0.5.11",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.9.2"
   }
