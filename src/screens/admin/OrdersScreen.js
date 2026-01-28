@@ -26,10 +26,9 @@ export const OrdersScreen = () => {
     const [todaysMenu, setTodaysMenu] = useState(null);
     const [manualForm, setManualForm] = useState({
         phoneNumber: "",
-        name: "",
+        name: "", // Set only when an existing customer is selected
         orderDescription: "",
         totalPrice: "",
-        slot: "",
         type: "ONE_TIME"
     });
     const [submittingManual, setSubmittingManual] = useState(false);
@@ -45,17 +44,9 @@ export const OrdersScreen = () => {
         if (!tenant?.id) return;
         const unsubMenu = subscribeToMenu(tenant.id, today, (menu) => {
             setTodaysMenu(menu);
-            if (menu) {
-                const firstSlotId = Object.keys(tenant?.mealSlots || {})[0];
-                const activeId = activeSlot || firstSlotId;
-                setManualForm(prev => ({
-                    ...prev,
-                    slot: activeId || "",
-                }));
-            }
         });
         return unsubMenu;
-    }, [tenant?.id, today, activeSlot, tenant?.mealSlots]);
+    }, [tenant?.id, today]);
 
     const handleCustomerSearch = async (text) => {
         setCustomerSearch(text);
@@ -132,20 +123,34 @@ export const OrdersScreen = () => {
 
     const { user } = useAuth();
     const handleManualSubmit = async () => {
-        if (!manualForm.phoneNumber || !manualForm.orderDescription || !manualForm.totalPrice) {
-            Alert.alert("Missing Fields", "Phone, Order Description, and Price are required.");
+        const { orderDescription, totalPrice } = manualForm;
+        const nameToRecord = manualForm.name || customerSearch;
+        const phoneToRecord = manualForm.phoneNumber;
+
+        if (!nameToRecord || !phoneToRecord || !orderDescription || !totalPrice) {
+            let missing = [];
+            if (!nameToRecord) missing.push("Customer Name");
+            if (!phoneToRecord) missing.push("Mobile Number");
+            if (!orderDescription) missing.push("Order Description");
+            if (!totalPrice) missing.push("Price");
+
+            Alert.alert("Missing Fields", `Please enter: ${missing.join(", ")}`);
+            return;
+        }
+
+        if (phoneToRecord.length < 10) {
+            Alert.alert("Invalid Phone", "Please enter a valid 10-digit mobile number.");
             return;
         }
 
         setSubmittingManual(true);
         const result = await placeManualOrder(tenant.id, {
-            phoneNumber: manualForm.phoneNumber,
-            name: manualForm.name,
-            quantity: 1, // Default for manual free-text
-            mainItem: manualForm.orderDescription, // Use description as main item for compatibility
-            orderDescription: manualForm.orderDescription,
-            totalAmount: parseFloat(manualForm.totalPrice),
-            slot: manualForm.slot,
+            phoneNumber: phoneToRecord,
+            name: nameToRecord,
+            quantity: 1,
+            mainItem: orderDescription,
+            orderDescription: orderDescription,
+            totalAmount: parseFloat(totalPrice),
             type: manualForm.type,
             status: 'CONFIRMED',
             paymentStatus: 'due',
@@ -160,7 +165,6 @@ export const OrdersScreen = () => {
                 name: "",
                 orderDescription: "",
                 totalPrice: "",
-                slot: activeSlot || "",
                 type: "ONE_TIME"
             });
             setCustomerSearch("");
@@ -424,40 +428,51 @@ export const OrdersScreen = () => {
                                     )}
                                 </View>
 
-                                {/* New/One-time Customer Fallback */}
-                                {customerSearch.length > 0 && !showSuggestions && !manualForm.phoneNumber && (
-                                    <Pressable
-                                        onPress={() => {
-                                            const isPhone = /^\d{10}$/.test(customerSearch);
-                                            setManualForm(prev => ({
-                                                ...prev,
-                                                phoneNumber: isPhone ? customerSearch : "",
-                                                name: isPhone ? "" : customerSearch
-                                            }));
-                                        }}
-                                        style={tw`bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex-row items-center gap-3`}
-                                    >
-                                        <UserPlus size={18} color="#ca8a04" />
-                                        <View>
-                                            <Text style={tw`font-bold text-yellow-900`}>New Customer: "{customerSearch}"</Text>
-                                            <Text style={tw`text-[10px] text-yellow-700 font-medium`}>Click to proceed with this info</Text>
+                                {/* Conditional Mobile Input (Only for new users) */}
+                                {!manualForm.name && customerSearch.length > 0 && !showSuggestions && (
+                                    <View>
+                                        <View style={tw`flex-row items-center gap-2 mb-2 ml-1`}>
+                                            <UserPlus size={12} color="#ca8a04" />
+                                            <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest`}>New Customer: Mobile *</Text>
                                         </View>
-                                    </Pressable>
+                                        <View style={tw`bg-gray-50 rounded-2xl px-4 border border-yellow-200`}>
+                                            <TextInput
+                                                style={tw`py-4 font-bold text-gray-900`}
+                                                placeholder="9123456789"
+                                                keyboardType="phone-pad"
+                                                maxLength={10}
+                                                value={manualForm.phoneNumber}
+                                                onChangeText={(t) => setManualForm(prev => ({ ...prev, phoneNumber: t }))}
+                                                placeholderTextColor="#9ca3af"
+                                            />
+                                        </View>
+                                        <Text style={tw`text-[8px] text-gray-400 mt-2 ml-1`}>Record "{customerSearch}" as a new customer with this mobile number.</Text>
+                                    </View>
                                 )}
 
-                                {/* Manual Inputs (Hidden if customer selected, unless editing) */}
-                                {manualForm.phoneNumber ? (
-                                    <View style={tw`flex-row gap-4`}>
-                                        <View style={tw`flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100`}>
-                                            <Text style={tw`text-[8px] font-black text-gray-400 uppercase mb-1`}>Phone</Text>
-                                            <Text style={tw`font-bold text-gray-900`}>{manualForm.phoneNumber}</Text>
+                                {/* Selected Customer Card */}
+                                {manualForm.name && (
+                                    <View style={tw`bg-emerald-50 p-4 rounded-3xl border border-emerald-100 flex-row items-center justify-between`}>
+                                        <View style={tw`flex-row items-center gap-3`}>
+                                            <View style={tw`w-10 h-10 rounded-2xl bg-emerald-500 items-center justify-center shadow-sm shadow-emerald-200`}>
+                                                <User size={18} color="white" />
+                                            </View>
+                                            <View>
+                                                <Text style={tw`font-black text-gray-900`}>{manualForm.name}</Text>
+                                                <Text style={tw`text-[10px] text-emerald-600 font-bold tracking-tight`}>{manualForm.phoneNumber}</Text>
+                                            </View>
                                         </View>
-                                        <View style={tw`flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100`}>
-                                            <Text style={tw`text-[8px] font-black text-gray-400 uppercase mb-1`}>Name</Text>
-                                            <Text style={tw`font-bold text-gray-900`}>{manualForm.name || 'Walk-in'}</Text>
-                                        </View>
+                                        <Pressable
+                                            onPress={() => {
+                                                setManualForm(prev => ({ ...prev, name: "", phoneNumber: "" }));
+                                                setCustomerSearch("");
+                                            }}
+                                            style={tw`w-8 h-8 rounded-full bg-white items-center justify-center border border-emerald-100`}
+                                        >
+                                            <X size={14} color="#059669" />
+                                        </Pressable>
                                     </View>
-                                ) : null}
+                                )}
 
                                 {/* Order Description */}
                                 <View>
@@ -484,39 +499,19 @@ export const OrdersScreen = () => {
                                     )}
                                 </View>
 
-                                {/* Total Price & Slot */}
-                                <View style={tw`flex-row gap-4`}>
-                                    <View style={tw`flex-1`}>
-                                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>Total Price *</Text>
-                                        <View style={tw`bg-gray-50 rounded-2xl flex-row items-center px-4 border border-gray-100`}>
-                                            <Text style={tw`font-bold text-gray-400 mr-1`}>₹</Text>
-                                            <TextInput
-                                                style={tw`flex-1 py-4 font-black text-gray-900 text-lg`}
-                                                placeholder="0.00"
-                                                keyboardType="numeric"
-                                                value={manualForm.totalPrice}
-                                                onChangeText={(t) => setManualForm(prev => ({ ...prev, totalPrice: t }))}
-                                                placeholderTextColor="#9ca3af"
-                                            />
-                                        </View>
-                                    </View>
-
-                                    <View style={tw`flex-1`}>
-                                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>Meal Slot</Text>
-                                        <View style={tw`flex-row gap-1`}>
-                                            {(tenant?.mealSlots) && Object.keys(tenant.mealSlots).map((id) => (
-                                                <Pressable
-                                                    key={id}
-                                                    onPress={() => setManualForm(prev => ({ ...prev, slot: id }))}
-                                                    style={[
-                                                        tw`flex-1 py-4 items-center rounded-xl border`,
-                                                        manualForm.slot === id ? tw`bg-gray-900 border-gray-900` : tw`bg-white border-gray-100`
-                                                    ]}
-                                                >
-                                                    <Text style={[tw`text-[8px] font-black uppercase tracking-widest`, manualForm.slot === id ? tw`text-white` : tw`text-gray-400`]}>{id}</Text>
-                                                </Pressable>
-                                            ))}
-                                        </View>
+                                {/* Total Price */}
+                                <View>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>Order Value *</Text>
+                                    <View style={tw`bg-gray-50 rounded-2xl flex-row items-center px-4 border border-gray-100`}>
+                                        <Text style={tw`font-bold text-gray-400 mr-1`}>₹</Text>
+                                        <TextInput
+                                            style={tw`flex-1 py-4 font-black text-gray-900 text-lg`}
+                                            placeholder="0.00"
+                                            keyboardType="numeric"
+                                            value={manualForm.totalPrice}
+                                            onChangeText={(t) => setManualForm(prev => ({ ...prev, totalPrice: t }))}
+                                            placeholderTextColor="#9ca3af"
+                                        />
                                     </View>
                                 </View>
 

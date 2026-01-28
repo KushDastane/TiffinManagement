@@ -138,12 +138,11 @@ const WalletCard = ({ balance, loading }) => {
                         <View style={tw`flex-row items-center gap-2 mt-4`}>
                             <View style={[tw`w-2 h-2 rounded-full`, balance < 0 ? tw`bg-red-500` : tw`bg-emerald-400 shadow-lg shadow-emerald-500/50`]} />
                             <Text style={tw`text-[9px] font-black uppercase tracking-widest ${balance < 0 ? 'text-red-400' : 'text-emerald-400/80'}`}>
-                                {balance < 0 ? "Dues Alert" : "Account Status: Active"}
+                                {balance < 0 ? "Dues Alert" : "Sufficient Balance"}
                             </Text>
                         </View>
                     </View>
                 )}
-
                 <Pressable
                     onPress={() => navigation.navigate('Khata')}
                     style={({ pressed }) => [

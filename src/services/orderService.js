@@ -142,6 +142,7 @@ export const placeManualOrder = async (kitchenId, orderData, adminId) => {
             kitchenId,
             dateId,
             status: 'CONFIRMED', // Manual orders are usually confirmed immediately
+            isTrial: false, // Manual entries are not trials
             paymentStatus: rest.paymentStatus || 'due',
             paymentMethod: rest.paymentMethod || 'CASH',
             recordedBy: adminId,

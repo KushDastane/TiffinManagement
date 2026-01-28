@@ -114,12 +114,22 @@ export const getStudentBalance = async (kitchenId, userId) => {
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
         const qOrders = query(
             ordersRef,
-            where('userId', '==', userId),
-            where('isTrial', '==', false),
-            where('status', '==', 'CONFIRMED')
+            where('userId', '==', userId)
         );
         const ordersSnap = await getDocs(qOrders);
-        const totalDebits = ordersSnap.docs.reduce((sum, doc) => sum + (doc.data().totalAmount || 0), 0);
+        const totalDebits = ordersSnap.docs.reduce((sum, doc) => {
+            const data = doc.data();
+            // Count as debt if:
+            // 1. Not a trial (isTrial is explicitly false OR missing)
+            // 2. Status is CONFIRMED, COMPLETED, or if it's a manual order
+            const isNoTrial = data.isTrial !== true;
+            const isDebtStatus = ['CONFIRMED', 'COMPLETED', 'DELIVERED'].includes(data.status) || data.isManual;
+
+            if (isNoTrial && isDebtStatus) {
+                return sum + (data.totalAmount || 0);
+            }
+            return sum;
+        }, 0);
 
         // 2. Get Payments (Credits) - SCOPED TO KITCHEN
         const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');

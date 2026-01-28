@@ -160,7 +160,7 @@ export const StudentsScreen = ({ navigation }) => {
             {/* 2. Full Screen Scroll */}
             <ScrollView
                 style={tw`flex-1`}
-                contentContainerStyle={tw`p-6 pb-64 pt-72`}
+                contentContainerStyle={[tw`p-6 pb-64`, { paddingTop: activeTab === 'ALL' ? 300 : 340 }]}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}
             >
