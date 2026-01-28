@@ -152,8 +152,23 @@ export const OrderScreen = ({ navigation }) => {
         };
     }, [tenant?.id, user?.uid, selectedSlot]);
 
-    // Always allow placing order if menu is present
-    const canPlaceOrder = true;
+    // Determine if placing order is allowed based on timing
+    const slotStatus = useMemo(() => {
+        if (!tenant?.mealSlots?.[selectedSlot]) return 'ENDED';
+        const slot = tenant.mealSlots[selectedSlot];
+        const now = new Date();
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        const { getSlotStatus } = require("../../services/menuService");
+        return getSlotStatus(slot, currentTime);
+    }, [tenant, selectedSlot]);
+
+    const canPlaceOrder = useMemo(() => {
+        // Allow placing orders for ACTIVE or UPCOMING meals (Pre-orders)
+        // Except maybe if it's too late night? 
+        // Our new business day logic handles the ENDED state correctly now.
+        return slotStatus === 'ACTIVE' || slotStatus === 'UPCOMING';
+    }, [slotStatus]);
 
     const total = useMemo(() => {
         if (!selectedItem) return 0;
@@ -301,9 +316,25 @@ export const OrderScreen = ({ navigation }) => {
             >
 
                 <View>
-                    <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-0.5`}>
-                        {activeDateKey} • AVAILABLE MEALS
-                    </Text>
+                    <View style={tw`flex-row items-center gap-2 mb-0.5`}>
+                        <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest`}>
+                            {activeDateKey} • AVAILABLE MEALS
+                        </Text>
+                        <View style={tw`w-1 h-1 rounded-full bg-yellow-400`} />
+                        <View style={[
+                            tw`px-2 py-0.5 rounded-full border`,
+                            slotStatus === 'ACTIVE' ? tw`bg-emerald-50 border-emerald-100` :
+                                slotStatus === 'UPCOMING' ? tw`bg-amber-50 border-amber-100` :
+                                    tw`bg-gray-50 border-gray-100`
+                        ]}>
+                            <Text style={[
+                                tw`text-[8px] font-black uppercase tracking-tight`,
+                                slotStatus === 'ACTIVE' ? tw`text-emerald-600` :
+                                    slotStatus === 'UPCOMING' ? tw`text-amber-600` :
+                                        tw`text-gray-400`
+                            ]}>{slotStatus}</Text>
+                        </View>
+                    </View>
                     <Text style={tw`text-2xl font-black text-gray-900`}>Build Meal</Text>
                 </View>
             </LinearGradient>

@@ -67,7 +67,7 @@ export const ProfileScreen = () => {
                 <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Account & Kitchen Settings</Text>
             </LinearGradient>
 
-            <ScrollView contentContainerStyle={tw`p-6 pb-32`} style={tw`flex-1 -mt-4`} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={tw`p-6 pb-32`} style={tw`flex-1 mt-3`} showsVerticalScrollIndicator={false}>
                 {/* Profile Card - Premium Minimalist */}
                 <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-6`}>
                     <View style={tw`flex-row items-center gap-4 mb-8`}>
@@ -75,7 +75,6 @@ export const ProfileScreen = () => {
                             <User size={28} color="#111827" />
                         </View>
                         <View style={tw`flex-1`}>
-                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1`}>Student Profile</Text>
 
                             {isEditing ? (
                                 <View style={tw`flex-row items-center gap-2`}>

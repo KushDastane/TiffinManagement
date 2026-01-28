@@ -126,12 +126,12 @@ export const HistoryScreen = () => {
                 end={{ x: 0.5, y: 1 }}
                 style={tw`px-6 pt-14 pb-8 rounded-b-[40px] shadow-sm border-b border-gray-100/50`}
             >
-                <Text style={tw`text-2xl font-black text-gray-900`}>Thali History</Text>
+                <Text style={tw`text-2xl font-black text-gray-900`}>Meal History</Text>
                 <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Past Orders & Consumption</Text>
             </LinearGradient>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pb-32`}
+                contentContainerStyle={tw`p-6 pb-32 mt-7`}
                 style={tw`flex-1 -mt-4`}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}

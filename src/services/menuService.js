@@ -10,17 +10,48 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-// Use YYYY-MM-DD for IDs
+// Business Day starts at 4 AM. 
+// This means 1 AM on Tuesday is still part of Monday's business cycle.
+export const getBusinessDate = (date = new Date()) => {
+    const d = new Date(date);
+    if (d.getHours() < 4) {
+        d.setDate(d.getDate() - 1);
+    }
+    return d;
+};
+
+// Use YYYY-MM-DD for IDs based on Business Day
 export const getMenuDateId = (dateObj) => {
-    return dateObj.toISOString().split('T')[0];
+    const target = getBusinessDate(dateObj);
+    return target.toISOString().split('T')[0];
 };
 
 export const getTodayKey = () => getMenuDateId(new Date());
 
 export const getTomorrowKey = () => {
-    const tomorrow = new Date();
+    const tomorrow = getBusinessDate();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return getMenuDateId(tomorrow);
+    return tomorrow.toISOString().split('T')[0];
+};
+
+// Helper to compare times correctly including late night (00:00 - 04:00)
+// Returns -1 if t1 < t2, 0 if t1 === t2, 1 if t1 > t2
+export const compareTimes = (t1, t2) => {
+    if (!t1 || !t2) return 0;
+
+    const [h1, m1] = t1.split(':').map(Number);
+    const [h2, m2] = t2.split(':').map(Number);
+
+    // Normalize hours: 00-03 become 24-27 to handle late night
+    const nh1 = h1 < 4 ? h1 + 24 : h1;
+    const nh2 = h2 < 4 ? h2 + 24 : h2;
+
+    const minutes1 = nh1 * 60 + m1;
+    const minutes2 = nh2 * 60 + m2;
+
+    if (minutes1 < minutes2) return -1;
+    if (minutes1 > minutes2) return 1;
+    return 0;
 };
 
 /**
@@ -73,10 +104,11 @@ export const isAfterResetTime = (kitchenConfig) => {
     if (activeSlots.length === 0) return false;
 
     const lastSlot = activeSlots.reduce((latest, current) => {
-        return ((current.end || "") > (latest.end || "")) ? current : latest;
+        return (compareTimes(current.end || "", latest.end || "") > 0) ? current : latest;
     }, { end: "" });
 
-    return currentTime > lastSlot.end;
+    // In a business day logic, "Reset" usually means we are past the last slot's window
+    return compareTimes(currentTime, lastSlot.end || "") > 0;
 };
 
 /**
@@ -89,9 +121,10 @@ export const getAvailableSlots = (kitchenConfig) => {
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     return Object.entries(kitchenConfig.mealSlots)
-        .filter(([id, slot]) => slot && slot.active && currentTime <= (slot.end || ""))
+        // Filter by end time using normalized compare
+        .filter(([id, slot]) => slot && slot.active && compareTimes(currentTime, slot.end || "") <= 0)
         .map(([id, slot]) => ({ id, ...slot }))
-        .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+        .sort((a, b) => compareTimes(a.start || "", b.start || ""));
 };
 
 export const getEffectiveMenuDateKey = (kitchenConfig) => {
@@ -107,23 +140,19 @@ export const getEffectiveMealSlot = (kitchenConfig) => {
     const activeSlots = Object.entries(kitchenConfig.mealSlots)
         .filter(([id, slot]) => slot && slot.active)
         .map(([id, slot]) => ({ id, ...slot }))
-        .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+        .sort((a, b) => compareTimes(a.start || "", b.start || ""));
 
     if (activeSlots.length === 0) return null;
 
-    // 1. Find slots currently within their window (start <= now <= end)
-    const inWindow = activeSlots.filter(s => currentTime >= s.start && currentTime <= s.end);
-    if (inWindow.length > 0) {
-        // If multiple (e.g., Breakfast 8-11 and Lunch 10-14), 
-        // pick the one that started LATER (the more recent focus)
-        return inWindow[inWindow.length - 1].id;
-    }
+    // 1. Find slots currently within their window
+    const inWindow = activeSlots.filter(s => getSlotStatus(s, currentTime) === 'ACTIVE');
+    if (inWindow.length > 0) return inWindow[inWindow.length - 1].id;
 
-    // 2. If nothing "In Window", find the next upcoming slot (now < start)
-    const upcoming = activeSlots.filter(s => currentTime < s.start);
+    // 2. Find next upcoming slot
+    const upcoming = activeSlots.filter(s => getSlotStatus(s, currentTime) === 'UPCOMING');
     if (upcoming.length > 0) return upcoming[0].id;
 
-    // 3. Fallback to the first slot of the day
+    // 3. Fallback to first slot
     return activeSlots[0].id;
 };
 
@@ -135,7 +164,7 @@ export const getSlotDateKey = (slotId, kitchenConfig) => {
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const slot = kitchenConfig.mealSlots[slotId];
 
-    return currentTime <= slot.end ? getTodayKey() : getTomorrowKey();
+    return compareTimes(currentTime, slot.end || "") <= 0 ? getTodayKey() : getTomorrowKey();
 };
 
 // Keep these for backward compatibility if needed, but they are now thin wrappers
@@ -147,8 +176,11 @@ export const getDinnerDateKey = (kitchenConfig) => getSlotDateKey('dinner', kitc
  */
 export const getSlotStatus = (slotObj, currentTime) => {
     if (!slotObj || !slotObj.start || !slotObj.end) return 'ENDED';
-    if (currentTime >= slotObj.start && currentTime <= slotObj.end) return 'ACTIVE';
-    if (currentTime < slotObj.start) return 'UPCOMING';
+    const starts = compareTimes(currentTime, slotObj.start);
+    const ends = compareTimes(currentTime, slotObj.end);
+
+    if (starts >= 0 && ends <= 0) return 'ACTIVE';
+    if (starts < 0) return 'UPCOMING';
     return 'ENDED';
 };
 
