@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Animated, Dimensions } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, getLunchDateKey, getDinnerDateKey, getEffectiveMenuDateKey, getSlotDateKey } from '../../services/menuService';
+import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, getLunchDateKey, getDinnerDateKey, getEffectiveMenuDateKey, getSlotDateKey, getDishLibrary, updateDishHistory } from '../../services/menuService';
 import tw from 'twrnc';
-import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun } from 'lucide-react-native';
+import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const OTHER_SUGGESTIONS = ["Misal Pav", "Pav Bhaji", "Thalipeeth"];
@@ -13,12 +13,13 @@ const SNACKS_SUGGESTIONS = ["Pani Puri", "Dhokla"];
 const FULL_ADDON_SUGGESTIONS = ["Dal Rice", "Kadhi Rice", "Biryani"];
 const FREE_ADDONS = ["Chatni", "Pickle", "Dahi", "Sweet"];
 
-export const MenuScreen = () => {
+export const MenuScreen = ({ navigation }) => {
     const { tenant } = useTenant();
 
     // UI State
     const [viewMode, setViewMode] = useState('summary'); // summary | edit
     const [editingSlot, setEditingSlot] = useState(null); // lunch | dinner
+    const [dishLibrary, setDishLibrary] = useState([]);
     const slideAnim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -79,6 +80,32 @@ export const MenuScreen = () => {
         return menuCache[key]?.[slot];
     };
 
+    const DishSuggestions = ({ value, onSelect, type }) => {
+        const filtered = dishLibrary
+            .filter(d => d.name.toLowerCase().includes((value || "").toLowerCase()) && d.name.toLowerCase() !== (value || "").toLowerCase())
+            .slice(0, 5);
+
+        if (filtered.length === 0) return null;
+
+        return (
+            <View style={tw`flex-row flex-wrap gap-2 mb-4 bg-yellow-50/50 p-3 rounded-2xl border border-yellow-100/50`}>
+                <View style={tw`flex-row items-center gap-1.5 w-full mb-1`}>
+                    <Sparkles size={10} color="#ca8a04" />
+                    <Text style={tw`text-[8px] font-black text-yellow-600 uppercase tracking-widest`}>Smart Suggestions</Text>
+                </View>
+                {filtered.map(d => (
+                    <Pressable
+                        key={d.name}
+                        onPress={() => onSelect(d.name)}
+                        style={tw`bg-white px-3 py-1.5 rounded-xl border border-yellow-100 shadow-sm`}
+                    >
+                        <Text style={tw`text-[10px] font-black text-gray-700`}>{d.name}</Text>
+                    </Pressable>
+                ))}
+            </View>
+        );
+    };
+
     const startEditing = (slot) => {
         setEditingSlot(slot);
         const existing = getSlotData(slot);
@@ -129,7 +156,17 @@ export const MenuScreen = () => {
         ]).start();
     };
 
+    useEffect(() => {
+        if (!tenant?.id) return;
+        const loadLibrary = async () => {
+            const lib = await getDishLibrary(tenant.id);
+            setDishLibrary(lib);
+        };
+        loadLibrary();
+    }, [tenant?.id, viewMode]);
+
     const handleSave = async () => {
+        if (!editingSlot) return Alert.alert("Error", "No slot selected");
         if (!mealType) return Alert.alert("Error", "Select meal type");
         setIsSaving(true);
 
@@ -139,6 +176,7 @@ export const MenuScreen = () => {
             extras: extras.filter(e => e.name && e.price).map(e => ({ name: e.name, price: Number(e.price) })),
         };
 
+        const dishesToTrack = [];
         if (mealType === 'ROTI_SABZI') {
             payload.rotiSabzi = {
                 sabzi,
@@ -152,18 +190,22 @@ export const MenuScreen = () => {
                 },
                 freeAddons
             };
+            if (sabzi) dishesToTrack.push(sabzi);
         } else {
             if (!otherName || !otherPrice) {
                 setIsSaving(false);
                 return Alert.alert("Error", "Enter item name and price");
             }
             payload.other = { name: otherName, price: Number(otherPrice) };
+            if (otherName) dishesToTrack.push(otherName);
         }
 
         const targetDate = getSlotDateKey(editingSlot, tenant);
         const result = await saveMenu(tenant.id, targetDate, { [editingSlot]: payload });
-        setIsSaving(false);
+
         if (result.success) {
+            await updateDishHistory(tenant.id, dishesToTrack);
+            setIsSaving(false);
             // Animate back to summary
             Animated.parallel([
                 Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
@@ -207,69 +249,88 @@ export const MenuScreen = () => {
                     style={tw`flex-1`}
                     showsVerticalScrollIndicator={false}
                 >
-                    {activeSlots.map(m => {
-                        const slot = m.id;
-                        const data = getSlotData(slot);
-                        const accent = slot === 'lunch' || slot === 'breakfast' ? 'yellow-400' : 'amber-500';
-
-                        return (
-                            <View key={slot} style={tw`mb-8`}>
-                                <View style={tw`flex-row items-center gap-2 mb-4`}>
-                                    <View style={tw`w-1 h-4 bg-${accent} rounded-full`} />
-                                    <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest`}>{slot}</Text>
-                                </View>
-
-                                {data ? (
-                                    <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100`}>
-                                        <View style={tw`flex-row justify-between items-start mb-4`}>
-                                            <View>
-                                                <Text style={tw`text-base font-black text-gray-900`}>{data.type === 'ROTI_SABZI' ? `Roti - ${data.rotiSabzi?.sabzi || 'Sabzi'}` : data.other?.name}</Text>
-                                                <Text style={tw`text-xs text-gray-400 font-bold uppercase`}>{data.type.replace('_', ' ')}</Text>
-                                            </View>
-                                            <Pressable
-                                                onPress={() => startEditing(slot)}
-                                                style={tw`w-10 h-10 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}
-                                            >
-                                                <PenTool size={18} color="#4b5563" />
-                                            </Pressable>
-                                        </View>
-
-                                        {data.type === 'ROTI_SABZI' ? (
-                                            <View style={tw`gap-3`}>
-                                                <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
-                                                    <View>
-                                                        <Text style={tw`text-xs font-bold text-gray-900`}>Half Dabba</Text>
-                                                        <Text style={tw`text-[10px] text-gray-400`}>{data.rotiSabzi.half.items.join(', ')}</Text>
-                                                    </View>
-                                                    <Text style={tw`font-black text-gray-900`}>₹{data.rotiSabzi.half.price}</Text>
-                                                </View>
-                                                <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
-                                                    <View>
-                                                        <Text style={tw`text-xs font-bold text-gray-900`}>Full Dabba</Text>
-                                                        <Text style={tw`text-[10px] text-gray-400`}>{data.rotiSabzi.full.items.join(', ')}</Text>
-                                                    </View>
-                                                    <Text style={tw`font-black text-gray-900`}>₹{data.rotiSabzi.full.price}</Text>
-                                                </View>
-                                            </View>
-                                        ) : (
-                                            <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
-                                                <Text style={tw`text-xs font-bold text-gray-900`}>Standard Price</Text>
-                                                <Text style={tw`font-black text-gray-900`}>₹{data.other?.price}</Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                ) : (
-                                    <Pressable
-                                        onPress={() => startEditing(slot)}
-                                        style={tw`bg-white rounded-3xl p-8 border-2 border-dashed border-gray-200 items-center justify-center`}
-                                    >
-                                        <Plus size={32} color="#9ca3af" />
-                                        <Text style={tw`text-gray-400 font-bold mt-2 uppercase text-xs tracking-widest`}>Set {slot} Menu</Text>
-                                    </Pressable>
-                                )}
+                    {activeSlots.length === 0 ? (
+                        <View style={tw`items-center justify-center py-20`}>
+                            <View style={tw`w-20 h-20 rounded-3xl bg-gray-50 items-center justify-center mb-6`}>
+                                <Utensils size={40} color="#d1d5db" />
                             </View>
-                        );
-                    })}
+                            <Text style={tw`text-xl font-black text-gray-900 mb-2`}>No Meal Slots Enabled</Text>
+                            <Text style={tw`text-sm text-gray-400 text-center mb-8 px-8`}>
+                                Please enable at least one meal slot in Settings to start setting menus
+                            </Text>
+                            <Pressable
+                                onPress={() => navigation.navigate('Settings')}
+                                style={tw`bg-yellow-400 px-8 py-4 rounded-2xl flex-row items-center gap-2`}
+                            >
+                                <Text style={tw`text-gray-900 font-black text-sm uppercase tracking-widest`}>Go to Settings</Text>
+                                <ExternalLink size={16} color="#111827" />
+                            </Pressable>
+                        </View>
+                    ) : (
+                        activeSlots.map(m => {
+                            const slot = m.id;
+                            const data = getSlotData(slot);
+                            const accent = slot === 'lunch' || slot === 'breakfast' ? 'yellow-400' : 'amber-500';
+
+                            return (
+                                <View key={slot} style={tw`mb-8`}>
+                                    <View style={tw`flex-row items-center gap-2 mb-4`}>
+                                        <View style={tw`w-1 h-4 bg-${accent} rounded-full`} />
+                                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest`}>{slot}</Text>
+                                    </View>
+
+                                    {data ? (
+                                        <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100`}>
+                                            <View style={tw`flex-row justify-between items-start mb-4`}>
+                                                <View>
+                                                    <Text style={tw`text-base font-black text-gray-900`}>{data.type === 'ROTI_SABZI' ? `Roti - ${data.rotiSabzi?.sabzi || 'Sabzi'}` : data.other?.name}</Text>
+                                                    <Text style={tw`text-xs text-gray-400 font-bold uppercase`}>{data.type.replace('_', ' ')}</Text>
+                                                </View>
+                                                <Pressable
+                                                    onPress={() => startEditing(slot)}
+                                                    style={tw`w-10 h-10 rounded-2xl bg-gray-50 items-center justify-center border border-gray-100`}
+                                                >
+                                                    <PenTool size={18} color="#4b5563" />
+                                                </Pressable>
+                                            </View>
+
+                                            {data.type === 'ROTI_SABZI' ? (
+                                                <View style={tw`gap-3`}>
+                                                    <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
+                                                        <View>
+                                                            <Text style={tw`text-xs font-bold text-gray-900`}>Half Dabba</Text>
+                                                            <Text style={tw`text-[10px] text-gray-400`}>{data.rotiSabzi.half.items?.join(', ') || 'Standard items'}</Text>
+                                                        </View>
+                                                        <Text style={tw`font-black text-gray-900`}>₹{data.rotiSabzi.half.price}</Text>
+                                                    </View>
+                                                    <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
+                                                        <View>
+                                                            <Text style={tw`text-xs font-bold text-gray-900`}>Full Dabba</Text>
+                                                            <Text style={tw`text-[10px] text-gray-400`}>{data.rotiSabzi.full.items?.join(', ') || 'Standard items'}</Text>
+                                                        </View>
+                                                        <Text style={tw`font-black text-gray-900`}>₹{data.rotiSabzi.full.price}</Text>
+                                                    </View>
+                                                </View>
+                                            ) : (
+                                                <View style={tw`flex-row justify-between items-center bg-gray-50 p-3 rounded-2xl`}>
+                                                    <Text style={tw`text-xs font-bold text-gray-900`}>Standard Price</Text>
+                                                    <Text style={tw`font-black text-gray-900`}>₹{data.other?.price}</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    ) : (
+                                        <Pressable
+                                            onPress={() => startEditing(slot)}
+                                            style={tw`bg-white rounded-3xl p-8 border-2 border-dashed border-gray-200 items-center justify-center`}
+                                        >
+                                            <Plus size={32} color="#9ca3af" />
+                                            <Text style={tw`text-gray-400 font-bold mt-2 uppercase text-xs tracking-widest`}>Set {slot} Menu</Text>
+                                        </Pressable>
+                                    )}
+                                </View>
+                            );
+                        })
+                    )}
                 </ScrollView>
             </Animated.View>
 
@@ -332,6 +393,7 @@ export const MenuScreen = () => {
                                 value={sabzi}
                                 onChangeText={setSabzi}
                             />
+                            <DishSuggestions value={sabzi} onSelect={setSabzi} />
 
                             <View style={tw`flex-row gap-3 mb-4`}>
                                 <View style={tw`flex-1`}>
@@ -426,12 +488,15 @@ export const MenuScreen = () => {
                             </View>
 
                             {showOtherInput && (
-                                <TextInput
-                                    style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 mb-4 font-bold text-gray-900`}
-                                    placeholder="Custom Meal Name"
-                                    value={otherName}
-                                    onChangeText={setOtherName}
-                                />
+                                <>
+                                    <TextInput
+                                        style={tw`bg-white rounded-xl px-4 py-3 border border-gray-200 mb-4 font-bold text-gray-900`}
+                                        placeholder="Custom Meal Name"
+                                        value={otherName}
+                                        onChangeText={setOtherName}
+                                    />
+                                    <DishSuggestions value={otherName} onSelect={setOtherName} />
+                                </>
                             )}
 
                             <Text style={tw`text-xs font-semibold text-gray-500 uppercase mb-2 ml-1`}>Price</Text>

@@ -54,7 +54,7 @@ export const LoginScreen = () => {
             <View style={tw`w-full max-w-[85%] px-4`}>
                 {/* Compact Header */}
                 <Animated.View layout={Layout.springify()} style={tw`items-center mb-8`}>
-                    <View style={tw`w-14 h-14 bg-yellow-100 rounded-2xl items-center justify-center mb-3 transform rotate-3`}>
+                    <View style={[tw`w-14 h-14 bg-yellow-100 rounded-2xl items-center justify-center mb-3`, { transform: [{ rotate: '3deg' }] }]}>
                         <Text style={tw`text-2xl`}>🍱</Text>
                     </View>
                     <Text style={tw`text-2xl font-black text-gray-900 tracking-tight text-center`}>

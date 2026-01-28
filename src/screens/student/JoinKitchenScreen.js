@@ -10,37 +10,44 @@ export const JoinKitchenScreen = () => {
     const [loading, setLoading] = useState(false);
 
     const handleJoin = async () => {
-        if (!joinCode.trim() || joinCode.length < 6) {
-            Alert.alert("Error", "Please enter a valid 6-digit code");
+        if (!joinCode.trim() || joinCode.length < 8) {
+            Alert.alert("Error", "Please enter a valid code (e.g., ZBJ-2929)");
             return;
         }
 
         setLoading(true);
         const result = await joinKitchen(user.uid, joinCode.toUpperCase());
-        setLoading(true); // Keep loading until navigation triggers? Or set false.
+        setLoading(false);
 
         if (result.error) {
-            setLoading(false);
             Alert.alert("Error", result.error);
         } else {
-            // Success! AuthContext/TenantContext will update and redirect
             Alert.alert("Success", "Joined kitchen successfully!");
         }
     };
 
+    const handleTextChange = (text) => {
+        let formatted = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (formatted.length > 3) {
+            formatted = formatted.slice(0, 3) + '-' + formatted.slice(3, 7);
+        }
+        setJoinCode(formatted);
+    };
+
     return (
         <View style={tw`flex-1 bg-white items-center justify-center p-4`}>
-            <Text style={tw`text-2xl font-bold mb-4 text-gray-800`}>Join a Kitchen</Text>
-            <Text style={tw`text-gray-500 mb-8 text-center px-4`}>
-                Enter the 6-character code shared by your kitchen manager.
+            <Text style={tw`text-2xl font-black mb-4 text-gray-900`}>Join a Kitchen</Text>
+            <Text style={tw`text-gray-500 mb-8 text-center px-4 font-bold`}>
+                Enter the 8-character code (e.g., ZBJ-2929) shared by your kitchen manager.
             </Text>
 
             <TextInput
-                style={tw`w-full max-w-xs border-2 border-dashed border-gray-300 rounded-lg p-4 mb-8 text-3xl text-center font-mono tracking-widest uppercase focus:border-yellow-400`}
-                placeholder="XK9J2M"
-                maxLength={6}
+                style={tw`w-full max-w-xs border-2 border-dashed border-gray-300 rounded-3xl p-6 mb-8 text-3xl text-center font-black tracking-widest uppercase text-gray-900 focus:border-yellow-400`}
+                placeholder="ZBJ-2929"
+                placeholderTextColor="#d1d5db"
+                maxLength={8}
                 value={joinCode}
-                onChangeText={setJoinCode}
+                onChangeText={handleTextChange}
                 autoCapitalize="characters"
             />
 

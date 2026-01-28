@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { HomeScreen } from '../screens/student/HomeScreen';
 import { OrderScreen } from '../screens/student/OrderScreen';
 import { HistoryScreen } from '../screens/student/HistoryScreen';
@@ -11,8 +12,12 @@ import { StudentTabBar } from '../components/StudentTabBar';
 const Tab = createBottomTabNavigator();
 
 export const StudentStack = () => {
+    const { userProfile } = useAuth();
+    const isFirstTime = userProfile && userProfile.hasSeenOnboarding === false;
+
     return (
         <Tab.Navigator
+            initialRouteName={isFirstTime ? "Profile" : "Home"}
             tabBar={props => <StudentTabBar {...props} />}
             screenOptions={{
                 headerShown: false,

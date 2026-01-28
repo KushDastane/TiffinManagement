@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, RefreshControl, Modal } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { subscribeToOrders, updateOrder } from '../../services/orderService';
-import { getTodayKey } from '../../services/menuService';
+import { subscribeToOrders, updateOrder, placeManualOrder } from '../../services/orderService';
+import { getTodayKey, subscribeToMenu, getEffectiveMealSlot } from '../../services/menuService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Search, Clock, Check, ChevronRight, User, Package, Filter } from 'lucide-react-native';
+import { Search, Clock, Check, ChevronRight, User, Package, Filter, Plus, ChevronLeft, Phone, Info, UserPlus, X, Wallet } from 'lucide-react-native';
+import { db } from '../../config/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { getLastOrderForUser } from '../../services/orderService';
 
 export const OrdersScreen = () => {
     const { tenant } = useTenant();
@@ -18,7 +21,92 @@ export const OrdersScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [confirmingId, setConfirmingId] = useState(null);
 
+    // Manual Order State
+    const [showManualModal, setShowManualModal] = useState(false);
+    const [todaysMenu, setTodaysMenu] = useState(null);
+    const [manualForm, setManualForm] = useState({
+        phoneNumber: "",
+        name: "",
+        orderDescription: "",
+        totalPrice: "",
+        slot: "",
+        type: "ONE_TIME"
+    });
+    const [submittingManual, setSubmittingManual] = useState(false);
+    const [customerSearch, setCustomerSearch] = useState("");
+    const [suggestions, setSuggestions] = useState([]);
+    const [lastOrderSuggestion, setLastOrderSuggestion] = useState(null);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
     const today = getTodayKey();
+    const activeSlot = getEffectiveMealSlot(tenant);
+
+    useEffect(() => {
+        if (!tenant?.id) return;
+        const unsubMenu = subscribeToMenu(tenant.id, today, (menu) => {
+            setTodaysMenu(menu);
+            if (menu) {
+                const firstSlotId = Object.keys(tenant?.mealSlots || {})[0];
+                const activeId = activeSlot || firstSlotId;
+                setManualForm(prev => ({
+                    ...prev,
+                    slot: activeId || "",
+                }));
+            }
+        });
+        return unsubMenu;
+    }, [tenant?.id, today, activeSlot, tenant?.mealSlots]);
+
+    const handleCustomerSearch = async (text) => {
+        setCustomerSearch(text);
+        if (text.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        try {
+            const usersRef = collection(db, 'users');
+            // Simplified search: fetching students in this kitchen
+            // In a real app, this should be a more robust search or pre-fetched index
+            const q = query(
+                usersRef,
+                where('role', '==', 'student'),
+                where('joinedKitchens', 'array-contains', tenant.id)
+            );
+            const snap = await getDocs(q);
+            const clients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            const filtered = clients.filter(c =>
+                (c.name || '').toLowerCase().includes(text.toLowerCase()) ||
+                (c.phoneNumber || '').includes(text)
+            ).slice(0, 5);
+
+            setSuggestions(filtered);
+            setShowSuggestions(filtered.length > 0);
+        } catch (err) {
+            console.error("Search error:", err);
+        }
+    };
+
+    const selectCustomer = async (customer) => {
+        setManualForm(prev => ({
+            ...prev,
+            phoneNumber: customer.phoneNumber,
+            name: customer.name
+        }));
+        setCustomerSearch(`${customer.name} — ${customer.phoneNumber}`);
+        setShowSuggestions(false);
+        setSuggestions([]);
+
+        // Smart Autofill: Get last order
+        const lastOrder = await getLastOrderForUser(tenant.id, customer.id);
+        if (lastOrder) {
+            setLastOrderSuggestion(lastOrder.orderDescription || lastOrder.mainItem);
+        } else {
+            setLastOrderSuggestion(null);
+        }
+    };
 
     useEffect(() => {
         if (!tenant?.id) return;
@@ -41,6 +129,47 @@ export const OrdersScreen = () => {
             return matchesSearch && matchesStatus;
         });
     }, [orders, searchTerm, statusFilter]);
+
+    const { user } = useAuth();
+    const handleManualSubmit = async () => {
+        if (!manualForm.phoneNumber || !manualForm.orderDescription || !manualForm.totalPrice) {
+            Alert.alert("Missing Fields", "Phone, Order Description, and Price are required.");
+            return;
+        }
+
+        setSubmittingManual(true);
+        const result = await placeManualOrder(tenant.id, {
+            phoneNumber: manualForm.phoneNumber,
+            name: manualForm.name,
+            quantity: 1, // Default for manual free-text
+            mainItem: manualForm.orderDescription, // Use description as main item for compatibility
+            orderDescription: manualForm.orderDescription,
+            totalAmount: parseFloat(manualForm.totalPrice),
+            slot: manualForm.slot,
+            type: manualForm.type,
+            status: 'CONFIRMED',
+            paymentStatus: 'due',
+            componentsSnapshot: []
+        }, user.uid);
+
+        setSubmittingManual(false);
+        if (result.success) {
+            setShowManualModal(false);
+            setManualForm({
+                phoneNumber: "",
+                name: "",
+                orderDescription: "",
+                totalPrice: "",
+                slot: activeSlot || "",
+                type: "ONE_TIME"
+            });
+            setCustomerSearch("");
+            setLastOrderSuggestion(null);
+            Alert.alert("Success", "Manual order recorded.");
+        } else {
+            Alert.alert("Error", result.error);
+        }
+    };
 
     const handleConfirm = async (orderId) => {
         setConfirmingId(orderId);
@@ -66,9 +195,17 @@ export const OrdersScreen = () => {
                     end={{ x: 0.5, y: 1 }}
                     style={tw`px-6 pt-16 pb-6 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
                 >
-                    <View style={tw`mb-4`}>
-                        <Text style={tw`text-2xl font-black text-gray-900`}>Daily Orders</Text>
-                        <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Confirm & Batch Production</Text>
+                    <View style={tw`mb-4 flex-row justify-between items-end`}>
+                        <View>
+                            <Text style={tw`text-2xl font-black text-gray-900`}>Daily Orders</Text>
+                            <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Confirm & Batch Production</Text>
+                        </View>
+                        <Pressable
+                            onPress={() => setShowManualModal(true)}
+                            style={tw`bg-gray-900 w-12 h-12 rounded-[20px] items-center justify-center shadow-lg shadow-gray-200`}
+                        >
+                            <Plus size={24} color="white" />
+                        </Pressable>
                     </View>
 
                     {/* Sticky Controls */}
@@ -207,6 +344,198 @@ export const OrdersScreen = () => {
                     )}
                 </View>
             </ScrollView>
+            {/* Manual Order Modal */}
+            <Modal
+                visible={showManualModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowManualModal(false)}
+            >
+                <View style={tw`flex-1 bg-black/60 justify-end`}>
+                    <View style={tw`bg-white rounded-t-[40px] p-8 pb-12`}>
+                        <View style={tw`flex-row justify-between items-center mb-8`}>
+                            <View>
+                                <Text style={tw`text-2xl font-black text-gray-900`}>Manual Entry</Text>
+                                <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Record external order</Text>
+                            </View>
+                            <Pressable
+                                onPress={() => setShowManualModal(false)}
+                                style={tw`w-10 h-10 rounded-full bg-gray-50 items-center justify-center`}
+                            >
+                                <Plus size={20} color="#9ca3af" style={{ transform: [{ rotate: '45deg' }] }} />
+                            </Pressable>
+                        </View>
+
+                        <ScrollView style={tw`max-h-[70%]`} showsVerticalScrollIndicator={false}>
+                            <View style={tw`gap-6`}>
+                                {/* Customer Selection */}
+                                <View style={tw`z-50`}>
+                                    <View style={tw`flex-row justify-between mb-2 ml-1`}>
+                                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Search Customer *</Text>
+                                        {!manualForm.phoneNumber && <Text style={tw`text-[8px] font-bold text-yellow-600 uppercase`}>Name or Phone</Text>}
+                                    </View>
+
+                                    <View style={tw`bg-gray-50 rounded-2xl flex-row items-center px-4 border ${showSuggestions ? 'border-yellow-400' : 'border-gray-100'}`}>
+                                        <Search size={16} color="#9ca3af" />
+                                        <TextInput
+                                            style={tw`flex-1 py-4 ml-3 font-bold text-gray-900`}
+                                            placeholder="Amit or 91234..."
+                                            value={customerSearch}
+                                            onChangeText={handleCustomerSearch}
+                                            placeholderTextColor="#9ca3af"
+                                        />
+                                        {customerSearch.length > 0 && (
+                                            <Pressable onPress={() => { setCustomerSearch(""); setManualForm(prev => ({ ...prev, phoneNumber: "", name: "" })); setLastOrderSuggestion(null); }}>
+                                                <X size={16} color="#9ca3af" />
+                                            </Pressable>
+                                        )}
+                                    </View>
+
+                                    {/* Suggestions Table */}
+                                    {showSuggestions && (
+                                        <View style={tw`absolute top-[75px] left-0 right-0 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden`}>
+                                            {suggestions.map((s) => (
+                                                <Pressable
+                                                    key={s.id}
+                                                    onPress={() => selectCustomer(s)}
+                                                    style={tw`p-4 border-b border-gray-50 flex-row items-center justify-between active:bg-gray-50`}
+                                                >
+                                                    <View style={tw`flex-row items-center gap-3`}>
+                                                        <View style={tw`w-8 h-8 rounded-full bg-yellow-100 items-center justify-center`}>
+                                                            <User size={14} color="#ca8a04" />
+                                                        </View>
+                                                        <View>
+                                                            <Text style={tw`font-bold text-gray-900`}>{s.name || 'Unnamed'}</Text>
+                                                            <Text style={tw`text-[10px] text-gray-400 font-bold`}>{s.phoneNumber}</Text>
+                                                        </View>
+                                                    </View>
+                                                    <ChevronRight size={14} color="#d1d5db" />
+                                                </Pressable>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+
+                                {/* New/One-time Customer Fallback */}
+                                {customerSearch.length > 0 && !showSuggestions && !manualForm.phoneNumber && (
+                                    <Pressable
+                                        onPress={() => {
+                                            const isPhone = /^\d{10}$/.test(customerSearch);
+                                            setManualForm(prev => ({
+                                                ...prev,
+                                                phoneNumber: isPhone ? customerSearch : "",
+                                                name: isPhone ? "" : customerSearch
+                                            }));
+                                        }}
+                                        style={tw`bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex-row items-center gap-3`}
+                                    >
+                                        <UserPlus size={18} color="#ca8a04" />
+                                        <View>
+                                            <Text style={tw`font-bold text-yellow-900`}>New Customer: "{customerSearch}"</Text>
+                                            <Text style={tw`text-[10px] text-yellow-700 font-medium`}>Click to proceed with this info</Text>
+                                        </View>
+                                    </Pressable>
+                                )}
+
+                                {/* Manual Inputs (Hidden if customer selected, unless editing) */}
+                                {manualForm.phoneNumber ? (
+                                    <View style={tw`flex-row gap-4`}>
+                                        <View style={tw`flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100`}>
+                                            <Text style={tw`text-[8px] font-black text-gray-400 uppercase mb-1`}>Phone</Text>
+                                            <Text style={tw`font-bold text-gray-900`}>{manualForm.phoneNumber}</Text>
+                                        </View>
+                                        <View style={tw`flex-1 bg-gray-50 p-4 rounded-2xl border border-gray-100`}>
+                                            <Text style={tw`text-[8px] font-black text-gray-400 uppercase mb-1`}>Name</Text>
+                                            <Text style={tw`font-bold text-gray-900`}>{manualForm.name || 'Walk-in'}</Text>
+                                        </View>
+                                    </View>
+                                ) : null}
+
+                                {/* Order Description */}
+                                <View>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>Order Description *</Text>
+                                    <View style={tw`bg-gray-50 rounded-2xl px-4 border border-gray-100`}>
+                                        <TextInput
+                                            style={tw`py-4 font-bold text-gray-900`}
+                                            placeholder="e.g. 2 Thali + Rice"
+                                            value={manualForm.orderDescription}
+                                            onChangeText={(t) => setManualForm(prev => ({ ...prev, orderDescription: t }))}
+                                            placeholderTextColor="#9ca3af"
+                                        />
+                                    </View>
+
+                                    {/* Smart Suggestion Tag */}
+                                    {lastOrderSuggestion && (
+                                        <Pressable
+                                            onPress={() => setManualForm(prev => ({ ...prev, orderDescription: lastOrderSuggestion }))}
+                                            style={tw`mt-2 self-start bg-gray-100 px-3 py-1.5 rounded-full flex-row items-center gap-2`}
+                                        >
+                                            <Clock size={10} color="#6b7280" />
+                                            <Text style={tw`text-[10px] font-black text-gray-500 uppercase`}>Latest: {lastOrderSuggestion}</Text>
+                                        </Pressable>
+                                    )}
+                                </View>
+
+                                {/* Total Price & Slot */}
+                                <View style={tw`flex-row gap-4`}>
+                                    <View style={tw`flex-1`}>
+                                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>Total Price *</Text>
+                                        <View style={tw`bg-gray-50 rounded-2xl flex-row items-center px-4 border border-gray-100`}>
+                                            <Text style={tw`font-bold text-gray-400 mr-1`}>₹</Text>
+                                            <TextInput
+                                                style={tw`flex-1 py-4 font-black text-gray-900 text-lg`}
+                                                placeholder="0.00"
+                                                keyboardType="numeric"
+                                                value={manualForm.totalPrice}
+                                                onChangeText={(t) => setManualForm(prev => ({ ...prev, totalPrice: t }))}
+                                                placeholderTextColor="#9ca3af"
+                                            />
+                                        </View>
+                                    </View>
+
+                                    <View style={tw`flex-1`}>
+                                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>Meal Slot</Text>
+                                        <View style={tw`flex-row gap-1`}>
+                                            {(tenant?.mealSlots) && Object.keys(tenant.mealSlots).map((id) => (
+                                                <Pressable
+                                                    key={id}
+                                                    onPress={() => setManualForm(prev => ({ ...prev, slot: id }))}
+                                                    style={[
+                                                        tw`flex-1 py-4 items-center rounded-xl border`,
+                                                        manualForm.slot === id ? tw`bg-gray-900 border-gray-900` : tw`bg-white border-gray-100`
+                                                    ]}
+                                                >
+                                                    <Text style={[tw`text-[8px] font-black uppercase tracking-widest`, manualForm.slot === id ? tw`text-white` : tw`text-gray-400`]}>{id}</Text>
+                                                </Pressable>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Info Box */}
+                                <View style={tw`bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex-row gap-3`}>
+                                    <Wallet size={16} color="#ca8a04" />
+                                    <Text style={tw`flex-1 text-[10px] font-medium text-yellow-800 leading-4`}>
+                                        Manual order will be recorded as "DUE" for this customer. Total Amount: ₹{manualForm.totalPrice || '0'}
+                                    </Text>
+                                </View>
+                            </View>
+                        </ScrollView>
+
+                        <Pressable
+                            onPress={handleManualSubmit}
+                            disabled={submittingManual}
+                            style={[tw`bg-gray-900 rounded-[20px] py-4.5 mt-8 items-center justify-center shadow-xl shadow-gray-200`, submittingManual && tw`opacity-50`]}
+                        >
+                            {submittingManual ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <Text style={tw`text-white font-black text-sm uppercase tracking-widest`}>Record Order</Text>
+                            )}
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };

@@ -19,7 +19,12 @@ export const ProfileScreen = () => {
 
     React.useEffect(() => {
         setEditedName(userProfile?.name || '');
-    }, [userProfile?.name]);
+
+        // Mark onboarding as seen if this is the first time landing here
+        if (userProfile && userProfile.hasSeenOnboarding === false) {
+            updateUserProfile(user.uid, { hasSeenOnboarding: true });
+        }
+    }, [userProfile]);
 
     const handleSaveProfile = async () => {
         if (!editedName.trim()) return;

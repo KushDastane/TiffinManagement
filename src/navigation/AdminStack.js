@@ -10,6 +10,7 @@ import { DashboardScreen } from '../screens/admin/DashboardScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CustomTabBar } from '../components/CustomTabBar';
 import { Home, Package, Utensils, IndianRupee, Users, Settings as SettingsIcon } from 'lucide-react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 const Tab = createBottomTabNavigator();
 const StudentStackNav = createNativeStackNavigator();
@@ -45,8 +46,12 @@ const AdminSettingsStack = () => (
 /* ---------------- ADMIN TAB NAV ---------------- */
 
 export const AdminStack = () => {
+    const { userProfile } = useAuth();
+    const isFirstTime = userProfile && userProfile.hasSeenOnboarding === false;
+
     return (
         <Tab.Navigator
+            initialRouteName={isFirstTime ? "Settings" : "Home"}
             tabBar={(props) => <CustomTabBar {...props} />}
             screenOptions={{
                 headerShown: false,

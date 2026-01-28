@@ -91,7 +91,7 @@ const MenuCard = ({ title, description, price, selected, quantity, onSelect, onQ
     );
 };
 
-export const OrderScreen = () => {
+export const OrderScreen = ({ navigation }) => {
     const { user } = useAuth();
     const { tenant } = useTenant();
     const { primaryColor } = useTheme();
@@ -117,6 +117,8 @@ export const OrderScreen = () => {
         setAvailableSlots(slots);
         if (slots.length > 0 && !selectedSlot) {
             setSelectedSlot(slots[0].id);
+        } else if (slots.length === 0) {
+            setLoading(false);
         }
         setActiveDateKey(getEffectiveMenuDateKey(tenant));
     }, [tenant]);
@@ -205,7 +207,6 @@ export const OrderScreen = () => {
         }));
     };
 
-    if (loading) return <View style={tw`flex-1 items-center justify-center bg-gray-50`}><ActivityIndicator color={primaryColor} /></View>;
     if (!tenant) return null;
 
     if (availableSlots.length === 0 || !selectedSlot) {
@@ -225,45 +226,62 @@ export const OrderScreen = () => {
         );
     }
 
+    if (loading) return <View style={tw`flex-1 items-center justify-center bg-gray-50`}><ActivityIndicator color={primaryColor} /></View>;
+
     if (!menu || menu.status !== 'SET') {
         const SlotIcon = selectedSlot === 'breakfast' ? Coffee : (selectedSlot === 'lunch' ? Sun : (selectedSlot === 'snacks' ? UtensilsCrossed : Moon));
+
         return (
             <View style={tw`flex-1 bg-white`}>
                 <View style={tw`px-6 pt-14 flex-row items-center gap-4`}>
                     <Pressable onPress={() => navigation.goBack()} style={tw`w-10 h-10 rounded-xl bg-gray-50 items-center justify-center border border-gray-100`}>
                         <ArrowLeft size={20} color="#111827" />
                     </Pressable>
-                    <Text style={tw`text-xl font-black text-gray-900`}>Build Meal</Text>
+                    <Text style={tw`text-xl font-black text-gray-900 uppercase tracking-tighter`}>Build Meal</Text>
                 </View>
 
-                {/* Slot Selector also here */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={tw`px-6 py-6 gap-3`}>
-                    {availableSlots.map(s => {
-                        const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
-                        const isSelected = selectedSlot === s.id;
-                        return (
-                            <Pressable
-                                key={s.id}
-                                onPress={() => setSelectedSlot(s.id)}
-                                style={[tw`flex-row items-center gap-2 px-5 py-3 rounded-2xl border`, isSelected ? tw`bg-yellow-400 border-yellow-400` : tw`bg-white border-gray-100 shadow-sm`]}
-                            >
-                                <Icon size={14} color={isSelected ? "#111827" : "#9ca3af"} />
-                                <Text style={[tw`text-[10px] font-black uppercase tracking-widest`, isSelected ? tw`text-gray-900` : tw`text-gray-400`]}>{s.id}</Text>
-                            </Pressable>
-                        );
-                    })}
-                </ScrollView>
+                {/* Slot Selector */}
+                <View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={tw`px-6 py-6 gap-3`}>
+                        {availableSlots.map(s => {
+                            const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
+                            const isSelected = selectedSlot === s.id;
+                            return (
+                                <Pressable
+                                    key={s.id}
+                                    onPress={() => setSelectedSlot(s.id)}
+                                    style={[tw`flex-row items-center gap-2 px-5 py-3 rounded-2xl border`, isSelected ? tw`bg-yellow-400 border-yellow-400` : tw`bg-white border-gray-100 shadow-sm`]}
+                                >
+                                    <Icon size={14} color={isSelected ? "#111827" : "#9ca3af"} />
+                                    <Text style={[tw`text-[10px] font-black uppercase tracking-widest`, isSelected ? tw`text-gray-900` : tw`text-gray-400`]}>{s.id}</Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
 
-                <View style={tw`flex-1 items-center justify-center p-10`}>
+                <View style={tw`flex-1 items-center justify-center p-10 -mt-20`}>
                     <View style={tw`w-20 h-20 rounded-3xl bg-gray-50 items-center justify-center mb-6`}>
-                        <SlotIcon size={32} color="#9ca3af" />
+                        <Text style={tw`text-5xl`}>🍱</Text>
                     </View>
-                    <Text style={tw`text-2xl font-black text-gray-900 text-center mb-2`}>
-                        Menu Updating...
+
+                    <Text style={tw`text-xl font-black text-gray-900 text-center mb-2`}>
+                        Menu Not Set Yet
                     </Text>
-                    <Text style={tw`text-gray-400 text-center font-bold uppercase tracking-widest text-[9px]`}>
-                        The kitchen is deciding the menu for {selectedSlot}.{'\n'}Please check back shortly!
+
+                    <Text style={tw`text-sm text-gray-400 text-center font-medium px-6 leading-5 mb-8`}>
+                        The kitchen is still planning today's menu. Check back in a bit!
                     </Text>
+
+                    <Pressable
+                        onPress={() => navigation.goBack()}
+                        style={({ pressed }) => [
+                            tw`bg-gray-900 px-8 py-4 rounded-2xl`,
+                            pressed && tw`opacity-90`
+                        ]}
+                    >
+                        <Text style={tw`text-white font-bold text-sm`}>Go Back</Text>
+                    </Pressable>
                 </View>
             </View>
         );

@@ -7,7 +7,10 @@ import {
     query,
     where,
     onSnapshot,
-    orderBy
+    orderBy,
+    getDocs,
+    arrayUnion,
+    limit
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -88,6 +91,89 @@ export const updateOrder = async (kitchenId, orderId, updates) => {
         return { error: error.message };
     }
 };
+export const placeManualOrder = async (kitchenId, orderData, adminId) => {
+    try {
+        if (!kitchenId) throw new Error("kitchenId is mandatory");
+
+        const { phoneNumber, name, ...rest } = orderData;
+
+        // 1. Find or Create User by Phone
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('phoneNumber', '==', phoneNumber));
+        const userSnap = await getDocs(q);
+
+        let userId;
+        let displayName = name || 'Unnamed Customer';
+
+        if (userSnap.empty) {
+            // Create a basic "Hidden" account
+            const newUserDoc = await addDoc(usersRef, {
+                phoneNumber,
+                name: displayName,
+                role: 'student',
+                isBasic: true, // Marker for manual-entry accounts
+                joinedKitchens: [kitchenId],
+                currentKitchenId: kitchenId,
+                createdAt: serverTimestamp()
+            });
+            userId = newUserDoc.id;
+        } else {
+            const existingUser = userSnap.docs[0];
+            userId = existingUser.id;
+            displayName = existingUser.data().name || displayName;
+
+            // Ensure this kitchen is in their list
+            if (!(existingUser.data().joinedKitchens || []).includes(kitchenId)) {
+                await updateDoc(doc(db, 'users', userId), {
+                    joinedKitchens: arrayUnion(kitchenId)
+                });
+            }
+        }
+
+        // 2. Place Order
+        const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
+        const dateId = new Date().toISOString().split('T')[0];
+
+        await addDoc(ordersRef, {
+            ...rest,
+            userId,
+            userDisplayName: displayName,
+            phoneNumber,
+            kitchenId,
+            dateId,
+            status: 'CONFIRMED', // Manual orders are usually confirmed immediately
+            paymentStatus: rest.paymentStatus || 'due',
+            paymentMethod: rest.paymentMethod || 'CASH',
+            recordedBy: adminId,
+            isManual: true,
+            createdAt: serverTimestamp()
+        });
+
+        return { success: true, userId };
+    } catch (error) {
+        console.error("Error placing manual order:", error);
+        return { error: error.message };
+    }
+};
+
+export const getLastOrderForUser = async (kitchenId, userId) => {
+    try {
+        const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
+        const q = query(
+            ordersRef,
+            where('userId', '==', userId),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) return null;
+        return snap.docs[0].data();
+    } catch (error) {
+        console.error("Error getting last order:", error);
+        return null;
+    }
+};
+
 export const placeStudentOrder = async (kitchenId, orderData) => {
     const { studentId, mealType, items } = orderData;
 
@@ -103,7 +189,7 @@ export const placeStudentOrder = async (kitchenId, orderData) => {
         componentsSnapshot: Object.entries(items.extras || {}).filter(([_, q]) => q > 0).map(([name, quantity]) => ({
             name,
             quantity,
-            price: 0, // In this flow, price is stored in items but simpler to pass total
+            price: 0,
             isDailySpecial: true
         }))
     };

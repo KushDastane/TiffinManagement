@@ -2,7 +2,11 @@ import {
     doc,
     setDoc,
     getDoc,
-    onSnapshot
+    onSnapshot,
+    collection,
+    query,
+    orderBy,
+    getDocs
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -137,3 +141,42 @@ export const getSlotDateKey = (slotId, kitchenConfig) => {
 // Keep these for backward compatibility if needed, but they are now thin wrappers
 export const getLunchDateKey = (kitchenConfig) => getSlotDateKey('lunch', kitchenConfig);
 export const getDinnerDateKey = (kitchenConfig) => getSlotDateKey('dinner', kitchenConfig);
+
+/**
+ * Tracks dish frequency for a specific kitchen.
+ */
+export const updateDishHistory = async (kitchenId, dishNames) => {
+    if (!dishNames || dishNames.length === 0) return;
+    try {
+        const batch = []; // Simulate batch or just loop for simplicity
+        for (const name of dishNames) {
+            if (!name) continue;
+            const normalized = name.trim().toLowerCase();
+            const dishRef = doc(db, 'kitchens', kitchenId, 'dishLibrary', normalized);
+            const snap = await getDoc(dishRef);
+
+            await setDoc(dishRef, {
+                name, // Store original casing
+                frequency: (snap.exists() ? (snap.data().frequency || 0) : 0) + 1,
+                lastUsed: new Date().toISOString()
+            }, { merge: true });
+        }
+    } catch (error) {
+        console.error("Error updating dish history:", error);
+    }
+};
+
+/**
+ * Retrieves top dish suggestions based on prefix and frequency.
+ */
+export const getDishLibrary = async (kitchenId) => {
+    try {
+        const libraryRef = collection(db, 'kitchens', kitchenId, 'dishLibrary');
+        const q = query(libraryRef, orderBy('frequency', 'desc'));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => d.data());
+    } catch (error) {
+        console.error("Error fetching dish library:", error);
+        return [];
+    }
+};

@@ -14,6 +14,7 @@ import { RoleSelectScreen } from '../screens/RoleSelectScreen';
 import { CreateKitchenScreen } from '../screens/admin/CreateKitchenScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
 import { StudentSetupScreen } from '../screens/StudentSetupScreen';
+import { LocationPickerScreen } from '../screens/student/LocationPickerScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,6 +43,8 @@ export const RootNavigator = () => {
                 !userProfile.name ? (
                     // Only ask for name IF they are a student and haven't set it yet
                     <Stack.Screen name="Setup" component={StudentSetupScreen} />
+                ) : !userProfile.locationSet ? (
+                    <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
                 ) : !userProfile.currentKitchenId ? (
                     <Stack.Screen name="UnjoinedRoot" component={UnjoinedStudentStack} />
                 ) : (

@@ -14,8 +14,7 @@ export const CreateKitchenScreen = () => {
     const [resetting, setResetting] = useState(false);
 
     const types = [
-        { id: 'DABBA', label: 'Tiffin Service', icon: '🍱', desc: 'Fixed meals (Lunch/Dinner)' },
-        { id: 'CANTEEN', label: 'Canteen Order', icon: '🍔', desc: 'A-la-carte Menu items' }
+        { id: 'DABBA', label: 'Tiffin Service', icon: '🍱', desc: 'Fixed meals (Lunch/Dinner)' }
     ];
 
     const handleBack = async () => {

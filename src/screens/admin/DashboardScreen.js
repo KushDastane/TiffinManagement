@@ -6,8 +6,9 @@ import { listenToAdminStats, getCookingSummary } from '../../services/adminServi
 import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot, getAvailableSlots } from '../../services/menuService';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import tw from 'twrnc';
-import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle, Coffee, UtensilsCrossed } from 'lucide-react-native';
+import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle, Coffee, UtensilsCrossed, Copy } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Clipboard from 'expo-clipboard';
 
 const { width } = Dimensions.get('window');
 
@@ -138,6 +139,13 @@ export const DashboardScreen = ({ navigation }) => {
         return Moon;
     }, [slot]);
 
+    const handleCopyCode = async () => {
+        if (tenant?.joinCode) {
+            await Clipboard.setStringAsync(tenant.joinCode);
+            Alert.alert("Copied", "Kitchen code copied to clipboard");
+        }
+    };
+
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
             {/* 1. Creative Absolute Header - Fixed & Sticky */}
@@ -155,6 +163,16 @@ export const DashboardScreen = ({ navigation }) => {
                                 Kitchen{"\n"}
                                 <Text style={tw`text-yellow-600`}>Dashboard</Text>
                             </Text>
+                            <Pressable
+                                onPress={handleCopyCode}
+                                style={({ pressed }) => [
+                                    tw`bg-white/80 self-start mt-3 px-3 py-1.5 rounded-xl border border-yellow-200 flex-row items-center gap-2 shadow-sm`,
+                                    pressed && tw`scale-95 opacity-80`
+                                ]}
+                            >
+                                <Text style={tw`text-[11px] font-black text-yellow-800 uppercase tracking-tight`}>Join: {tenant?.joinCode || '...'}</Text>
+                                <Copy size={12} color="#ca8a04" />
+                            </Pressable>
                         </View>
                         <View style={tw`w-14 h-14 rounded-[22px] bg-white items-center justify-center shadow-lg shadow-yellow-200 border border-white`}>
                             <Activity size={26} color="#ca8a04" />
@@ -217,35 +235,37 @@ export const DashboardScreen = ({ navigation }) => {
                     </Pressable>
 
                     {/* Slot Switcher - For Overlap Resolution */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={tw`mt-6`}
-                        contentContainerStyle={tw`px-1`}
-                    >
-                        {enabledSlots.map(s => {
-                            const isSelected = slot === s.id;
-                            const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
-                            return (
-                                <Pressable
-                                    key={s.id}
-                                    onPress={() => setManualSlot(s.id)}
-                                    style={[
-                                        tw`flex-row items-center gap-2 px-5 py-2.5 rounded-2xl mr-3 border`,
-                                        isSelected
-                                            ? tw`bg-yellow-400 border-yellow-400 shadow-md shadow-yellow-100`
-                                            : tw`bg-white border-white`
-                                    ]}
-                                >
-                                    <Icon size={12} color={isSelected ? "#111827" : "#9ca3af"} />
-                                    <Text style={[
-                                        tw`text-[9px] font-black uppercase tracking-widest`,
-                                        isSelected ? tw`text-gray-900` : tw`text-gray-400`
-                                    ]}>{s.id}</Text>
-                                </Pressable>
-                            );
-                        })}
-                    </ScrollView>
+                    {enabledSlots.length > 1 && (
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={tw`mt-6`}
+                            contentContainerStyle={tw`px-1`}
+                        >
+                            {enabledSlots.map(s => {
+                                const isSelected = slot === s.id;
+                                const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
+                                return (
+                                    <Pressable
+                                        key={s.id}
+                                        onPress={() => setManualSlot(s.id)}
+                                        style={[
+                                            tw`flex-row items-center gap-2 px-5 py-2.5 rounded-2xl mr-3 border`,
+                                            isSelected
+                                                ? tw`bg-yellow-400 border-yellow-400 shadow-md shadow-yellow-100`
+                                                : tw`bg-white border-white`
+                                        ]}
+                                    >
+                                        <Icon size={12} color={isSelected ? "#111827" : "#9ca3af"} />
+                                        <Text style={[
+                                            tw`text-[9px] font-black uppercase tracking-widest`,
+                                            isSelected ? tw`text-gray-900` : tw`text-gray-400`
+                                        ]}>{s.id}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    )}
                 </LinearGradient>
             </View>
 
@@ -343,22 +363,22 @@ export const DashboardScreen = ({ navigation }) => {
                 {nextPendingOrder && (
                     <View style={[
                         tw`mt-4 rounded-[32px] p-6 shadow-sm border border-gray-100 bg-white relative`,
-                        nextPendingOrder.isPriority ? tw`border-orange-200` : tw`border-gray-100`
+                        nextPendingOrder?.isPriority ? tw`border-orange-200` : tw`border-gray-100`
                     ]}>
                         {/* Elegant Priority Accent */}
-                        {nextPendingOrder.isPriority && (
+                        {nextPendingOrder?.isPriority && (
                             <View style={tw`absolute top-0 left-0 bottom-0 w-1.5 bg-orange-500`} />
                         )}
 
                         <View style={tw`flex-row items-center justify-between mb-5`}>
                             <View style={tw`flex-row items-center gap-2.5`}>
-                                <View style={[tw`w-2 h-2 rounded-full`, nextPendingOrder.isPriority ? tw`bg-orange-500` : tw`bg-yellow-400`]} />
+                                <View style={[tw`w-2 h-2 rounded-full`, nextPendingOrder?.isPriority ? tw`bg-orange-500` : tw`bg-yellow-400`]} />
                                 <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>
-                                    {nextPendingOrder.isPriority ? "Priority Assignment" : "Pending Action"}
+                                    {nextPendingOrder?.isPriority ? "Priority Assignment" : "Pending Action"}
                                 </Text>
                             </View>
-                            <View style={[tw`px-3 py-1 rounded-full flex-row items-center gap-2`, nextPendingOrder.isPriority ? tw`bg-orange-50` : tw`bg-gray-50`]}>
-                                <Text style={[tw`text-[9px] font-black uppercase`, nextPendingOrder.isPriority ? tw`text-orange-700` : tw`text-gray-500`]}>Latest Order</Text>
+                            <View style={[tw`px-3 py-1 rounded-full flex-row items-center gap-2`, nextPendingOrder?.isPriority ? tw`bg-orange-50` : tw`bg-gray-50`]}>
+                                <Text style={[tw`text-[9px] font-black uppercase`, nextPendingOrder?.isPriority ? tw`text-orange-700` : tw`text-gray-500`]}>Latest Order</Text>
                                 {otherPendingCount > 0 && (
                                     <TouchableOpacity
                                         onPress={() => navigation.navigate('Orders')}
@@ -373,18 +393,18 @@ export const DashboardScreen = ({ navigation }) => {
 
                         <View style={tw`mb-6 flex-row justify-between items-end`}>
                             <View style={tw`flex-1`}>
-                                <Text style={tw`text-lg font-black text-gray-900`}>{nextPendingOrder.userDisplayName || 'Student'}</Text>
+                                <Text style={tw`text-lg font-black text-gray-900`}>{nextPendingOrder?.userDisplayName || 'Student'}</Text>
                                 <View style={tw`flex-row items-center gap-2 mt-1.5`}>
                                     <View style={tw`bg-gray-100/80 px-2 py-0.5 rounded-md`}>
-                                        <Text style={tw`text-[10px] font-black text-gray-600 uppercase tracking-tighter`}>{nextPendingOrder.slot}</Text>
+                                        <Text style={tw`text-[10px] font-black text-gray-600 uppercase tracking-tighter`}>{nextPendingOrder?.slot}</Text>
                                     </View>
                                     <Text style={tw`text-sm font-bold text-gray-500`}>
-                                        {nextPendingOrder.quantity} × {nextPendingOrder.mainItem}
+                                        {nextPendingOrder?.quantity} × {nextPendingOrder?.mainItem}
                                     </Text>
                                 </View>
                             </View>
 
-                            {nextPendingOrder.isPriority && (
+                            {nextPendingOrder?.isPriority && (
                                 <View style={tw`bg-orange-100 px-3 py-1 rounded-xl flex-row items-center gap-1.5`}>
                                     <Clock size={12} color="#ea580c" strokeWidth={2.5} />
                                     <Text style={tw`text-[10px] font-black text-orange-700 uppercase`}>Early</Text>
@@ -396,16 +416,16 @@ export const DashboardScreen = ({ navigation }) => {
 
                         <TouchableOpacity
                             onPress={() => {
-                                console.log("Confirming Order ID:", nextPendingOrder.id);
-                                handleQuickConfirm(nextPendingOrder.id);
+                                console.log("Confirming Order ID:", nextPendingOrder?.id);
+                                handleQuickConfirm(nextPendingOrder?.id);
                             }}
-                            disabled={confirmingId === nextPendingOrder.id}
+                            disabled={confirmingId === nextPendingOrder?.id}
                             style={[
                                 tw`rounded-2xl py-4 items-center justify-center flex-row gap-3 shadow-md bg-gray-900`,
-                                confirmingId === nextPendingOrder.id ? tw`opacity-70` : tw`opacity-100`
+                                confirmingId === nextPendingOrder?.id ? tw`opacity-70` : tw`opacity-100`
                             ]}
                         >
-                            {confirmingId === nextPendingOrder.id ? (
+                            {confirmingId === nextPendingOrder?.id ? (
                                 <ActivityIndicator color="#fff" size="small" />
                             ) : (
                                 <>

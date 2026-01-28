@@ -12,14 +12,30 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
-// Helper to generate a random 6-character code
-const generateJoinCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+// Helper to generate a unique random code (AAA-1234)
+const generateJoinCode = async () => {
+    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // Removed I, O for clarity
+    let isUnique = false;
+    let code = '';
+
+    while (!isUnique) {
+        const l1 = letters[Math.floor(Math.random() * letters.length)];
+        const l2 = letters[Math.floor(Math.random() * letters.length)];
+        const l3 = letters[Math.floor(Math.random() * letters.length)];
+        const n = Math.floor(1000 + Math.random() * 9000);
+        code = `${l1}${l2}${l3}-${n}`;
+
+        const q = query(collection(db, 'kitchens'), where('joinCode', '==', code));
+        const existing = await getDocs(q);
+        if (existing.empty) isUnique = true;
+    }
+    return code;
 };
 
 export const createKitchen = async (ownerId, kitchenData) => {
     try {
-        const joinCode = generateJoinCode();
+        const joinCode = await generateJoinCode();
+
         const { kitchenType, ...rest } = kitchenData;
 
         // Smart Defaults based on Type
@@ -62,9 +78,10 @@ export const createKitchen = async (ownerId, kitchenData) => {
 
         const docRef = await addDoc(collection(db, 'kitchens'), newKitchen);
 
-        // Update owner's profile to set currentKitchenId
+        // Update owner's profile to set currentKitchenId and mark for onboarding redirect
         await updateDoc(doc(db, 'users', ownerId), {
-            currentKitchenId: docRef.id
+            currentKitchenId: docRef.id,
+            hasSeenOnboarding: false // Admins land on Settings first time
         });
 
         return { id: docRef.id, ...newKitchen, error: null };
@@ -89,14 +106,40 @@ export const joinKitchen = async (userId, joinCode) => {
 
         // 2. Add kitchen to user's joinedKitchens and set as current
         const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
-            joinedKitchens: arrayUnion(kitchenId),
-            currentKitchenId: kitchenId
-        });
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const joinedKitchens = userData.joinedKitchens || [];
+
+            // Check if already joined
+            if (joinedKitchens.includes(kitchenId)) {
+                // Just switch to it
+                await updateDoc(userRef, { currentKitchenId: kitchenId });
+                return { success: true, kitchenId, message: "Switched to kitchen" };
+            }
+
+            // Add to list and set as current
+            await updateDoc(userRef, {
+                joinedKitchens: arrayUnion(kitchenId),
+                currentKitchenId: kitchenId
+            });
+        }
 
         return { success: true, kitchenId };
     } catch (error) {
         console.error("Error joining kitchen:", error);
+        return { error: error.message };
+    }
+};
+
+export const switchKitchen = async (userId, kitchenId) => {
+    try {
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, { currentKitchenId: kitchenId });
+        return { success: true };
+    } catch (error) {
+        console.error("Error switching kitchen:", error);
         return { error: error.message };
     }
 };

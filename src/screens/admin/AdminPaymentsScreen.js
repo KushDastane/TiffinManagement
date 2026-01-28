@@ -3,9 +3,10 @@ import { View, Text, FlatList, Pressable, ActivityIndicator, Image, Alert, Modal
 import { useTenant } from '../../contexts/TenantContext';
 import { collection, query, where, onSnapshot, updateDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { getKitchenOutstandingSummary } from '../../services/paymentService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, X, Eye, IndianRupee, Calendar, User, PaymentCard } from 'lucide-react-native';
+import { Check, X, Eye, IndianRupee, Calendar, User, CreditCard, ArrowRight, AlertCircle } from 'lucide-react-native';
 
 export const AdminPaymentsScreen = () => {
     const { tenant } = useTenant();
@@ -14,6 +15,7 @@ export const AdminPaymentsScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [processingId, setProcessingId] = useState(null);
+
 
     useEffect(() => {
         if (!tenant?.id) return;
@@ -54,8 +56,8 @@ export const AdminPaymentsScreen = () => {
 
     const onRefresh = () => {
         setRefreshing(true);
-        // Snapshot updates auto
-        setTimeout(() => setRefreshing(false), 1000);
+        // Snapshot updates auto - just show spinner briefly
+        setTimeout(() => setRefreshing(false), 800);
     };
 
     const renderItem = ({ item }) => {
@@ -144,10 +146,15 @@ export const AdminPaymentsScreen = () => {
                     colors={['#fff', '#faf9f6']}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
-                    style={tw`px-6 pt-16 pb-8 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
+                    style={tw`px-6 pt-16 pb-6 rounded-b-[45px] shadow-sm border-b border-gray-100/50`}
                 >
-                    <Text style={tw`text-2xl font-black text-gray-900`}>Financial Ledger</Text>
-                    <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Review & Approve Top-ups</Text>
+                    <View style={tw`flex-row justify-between items-end mb-2`}>
+                        <View>
+                            <Text style={tw`text-2xl font-black text-gray-900`}>Financial Ledger</Text>
+                            <Text style={tw`text-yellow-600 text-[9px] font-black uppercase tracking-widest mt-0.5`}>Review & Manage Payments</Text>
+                        </View>
+                    </View>
+
                 </LinearGradient>
             </View>
 
@@ -156,7 +163,7 @@ export const AdminPaymentsScreen = () => {
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 style={tw`flex-1`}
-                contentContainerStyle={tw`p-6 pt-44 pb-32`}
+                contentContainerStyle={tw`p-6 pb-32 pt-40`}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 ListEmptyComponent={

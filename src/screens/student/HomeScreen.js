@@ -6,7 +6,8 @@ import {
     ScrollView,
     ActivityIndicator,
     ImageBackground,
-    RefreshControl
+    RefreshControl,
+    Alert
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTenant } from "../../contexts/TenantContext";
@@ -33,8 +34,61 @@ import {
     Coffee,
     Sun,
     UtensilsCrossed,
-    Moon
+    Moon,
+    ChevronDown,
+    ChefHat
 } from 'lucide-react-native';
+import { switchKitchen } from "../../services/kitchenService";
+
+const KitchenSelector = ({ joinedKitchens, currentKitchen, onSwitch }) => {
+    const [showOptions, setShowOptions] = useState(false);
+
+    if (joinedKitchens.length <= 1) return null;
+
+    return (
+        <View style={tw`z-50`}>
+            <Pressable
+                onPress={() => setShowOptions(!showOptions)}
+                style={tw`flex-row items-center bg-white/40 px-3 py-1.5 rounded-full border border-white/20`}
+            >
+                <ChefHat size={14} color="#ca8a04" style={tw`mr-2`} />
+                <Text style={tw`text-[10px] font-black text-gray-700 uppercase tracking-widest mr-1`}>
+                    {currentKitchen?.name || 'Kitchen'}
+                </Text>
+                <ChevronDown size={12} color="#ca8a04" />
+            </Pressable>
+
+            {showOptions && (
+                <View style={tw`absolute top-10 right-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 w-48`}>
+                    <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2 mt-1`}>
+                        Switch Kitchen
+                    </Text>
+                    {joinedKitchens.map((k) => (
+                        <Pressable
+                            key={k.id}
+                            onPress={() => {
+                                onSwitch(k.id);
+                                setShowOptions(false);
+                            }}
+                            style={[
+                                tw`p-3 rounded-xl mb-1 flex-row items-center justify-between`,
+                                k.id === currentKitchen?.id ? tw`bg-yellow-50` : tw`bg-transparent`
+                            ]}
+                        >
+                            <Text style={[
+                                tw`text-xs font-bold`,
+                                k.id === currentKitchen?.id ? tw`text-yellow-700` : tw`text-gray-600`
+                            ]}>
+                                {k.name}
+                            </Text>
+                            {k.id === currentKitchen?.id && <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />}
+                        </Pressable>
+                    ))}
+                </View>
+            )}
+        </View>
+    );
+};
 
 const WalletCard = ({ balance, loading }) => {
     const navigation = useNavigation();
@@ -93,11 +147,11 @@ const WalletCard = ({ balance, loading }) => {
                 <Pressable
                     onPress={() => navigation.navigate('Khata')}
                     style={({ pressed }) => [
-                        tw`w-full bg-white rounded-2xl py-4.5 flex-row items-center justify-center gap-3 shadow-xl`,
+                        tw`w-full bg-black rounded-2xl py-4.5 flex-row items-center justify-center gap-3 shadow-xl`,
                         pressed && tw`opacity-90 scale-[0.98]`
                     ]}
                 >
-                    <View style={tw`bg-gray-900 w-6 h-6 rounded-lg items-center justify-center`}>
+                    <View style={tw`bg-yellow-400/60 w-6 h-6 rounded-lg items-center justify-center`}>
                         <Plus size={12} color="white" strokeWidth={4} />
                     </View>
                     <Text style={tw`text-gray-100 font-black text-[11px] uppercase tracking-widest`}>Add Funds</Text>
@@ -131,7 +185,7 @@ const WeekSummary = ({ orders }) => {
             <View style={tw`flex-row justify-between items-center mb-10 px-2`}>
                 <View>
                     <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>Meal Schedule</Text>
-                    <Text style={tw`font-black text-gray-900 text-xl`}>Weekly Planner</Text>
+                    <Text style={tw`font-black text-gray-900 text-xl`}>Weekly History</Text>
                 </View>
                 <Pressable
                     onPress={() => navigation.navigate("History")}
@@ -175,7 +229,7 @@ const WeekSummary = ({ orders }) => {
 
 export const HomeScreen = () => {
     const { user, userProfile } = useAuth();
-    const { tenant } = useTenant();
+    const { tenant, joinedKitchens } = useTenant();
     const navigation = useNavigation();
 
     // Data State
@@ -311,6 +365,13 @@ export const HomeScreen = () => {
     const config = getStatusConfig();
     const activeMenu = todaysMenu?.mealSlots?.[activeSlot];
 
+    const handleSwitchKitchen = async (kitchenId) => {
+        if (kitchenId === tenant?.id) return;
+        setLoading(true);
+        const result = await switchKitchen(user.uid, kitchenId);
+        if (result.error) Alert.alert("Error", result.error);
+    };
+
     return (
         <View style={tw`flex-1  bg-[#faf9f6]`}>
             {/* Absolute Creative Header - Premium Hook */}
@@ -335,7 +396,12 @@ export const HomeScreen = () => {
                             </Text>
                         </View>
 
-                        <View style={tw`items-end gap-4`}>
+                        <View style={tw`items-end gap-3`}>
+                            <KitchenSelector
+                                joinedKitchens={joinedKitchens}
+                                currentKitchen={tenant}
+                                onSwitch={handleSwitchKitchen}
+                            />
                             <View style={[
                                 tw`px-3 py-1.5 rounded-xl border border-white bg-white/60`,
                             ]}>
@@ -355,7 +421,7 @@ export const HomeScreen = () => {
                 style={tw`flex-1`}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                contentContainerStyle={tw`p-6 pt-72 pb-32`}
+                contentContainerStyle={tw`p-6 pt-56 pb-32`}
             >
                 {/* Dynamic Status Card */}
                 <View style={[tw`rounded-[32px] mb-6 shadow-xl shadow-gray-200/50`, { backgroundColor: 'white' }]}>
@@ -374,12 +440,12 @@ export const HomeScreen = () => {
                                 {/* !Important: Exclamation Logic for Empty State */}
                                 {orderStatus === 'NO_ORDER' && (
                                     <View style={tw`bg-white self-start px-2.5 py-1 rounded-full mb-3 border border-red-50 shadow-sm`}>
-                                        <Text style={tw`text-red-500 text-[9px] font-black uppercase tracking-widest`}>Action Required</Text>
+                                        <Text style={tw`text-red-500 text-[9px] font-black uppercase tracking-widest`}>Order Now</Text>
                                     </View>
                                 )}
 
                                 <Text style={tw`text-[9px] font-black uppercase tracking-widest mb-1 text-gray-400`}>
-                                    Dashboard • {activeSlot?.toUpperCase() || 'MEAL'}
+                                    {activeSlot?.toUpperCase() || 'MEAL'}
                                 </Text>
                                 <Text style={[tw`text-2xl font-black`, config.titleColor]}>
                                     {config.title}

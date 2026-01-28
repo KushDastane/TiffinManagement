@@ -7,7 +7,8 @@ import { getKitchenConfig, updateKitchenConfig, updateKitchen } from '../../serv
 import { logoutUser } from '../../services/authService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check } from 'lucide-react-native';
+import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 
 // Helper Component for Triggers
 const InputTrigger = ({ label, value, onPress, placeholder, disabled }) => (
@@ -27,7 +28,7 @@ const InputTrigger = ({ label, value, onPress, placeholder, disabled }) => (
 );
 
 export const SettingsScreen = () => {
-    const { userProfile } = useAuth();
+    const { user, userProfile } = useAuth();
     const { tenant } = useTenant();
 
     const [config, setConfig] = useState(null);
@@ -53,6 +54,12 @@ export const SettingsScreen = () => {
 
     // Picker State
     const [picker, setPicker] = useState({ show: false, mode: 'time', field: null, subField: null, value: new Date() });
+
+    useEffect(() => {
+        if (userProfile && userProfile.hasSeenOnboarding === false) {
+            updateUserProfile(user.uid, { hasSeenOnboarding: true });
+        }
+    }, [userProfile]);
 
     const openPicker = (mode, field, subField, currentValue) => {
         let date = new Date();
@@ -90,23 +97,29 @@ export const SettingsScreen = () => {
                 newValue = `${y}-${m}-${d}`;
             }
 
-            // Update Config
+            // Update Config & Persist if needed
             if (picker.field === 'holiday') {
                 setConfig(prev => ({ ...prev, holiday: { ...prev.holiday, [picker.subField]: newValue } }));
             } else if (picker.field === 'mealSlots' && picker.subField) {
                 const [slotId, timeField] = picker.subField.split('.');
-                setConfig(prev => ({
-                    ...prev,
-                    mealSlots: {
-                        ...prev.mealSlots,
-                        [slotId]: {
-                            ...(prev.mealSlots?.[slotId] || {}),
-                            [timeField]: newValue
-                        }
+                const updatedMealSlots = {
+                    ...config.mealSlots,
+                    [slotId]: {
+                        ...(config.mealSlots?.[slotId] || {}),
+                        [timeField]: newValue
                     }
-                }));
+                };
+
+                // Real-time update for timings
+                setConfig(prev => ({ ...prev, mealSlots: updatedMealSlots }));
+                updateKitchenConfig(tenant.id, { ...config, mealSlots: updatedMealSlots });
             } else {
-                setConfig(prev => ({ ...prev, [picker.field]: newValue }));
+                setConfig(prev => {
+                    const next = { ...prev, [picker.field]: newValue };
+                    // Persist other fields real-time if they aren't holiday
+                    updateKitchenConfig(tenant.id, next);
+                    return next;
+                });
             }
 
             // Update picker val
@@ -120,6 +133,13 @@ export const SettingsScreen = () => {
         setSaving(false);
         if (result.success) Alert.alert("Success", "Settings updated");
         else Alert.alert("Error", result.error);
+    };
+
+    const handleCopyCode = async () => {
+        if (tenant?.joinCode) {
+            await Clipboard.setStringAsync(tenant.joinCode);
+            Alert.alert("Copied", "Kitchen code copied to clipboard");
+        }
     };
 
     const handleLogout = async () => {
@@ -155,56 +175,74 @@ export const SettingsScreen = () => {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Kitchen Brief */}
-                <View style={tw`bg-white rounded-[30px] p-5 shadow-sm border border-gray-100 mb-5 flex-row items-center justify-between`}>
-                    <View style={tw`flex-row items-center gap-4 flex-1`}>
-                        <View style={tw`w-12 h-12 rounded-2xl bg-yellow-100 items-center justify-center`}>
-                            <ChefHat size={22} color="#ca8a04" />
-                        </View>
-                        <View style={tw`flex-1`}>
-                            <Text style={tw`text-[10px] text-gray-400 font-bold uppercase tracking-widest`}>Kitchen Administrator</Text>
-                            {isEditingName ? (
-                                <View style={tw`flex-row items-center gap-2 mt-1`}>
-                                    <TextInput
-                                        style={tw`flex-1 text-lg font-black text-gray-900 border-b border-yellow-400 pb-0.5`}
-                                        value={editedKitchenName}
-                                        onChangeText={setEditedKitchenName}
-                                        autoFocus
-                                    />
-                                    <Pressable
-                                        onPress={async () => {
-                                            if (!editedKitchenName.trim()) return;
-                                            setSaving(true);
-                                            await updateKitchen(tenant.id, { name: editedKitchenName.trim() });
-                                            // Optimistic update locally if needed, but tenant context should auto-update if listening?
-                                            // Actually tenant context listens to doc. so it should be fine.
-                                            setSaving(false);
-                                            setIsEditingName(false);
-                                        }}
-                                        style={tw`bg-gray-900 p-1.5 rounded-lg`}
-                                        disabled={saving}
-                                    >
-                                        <Check size={14} color="white" />
+                <View style={tw`bg-white rounded-[30px] p-5 shadow-sm border border-gray-100 mb-5`}>
+                    <View style={tw`flex-row items-center justify-between`}>
+                        <View style={tw`flex-row items-center gap-4 flex-1`}>
+                            <View style={tw`w-12 h-12 rounded-2xl bg-yellow-100 items-center justify-center`}>
+                                <ChefHat size={22} color="#ca8a04" />
+                            </View>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-[10px] text-gray-400 font-bold uppercase tracking-widest`}>Kitchen Administrator</Text>
+                                {isEditingName ? (
+                                    <View style={tw`flex-row items-center gap-2 mt-1`}>
+                                        <TextInput
+                                            style={tw`flex-1 text-lg font-black text-gray-900 border-b border-yellow-400 pb-0.5`}
+                                            value={editedKitchenName}
+                                            onChangeText={setEditedKitchenName}
+                                            autoFocus
+                                        />
+                                        <Pressable
+                                            onPress={async () => {
+                                                if (!editedKitchenName.trim()) return;
+                                                setSaving(true);
+                                                await updateKitchen(tenant.id, { name: editedKitchenName.trim() });
+                                                setSaving(false);
+                                                setIsEditingName(false);
+                                            }}
+                                            style={tw`bg-gray-900 p-1.5 rounded-lg`}
+                                            disabled={saving}
+                                        >
+                                            <Check size={14} color="white" />
+                                        </Pressable>
+                                    </View>
+                                ) : (
+                                    <Pressable onLongPress={() => setIsEditingName(true)} delayLongPress={500} style={tw`flex-row items-center gap-2`}>
+                                        <Text style={tw`text-lg font-black text-gray-900`}>{tenant?.name}</Text>
+                                        <Pressable onPress={() => setIsEditingName(true)} style={tw`bg-gray-50 p-1.5 rounded-md`}>
+                                            <Edit2 size={12} color="#9ca3af" />
+                                        </Pressable>
                                     </Pressable>
-                                </View>
-                            ) : (
-                                <Pressable onLongPress={() => setIsEditingName(true)} delayLongPress={500} style={tw`flex-row items-center gap-2`}>
-                                    <Text style={tw`text-lg font-black text-gray-900`}>{tenant?.name}</Text>
-                                    <Pressable onPress={() => setIsEditingName(true)} style={tw`bg-gray-50 p-1.5 rounded-md`}>
-                                        <Edit2 size={12} color="#9ca3af" />
-                                    </Pressable>
-                                </Pressable>
-                            )}
+                                )}
+                            </View>
                         </View>
+                        <Pressable
+                            onPress={handleLogout}
+                            style={({ pressed }) => [
+                                tw`w-10 h-10 rounded-xl bg-red-50 items-center justify-center border border-red-100 ml-2`,
+                                pressed && tw`opacity-70 scale-90`
+                            ]}
+                        >
+                            <LogOut size={18} color="#b91c1c" />
+                        </Pressable>
                     </View>
-                    <Pressable
-                        onPress={handleLogout}
-                        style={({ pressed }) => [
-                            tw`w-10 h-10 rounded-xl bg-red-50 items-center justify-center border border-red-100 ml-2`,
-                            pressed && tw`opacity-70 scale-90`
-                        ]}
-                    >
-                        <LogOut size={18} color="#b91c1c" />
-                    </Pressable>
+
+                    {/* Join Code Section - No Overlap */}
+                    <View style={tw`mt-5 pt-4 border-t border-gray-50 flex-row justify-between items-center`}>
+                        <View>
+                            <Text style={tw`text-[8px] font-black text-gray-300 uppercase tracking-widest`}>Invite Kitchen Joining Code</Text>
+                            <Text style={tw`text-base font-black text-gray-900 tracking-tight mt-0.5`}>{tenant?.joinCode || '...'}</Text>
+                        </View>
+                        <Pressable
+                            onPress={handleCopyCode}
+                            style={({ pressed }) => [
+                                tw`bg-yellow-100 items-center justify-center px-4 py-2 rounded-xl border border-yellow-200 flex-row gap-2`,
+                                pressed && tw`opacity-70 scale-95`
+                            ]}
+                        >
+                            <Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>Copy Code</Text>
+                            <Copy size={12} color="#ca8a04" />
+                        </Pressable>
+                    </View>
                 </View>
 
                 {/* Meal Slots */}
@@ -234,13 +272,14 @@ export const SettingsScreen = () => {
                                     </View>
                                     <Switch
                                         value={slot.active}
-                                        onValueChange={(v) => setConfig({
-                                            ...config,
-                                            mealSlots: {
+                                        onValueChange={(v) => {
+                                            const updatedSlots = {
                                                 ...config.mealSlots,
                                                 [m.id]: { ...slot, active: v }
-                                            }
-                                        })}
+                                            };
+                                            setConfig({ ...config, mealSlots: updatedSlots });
+                                            updateKitchenConfig(tenant.id, { ...config, mealSlots: updatedSlots });
+                                        }}
                                         trackColor={{ false: "#e5e7eb", true: "#fde68a" }}
                                         thumbColor={slot.active ? "#ca8a04" : "#f4f3f4"}
                                     />
@@ -304,23 +343,23 @@ export const SettingsScreen = () => {
                                 onChangeText={(v) => setConfig({ ...config, holiday: { ...holiday, reason: v } })}
                                 placeholder="Reason (e.g. Festival / Break)"
                             />
+                            <Pressable
+                                onPress={handleSave}
+                                disabled={saving}
+                                style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
+                            >
+                                {saving ? <ActivityIndicator color="white" /> : (
+                                    <>
+                                        <Save size={14} color="white" />
+                                        <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Holiday Settings</Text>
+                                    </>
+                                )}
+                            </Pressable>
                         </View>
                     )}
                 </View>
 
-                {/* Actions */}
-                <Pressable
-                    onPress={handleSave}
-                    disabled={saving}
-                    style={tw`bg-yellow-600 rounded-2xl py-4 shadow-lg items-center justify-center flex-row gap-2`}
-                >
-                    {saving ? <ActivityIndicator color="white" /> : (
-                        <>
-                            <Save size={18} color="white" />
-                            <Text style={tw`text-white font-black text-sm uppercase tracking-widest`}>Save Changes</Text>
-                        </>
-                    )}
-                </Pressable>
+
 
                 <Text style={tw`text-center text-xs text-gray-300 mt-10 uppercase font-bold tracking-widest`}>DabbaMe v1.0.0 • Production</Text>
             </ScrollView>

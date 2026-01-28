@@ -87,7 +87,7 @@ export const getKitchenStudents = async (kitchenId) => {
 };
 
 // Record a manual payment (Admin)
-export const recordPayment = async (kitchenId, userId, amount, note = "Manual Entry") => {
+export const recordPayment = async (kitchenId, userId, amount, adminId, note = "Manual Entry") => {
     try {
         const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
         await addDoc(paymentsRef, {
@@ -97,6 +97,8 @@ export const recordPayment = async (kitchenId, userId, amount, note = "Manual En
             method: 'CASH', // Manual entry usually implies Cash handling
             status: 'accepted', // Admin recorded = Auto accepted
             note,
+            recordedBy: adminId,
+            timestamp: serverTimestamp(),
             createdAt: serverTimestamp()
         });
         return { success: true };
@@ -108,10 +110,7 @@ export const recordPayment = async (kitchenId, userId, amount, note = "Manual En
 
 export const getStudentBalance = async (kitchenId, userId) => {
     try {
-        // 1. Get Orders (Debits) - CONFIRMED ONLY usually, but for MVP maybe all 'placed' count as debt? 
-        // User said: "On order confirm, deduct from ledger". So we should filter by status='accepted' | 'confirmed'
-        // But for MVP, let's include 'placed' as "Tentative Debt" or just all.
-        // Let's stick to: Orders = Debit.
+        // 1. Get Orders (Debits) - SCOPED TO KITCHEN
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
         const qOrders = query(
             ordersRef,
@@ -122,8 +121,7 @@ export const getStudentBalance = async (kitchenId, userId) => {
         const ordersSnap = await getDocs(qOrders);
         const totalDebits = ordersSnap.docs.reduce((sum, doc) => sum + (doc.data().totalAmount || 0), 0);
 
-        // 2. Get Payments (Credits) - Only ACCEPTED payments count towards actual balance
-        // PENDING payments do NOT reduce debt yet.
+        // 2. Get Payments (Credits) - SCOPED TO KITCHEN
         const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
         const qPayments = query(paymentsRef, where('userId', '==', userId), where('status', '==', 'accepted'));
         const paymentsSnap = await getDocs(qPayments);
@@ -144,6 +142,42 @@ export const getStudentBalance = async (kitchenId, userId) => {
     } catch (error) {
         console.error("Error getting balance:", error);
         return { balance: 0, error: error.message };
+    }
+};
+
+export const getKitchenOutstandingSummary = async (kitchenId) => {
+    try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('joinedKitchens', 'array-contains', kitchenId));
+        const studentsSnap = await getDocs(q);
+
+        let summary = [];
+        let totalKitchenOutstanding = 0;
+
+        for (const studentDoc of studentsSnap.docs) {
+            const userId = studentDoc.id;
+            const userData = studentDoc.data();
+            const { balance } = await getStudentBalance(kitchenId, userId);
+
+            if (balance < 0) {
+                const outstanding = Math.abs(balance);
+                summary.push({
+                    userId,
+                    name: userData.name || 'Unnamed Student',
+                    phoneNumber: userData.phoneNumber,
+                    outstanding
+                });
+                totalKitchenOutstanding += outstanding;
+            }
+        }
+
+        return {
+            students: summary.sort((a, b) => b.outstanding - a.outstanding),
+            totalKitchenOutstanding
+        };
+    } catch (error) {
+        console.error("Error getting kitchen outstanding summary:", error);
+        return { students: [], totalKitchenOutstanding: 0 };
     }
 };
 

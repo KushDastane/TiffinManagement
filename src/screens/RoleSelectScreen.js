@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { createUserProfile } from '../services/authService';
+import { createUserProfile, logoutUser } from '../services/authService';
 import tw from 'twrnc';
 import { ChefHat, User, ArrowRight } from 'lucide-react-native';
 
@@ -66,6 +66,13 @@ export const RoleSelectScreen = () => {
                             <Text style={tw`text-[10px] text-gray-500 font-bold leading-tight`}>I want to order meals from a kitchen.</Text>
                         </View>
                         <ArrowRight size={16} color="#374151" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => logoutUser()}
+                        style={tw`mt-10 self-center flex-row items-center gap-2 p-3`}
+                    >
+                        <Text style={tw`text-gray-400 font-black text-[10px] uppercase tracking-widest`}>Not You? Logout</Text>
                     </TouchableOpacity>
                 </View>
             )}
