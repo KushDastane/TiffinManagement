@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Animated, Dimensions } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, getLunchDateKey, getDinnerDateKey, getEffectiveMenuDateKey, getSlotDateKey, getDishLibrary, updateDishHistory } from '../../services/menuService';
+import { saveMenu, subscribeToMenu, getTodayKey, getTomorrowKey, getLunchDateKey, getDinnerDateKey, getEffectiveMenuDateKey, getSlotDateKey, getDishLibrary, updateDishHistory, getSlotStatus, getNextUpcomingSlot } from '../../services/menuService';
 import tw from 'twrnc';
 import { ChevronLeft, Plus, X, List, PenTool, ExternalLink, Utensils, Moon, Sun, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,16 @@ const FREE_ADDONS = ["Chatni", "Pickle", "Dahi", "Sweet"];
 
 export const MenuScreen = ({ navigation }) => {
     const { tenant } = useTenant();
+
+    const [currentTime, setCurrentTime] = useState(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const now = new Date();
+            setCurrentTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        }, 30000);
+        return () => clearInterval(timer);
+    }, []);
 
     // UI State
     const [viewMode, setViewMode] = useState('summary'); // summary | edit
@@ -270,13 +280,27 @@ export const MenuScreen = ({ navigation }) => {
                         activeSlots.map(m => {
                             const slot = m.id;
                             const data = getSlotData(slot);
-                            const accent = slot === 'lunch' || slot === 'breakfast' ? 'yellow-400' : 'amber-500';
+                            const slotConfig = tenant.mealSlots[slot];
+                            const status = getSlotStatus(slotConfig, currentTime);
+
+                            const statusColors = {
+                                ACTIVE: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100', pill: 'bg-emerald-500' },
+                                UPCOMING: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', pill: 'bg-amber-400' },
+                                ENDED: { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-100', pill: 'bg-gray-300' }
+                            };
+                            const colors = statusColors[status];
 
                             return (
                                 <View key={slot} style={tw`mb-8`}>
-                                    <View style={tw`flex-row items-center gap-2 mb-4`}>
-                                        <View style={tw`w-1 h-4 bg-${accent} rounded-full`} />
-                                        <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest`}>{slot}</Text>
+                                    <View style={tw`flex-row items-center justify-between mb-4`}>
+                                        <View style={tw`flex-row items-center gap-2`}>
+                                            <View style={tw`w-1 h-4 bg-yellow-400 rounded-full`} />
+                                            <Text style={tw`text-xs font-black text-gray-400 uppercase tracking-widest`}>{slot}</Text>
+                                        </View>
+                                        <View style={tw`${colors.bg} px-3 py-1 rounded-full border ${colors.border} flex-row items-center gap-1.5`}>
+                                            <View style={tw`w-1.5 h-1.5 rounded-full ${colors.pill}`} />
+                                            <Text style={tw`${colors.text} text-[8px] font-black uppercase tracking-widest`}>{status}</Text>
+                                        </View>
                                     </View>
 
                                     {data ? (
@@ -317,15 +341,31 @@ export const MenuScreen = ({ navigation }) => {
                                                     <Text style={tw`font-black text-gray-900`}>₹{data.other?.price}</Text>
                                                 </View>
                                             )}
+
+                                            {/* Slot Helper Text */}
+                                            <View style={tw`mt-4 pt-4 border-t border-gray-50`}>
+                                                <Text style={tw`text-[9px] font-bold ${status === 'ACTIVE' ? 'text-emerald-500' : 'text-gray-400'} italic`}>
+                                                    {status === 'ACTIVE' ? "• This menu is currently visible to users." :
+                                                        status === 'UPCOMING' ? `• This menu will go live today at ${slotConfig.start}.` :
+                                                            `• This menu will apply to tomorrow's ${slot}.`}
+                                                </Text>
+                                            </View>
                                         </View>
                                     ) : (
-                                        <Pressable
-                                            onPress={() => startEditing(slot)}
-                                            style={tw`bg-white rounded-3xl p-8 border-2 border-dashed border-gray-200 items-center justify-center`}
-                                        >
-                                            <Plus size={32} color="#9ca3af" />
-                                            <Text style={tw`text-gray-400 font-bold mt-2 uppercase text-xs tracking-widest`}>Set {slot} Menu</Text>
-                                        </Pressable>
+                                        <View>
+                                            <Pressable
+                                                onPress={() => startEditing(slot)}
+                                                style={tw`bg-white rounded-3xl p-8 border-2 border-dashed border-gray-200 items-center justify-center`}
+                                            >
+                                                <Plus size={32} color="#9ca3af" />
+                                                <Text style={tw`text-gray-400 font-bold mt-2 uppercase text-xs tracking-widest`}>Set {slot} Menu</Text>
+                                            </Pressable>
+                                            {status === 'ENDED' && (
+                                                <Text style={tw`text-[9px] font-bold text-gray-300 italic mt-2 ml-4`}>
+                                                    • Setting this now will update tomorrow's menu.
+                                                </Text>
+                                            )}
+                                        </View>
                                     )}
                                 </View>
                             );
@@ -356,8 +396,18 @@ export const MenuScreen = ({ navigation }) => {
                                 <ChevronLeft size={20} color="#111827" />
                             </Pressable>
                             <View>
-                                <Text style={tw`text-2xl font-black text-gray-900 capitalize`}>Set {editingSlot}</Text>
-                                <Text style={tw`text-yellow-600 text-[10px] font-black uppercase tracking-widest mt-0.5`}>Configuring Daily Meal</Text>
+                                <Text style={tw`text-2xl font-black text-gray-900 capitalize`}>{editingSlot}</Text>
+                                <View style={tw`flex-row items-center gap-1.5 mt-0.5`}>
+                                    <View style={tw`w-1.5 h-1.5 rounded-full ${currentTime <= (tenant.mealSlots[editingSlot]?.end || "") ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                                    <View>
+                                        <Text style={tw`text-gray-900 text-[10px] font-black uppercase tracking-widest`}>
+                                            Editing {currentTime <= (tenant.mealSlots[editingSlot]?.end || "") ? "TODAY'S" : "TOMORROW'S"} Menu
+                                        </Text>
+                                        <Text style={tw`text-gray-400 text-[8px] font-bold uppercase tracking-tight`}>
+                                            Refers to {getSlotDateKey(editingSlot, tenant)}
+                                        </Text>
+                                    </View>
+                                </View>
                             </View>
                         </View>
                     </LinearGradient>

@@ -143,6 +143,29 @@ export const getLunchDateKey = (kitchenConfig) => getSlotDateKey('lunch', kitche
 export const getDinnerDateKey = (kitchenConfig) => getSlotDateKey('dinner', kitchenConfig);
 
 /**
+ * Determines the status of a specific slot relative to current time.
+ */
+export const getSlotStatus = (slotObj, currentTime) => {
+    if (!slotObj || !slotObj.start || !slotObj.end) return 'ENDED';
+    if (currentTime >= slotObj.start && currentTime <= slotObj.end) return 'ACTIVE';
+    if (currentTime < slotObj.start) return 'UPCOMING';
+    return 'ENDED';
+};
+
+/**
+ * Finds the next upcoming slot of the day.
+ */
+export const getNextUpcomingSlot = (kitchenConfig, currentTime) => {
+    if (!kitchenConfig?.mealSlots) return null;
+    const upcoming = Object.entries(kitchenConfig.mealSlots)
+        .filter(([id, slot]) => slot && slot.active && currentTime < (slot.start || ""))
+        .map(([id, slot]) => ({ id, ...slot }))
+        .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+
+    return upcoming.length > 0 ? upcoming[0] : null;
+};
+
+/**
  * Tracks dish frequency for a specific kitchen.
  */
 export const updateDishHistory = async (kitchenId, dishNames) => {

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions, Alert, A
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { listenToAdminStats, getCookingSummary } from '../../services/adminService';
-import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot, getAvailableSlots } from '../../services/menuService';
+import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot, getAvailableSlots, getSlotStatus, getNextUpcomingSlot } from '../../services/menuService';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import tw from 'twrnc';
 import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle, Coffee, UtensilsCrossed, Copy } from 'lucide-react-native';
@@ -28,18 +28,26 @@ export const DashboardScreen = ({ navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [confirmingId, setConfirmingId] = useState(null);
 
-    const initialSlot = useMemo(() => getEffectiveMealSlot(tenant), [tenant]);
+    const [currentTime, setCurrentTime] = useState(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const now = new Date();
+            setCurrentTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        }, 30000); // Update every 30s for better precision
+        return () => clearInterval(timer);
+    }, []);
+
+    const initialSlot = useMemo(() => getEffectiveMealSlot(tenant), [tenant, currentTime]);
     const [manualSlot, setManualSlot] = useState(null);
     const slot = manualSlot || initialSlot;
-    const dateKey = useMemo(() => getEffectiveMenuDateKey(tenant), [tenant]);
+    const dateKey = useMemo(() => getEffectiveMenuDateKey(tenant), [tenant, currentTime]);
 
     const enabledSlots = useMemo(() => {
         if (!tenant?.mealSlots) return [];
-        const now = new Date();
-        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
         return Object.entries(tenant.mealSlots)
-            .filter(([_, s]) => s && s.active && currentTime <= (s.end || "")) // Only show slots that haven't ended
+            .filter(([_, s]) => s && s.active)
             .map(([id, s]) => ({ id, ...s }))
             .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
     }, [tenant]);
@@ -124,12 +132,35 @@ export const DashboardScreen = ({ navigation }) => {
     console.log("Admin Dashboard Render: nextPendingOrder ID:", nextPendingOrder?.id);
 
     const menuStatus = useMemo(() => {
-        if (!slot) return { label: "Off Hours", color: "gray", subLabel: "Kitchen is resting" };
+        if (!tenant || !tenant.mealSlots) return { label: "No Config", color: "gray", subLabel: "Check settings" };
+
+        const activeSlots = Object.entries(tenant.mealSlots).filter(([_, s]) => s.active);
+        if (activeSlots.length === 0) return { label: "No Slots", color: "gray", subLabel: "Enable in settings" };
+
+        const currentSlotObj = tenant.mealSlots[slot];
+        if (!currentSlotObj) return { label: "Off Hours", color: "gray", subLabel: "Kitchen is resting" };
+
+        const status = getSlotStatus(currentSlotObj, currentTime);
         const slotData = menuData?.[slot];
-        if (!slotData) return { label: `${slot.toUpperCase()} Menu Not Set`, color: "red", subLabel: "" };
-        const mainItem = slotData.type === 'ROTI_SABZI' ? slotData.rotiSabzi?.sabzi : slotData.other?.name;
-        return { label: "Ready to Serve", color: "yellow", subLabel: mainItem };
-    }, [menuData, slot]);
+
+        if (status === 'ACTIVE') {
+            if (!slotData) return { label: `${slot.toUpperCase()} NOT SET`, color: "red", subText: "Upload menu now" };
+            const mainItem = slotData.type === 'ROTI_SABZI' ? slotData.rotiSabzi?.sabzi : slotData.other?.name;
+            return { label: "Live & Taking Orders", color: "green", subLabel: mainItem };
+        }
+
+        if (status === 'UPCOMING') {
+            return { label: "Coming Up Next", color: "amber", subLabel: `Starts at ${currentSlotObj.start}` };
+        }
+
+        // status === 'ENDED'
+        const next = getNextUpcomingSlot(tenant, currentTime);
+        if (next) {
+            return { label: "Slot Ended", color: "gray", subLabel: `Next: ${next.id.toUpperCase()} at ${next.start}` };
+        }
+
+        return { label: "Day Over", color: "gray", subLabel: "All slots ended" };
+    }, [menuData, slot, currentTime, tenant]);
 
     const SlotIcon = useMemo(() => {
         if (!slot) return Clock; // Default icon for off hours
@@ -165,7 +196,10 @@ export const DashboardScreen = ({ navigation }) => {
                 >
                     <View style={tw`flex-row justify-between items-start mb-8`}>
                         <View>
-                            <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-1`}>{todayStr}</Text>
+                            <View style={tw`flex-row items-center gap-1.5 mb-1`}>
+                                <Clock size={10} color="#ca8a04" />
+                                <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest`}>{currentTime} • {todayStr}</Text>
+                            </View>
                             <Text style={tw`text-3xl font-black text-gray-900 leading-tight`}>
                                 Kitchen{"\n"}
                                 <Text style={tw`text-yellow-600`}>Dashboard</Text>
@@ -203,11 +237,13 @@ export const DashboardScreen = ({ navigation }) => {
                                     <SlotIcon size={22} color="#fbbf24" fill={slot === 'dinner' || slot === 'snacks' ? "#fbbf24" : "transparent"} />
                                 </View>
                                 <View style={tw`flex-1`}>
-
                                     <Text style={tw`text-2xl font-black text-white capitalize`}>{slot || 'Resting'}</Text>
-                                    <Text style={tw`text-[10px] text-white/80 font-medium`} numberOfLines={1}>
-                                        {menuStatus.color === 'red' ? 'Upload menu' : (slot ? 'Menu is live • Receiving orders' : 'Waiting for next slot...')}
-                                    </Text>
+                                    <View style={tw`flex-row items-center gap-1.5 mt-0.5`}>
+                                        <View style={tw`w-2 h-2 rounded-full ${menuStatus.color === 'red' ? 'bg-red-500' : (menuStatus.color === 'green' ? 'bg-emerald-500' : 'bg-amber-400')}`} />
+                                        <Text style={tw`text-[10px] text-white/90 font-black uppercase tracking-widest`}>
+                                            {menuStatus.label}
+                                        </Text>
+                                    </View>
                                 </View>
                             </View>
 
@@ -216,25 +252,33 @@ export const DashboardScreen = ({ navigation }) => {
                                     <>
                                         <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
                                             <AlertTriangle size={14} color="#fca5a5" />
-                                            <Text style={tw`text-xs font-bold text-red-100`}>Missing</Text>
+                                            <Text style={tw`text-xs font-bold text-red-100`}>Urgent</Text>
                                         </View>
-                                        <Text style={tw`text-[9px] text-white/40`}>Not Uploaded</Text>
+                                        <Text style={tw`text-[9px] text-white/40`}>Set menu now</Text>
                                     </>
-                                ) : menuStatus.color === 'gray' ? (
+                                ) : menuStatus.color === 'amber' ? (
                                     <>
                                         <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
-                                            <Clock size={14} color="#cbd5e1" />
-                                            <Text style={tw`text-xs font-bold text-slate-100`}>Resting</Text>
+                                            <Clock size={14} color="#fde68a" />
+                                            <Text style={tw`text-xs font-bold text-amber-100`}>Upcoming</Text>
                                         </View>
-                                        <Text style={tw`text-[9px] text-white/40`}>Off Hours</Text>
+                                        <Text style={tw`text-[9px] text-white/40`}>{menuStatus.subLabel}</Text>
                                     </>
-                                ) : (
+                                ) : menuStatus.color === 'green' ? (
                                     <>
                                         <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
                                             <CheckCircle size={14} color="#a7f3d0" />
                                             <Text style={tw`text-xs font-bold text-emerald-100`}>Active</Text>
                                         </View>
                                         <Text style={tw`text-[9px] text-white/40`}>{orders.filter(o => o.slot === slot).length} orders</Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
+                                            <Clock size={14} color="#cbd5e1" />
+                                            <Text style={tw`text-xs font-bold text-slate-100`}>Slot Over</Text>
+                                        </View>
+                                        <Text style={tw`text-[9px] text-white/40 uppercase tracking-tighter`}>{menuStatus.subLabel}</Text>
                                     </>
                                 )}
                             </View>
