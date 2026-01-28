@@ -19,6 +19,8 @@ export const AuthProvider = ({ children }) => {
             setUser(firebaseUser);
 
             if (firebaseUser) {
+                setLoading(true);
+                setUserProfile(null);
                 // Real-time listener for user profile
                 const userRef = doc(db, 'users', firebaseUser.uid);
                 profileUnsubscribe = onSnapshot(userRef, (docSnap) => {

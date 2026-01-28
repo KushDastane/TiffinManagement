@@ -149,7 +149,13 @@ export const SettingsScreen = () => {
         ]);
     };
 
-    if (loading) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
+    if (loading || !tenant || !user) {
+        return (
+            <View style={tw`flex-1 bg-[#faf9f6] items-center justify-center`}>
+                <ActivityIndicator color="#ca8a04" />
+            </View>
+        );
+    }
 
     const holiday = config?.holiday || { active: false };
 

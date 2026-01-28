@@ -11,7 +11,7 @@ export const TenantProvider = ({ children }) => {
     const { user, userProfile } = useAuth();
     const [tenant, setTenant] = useState(null);
     const [joinedKitchens, setJoinedKitchens] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(!!user);
 
     useEffect(() => {
         let unsubscribe;
@@ -21,6 +21,7 @@ export const TenantProvider = ({ children }) => {
             if (!user || !userProfile || !userProfile.currentKitchenId) {
                 setTenant(null);
                 setJoinedKitchens([]);
+                setLoading(false);
                 return;
             }
 

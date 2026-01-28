@@ -372,6 +372,14 @@ export const HomeScreen = () => {
         if (result.error) Alert.alert("Error", result.error);
     };
 
+    if (!tenant || !user) {
+        return (
+            <View style={tw`flex-1 bg-[#faf9f6] items-center justify-center`}>
+                <ActivityIndicator color="#ca8a04" />
+            </View>
+        );
+    }
+
     return (
         <View style={tw`flex-1  bg-[#faf9f6]`}>
             {/* Absolute Creative Header - Premium Hook */}

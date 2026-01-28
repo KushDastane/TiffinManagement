@@ -73,8 +73,8 @@ export const isAfterResetTime = (kitchenConfig) => {
     if (activeSlots.length === 0) return false;
 
     const lastSlot = activeSlots.reduce((latest, current) => {
-        return (current.end > latest.end) ? current : latest;
-    });
+        return ((current.end || "") > (latest.end || "")) ? current : latest;
+    }, { end: "" });
 
     return currentTime > lastSlot.end;
 };
@@ -89,9 +89,9 @@ export const getAvailableSlots = (kitchenConfig) => {
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     return Object.entries(kitchenConfig.mealSlots)
-        .filter(([id, slot]) => slot.active && currentTime <= slot.end)
+        .filter(([id, slot]) => slot && slot.active && currentTime <= (slot.end || ""))
         .map(([id, slot]) => ({ id, ...slot }))
-        .sort((a, b) => a.start.localeCompare(b.start));
+        .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
 };
 
 export const getEffectiveMenuDateKey = (kitchenConfig) => {
@@ -105,9 +105,9 @@ export const getEffectiveMealSlot = (kitchenConfig) => {
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     const activeSlots = Object.entries(kitchenConfig.mealSlots)
-        .filter(([id, slot]) => slot.active)
+        .filter(([id, slot]) => slot && slot.active)
         .map(([id, slot]) => ({ id, ...slot }))
-        .sort((a, b) => a.start.localeCompare(b.start));
+        .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
 
     if (activeSlots.length === 0) return null;
 

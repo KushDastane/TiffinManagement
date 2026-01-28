@@ -39,9 +39,9 @@ export const DashboardScreen = ({ navigation }) => {
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
         return Object.entries(tenant.mealSlots)
-            .filter(([_, s]) => s.active && currentTime <= s.end) // Only show slots that haven't ended
+            .filter(([_, s]) => s && s.active && currentTime <= (s.end || "")) // Only show slots that haven't ended
             .map(([id, s]) => ({ id, ...s }))
-            .sort((a, b) => a.start.localeCompare(b.start));
+            .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
     }, [tenant]);
 
     useEffect(() => {
@@ -146,6 +146,13 @@ export const DashboardScreen = ({ navigation }) => {
         }
     };
 
+    if (!tenant || !user) {
+        return (
+            <View style={tw`flex-1 bg-[#faf9f6] items-center justify-center`}>
+                <ActivityIndicator color="#ca8a04" />
+            </View>
+        );
+    }
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
             {/* 1. Creative Absolute Header - Fixed & Sticky */}

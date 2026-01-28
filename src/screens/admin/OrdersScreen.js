@@ -185,6 +185,14 @@ export const OrdersScreen = () => {
 
     if (loading) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
 
+    if (!tenant) {
+        return (
+            <View style={tw`flex-1 bg-[#faf9f6] items-center justify-center`}>
+                <ActivityIndicator color="#ca8a04" />
+            </View>
+        );
+    }
+
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
             {/* Absolute Creative Header - Fixed & Sticky */}
