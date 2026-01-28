@@ -212,7 +212,9 @@ export const OrderScreen = ({ navigation }) => {
     if (availableSlots.length === 0 || !selectedSlot) {
         return (
             <View style={tw`flex-1 bg-white items-center justify-center p-10`}>
-                <Text style={tw`text-6xl mb-6`}>👨‍🍳</Text>
+                <View style={tw`mb-6`}>
+                    <Text style={tw`text-6xl leading-[80px]`}>👨‍🍳</Text>
+                </View>
                 <Text style={tw`text-2xl font-black text-gray-900 text-center mb-2`}>
                     Kitchen Resting
                 </Text>

@@ -9,6 +9,8 @@ import { ChefHat, ArrowRight, ChevronLeft } from 'lucide-react-native';
 export const CreateKitchenScreen = () => {
     const { user } = useAuth();
     const [name, setName] = useState('');
+    const [city, setCity] = useState('');
+    const [pincode, setPincode] = useState('');
     const [kitchenType, setKitchenType] = useState('DABBA'); // Default Type
     const [loading, setLoading] = useState(false);
     const [resetting, setResetting] = useState(false);
@@ -39,9 +41,23 @@ export const CreateKitchenScreen = () => {
             return;
         }
 
+        if (!city.trim() || !pincode.trim()) {
+            Alert.alert("Error", "City and Pincode are required");
+            return;
+        }
+
+        if (pincode.length !== 6) {
+            Alert.alert("Error", "Please enter a valid 6-digit Pincode");
+            return;
+        }
+
         setLoading(true);
         const result = await createKitchen(user.uid, {
             name: name.trim(),
+            address: {
+                city: city.trim(),
+                pinCode: pincode.trim()
+            },
             kitchenType,
             theme: {
                 primaryColor: '#FACC15' // Default
@@ -82,6 +98,33 @@ export const CreateKitchenScreen = () => {
                         placeholderTextColor="#9ca3af"
                         selectionColor="#ca8a04"
                     />
+                </View>
+
+                <View style={tw`flex-row gap-3 mb-4`}>
+                    <View style={tw`flex-1 bg-gray-50 border border-gray-100 rounded-xl p-3 focus:border-yellow-400`}>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>City</Text>
+                        <TextInput
+                            style={tw`w-full text-base font-bold text-gray-900`}
+                            placeholder="e.g. Mumbai"
+                            value={city}
+                            onChangeText={setCity}
+                            placeholderTextColor="#9ca3af"
+                            selectionColor="#ca8a04"
+                        />
+                    </View>
+                    <View style={tw`flex-1 bg-gray-50 border border-gray-100 rounded-xl p-3 focus:border-yellow-400`}>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Pincode</Text>
+                        <TextInput
+                            style={tw`w-full text-base font-bold text-gray-900`}
+                            placeholder="6 Digits"
+                            value={pincode}
+                            onChangeText={setPincode}
+                            placeholderTextColor="#9ca3af"
+                            selectionColor="#ca8a04"
+                            keyboardType="numeric"
+                            maxLength={6}
+                        />
+                    </View>
                 </View>
 
                 {/* Kitchen Type Selection - Compact */}

@@ -8,6 +8,7 @@ export const DiscoveryScreen = ({ navigation }) => {
     const [kitchens, setKitchens] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
+    const { userProfile } = useAuth();
 
     useEffect(() => {
         fetchKitchens();
@@ -15,7 +16,13 @@ export const DiscoveryScreen = ({ navigation }) => {
 
     const fetchKitchens = async (searchText = '') => {
         setLoading(true);
-        const data = await getAllKitchens(searchText);
+        let data = await getAllKitchens(searchText);
+
+        // Hard Filter by Student Pincode
+        if (userProfile?.pincode) {
+            data = data.filter(k => k.address?.pinCode === userProfile.pincode);
+        }
+
         setKitchens(data);
         setLoading(false);
     };
@@ -47,18 +54,12 @@ export const DiscoveryScreen = ({ navigation }) => {
                 </View>
             </View>
 
-            <View style={tw`flex-row mt-6 gap-3`}>
+            <View style={tw`mt-6`}>
                 <TouchableOpacity
-                    style={tw`flex-1 bg-yellow-400 p-4 rounded-xl items-center shadow-sm`}
-                    onPress={() => navigation.navigate('TrialOrder', { kitchen: item })}
-                >
-                    <Text style={tw`font-bold text-gray-900`}>Try Today</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={tw`flex-1 bg-white p-4 rounded-xl items-center border border-gray-200`}
+                    style={tw`bg-yellow-400 p-4 rounded-xl items-center shadow-sm`}
                     onPress={() => navigation.navigate('JoinKitchen', { kitchenCode: item.joinCode })}
                 >
-                    <Text style={tw`font-bold text-gray-700`}>Join</Text>
+                    <Text style={tw`font-black text-gray-900 uppercase tracking-widest text-xs`}>Join Kitchen</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -67,8 +68,8 @@ export const DiscoveryScreen = ({ navigation }) => {
     return (
         <View style={tw`flex-1 bg-white p-4`}>
             <View style={tw`pt-10 mb-6`}>
-                <Text style={tw`text-4xl font-black text-gray-900`}>Discover</Text>
-                <Text style={tw`text-gray-500 text-lg`}>Taste home-cooked meals near you.</Text>
+                <Text style={tw`text-4xl font-black text-gray-900`}>Discovery</Text>
+                <Text style={tw`text-gray-500 text-lg`}>Kitchens in {userProfile?.city} ({userProfile?.pincode})</Text>
             </View>
 
             <TextInput
@@ -87,8 +88,12 @@ export const DiscoveryScreen = ({ navigation }) => {
                     renderItem={renderKitchen}
                     keyExtractor={item => item.id}
                     ListEmptyComponent={
-                        <View style={tw`items-center justify-center py-10`}>
-                            <Text style={tw`text-gray-400 text-lg`}>No kitchens found.</Text>
+                        <View style={tw`items-center justify-center py-20`}>
+                            <View style={tw`w-20 h-20 bg-gray-50 rounded-full items-center justify-center mb-4`}>
+                                <Text style={tw`text-4xl`}>📍</Text>
+                            </View>
+                            <Text style={tw`text-gray-400 text-lg font-bold text-center`}>No kitchens found{'\n'}in your area yet.</Text>
+                            <Text style={tw`text-gray-400 text-xs mt-2 text-center`}>Try searching for a specific name{'\n'}or check back later.</Text>
                         </View>
                     }
                 />
