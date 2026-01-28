@@ -64,6 +64,7 @@ export const AddPaymentScreen = () => {
       // 2. Submit Payment Request
       const paymentData = {
         userId: user.uid,
+        phoneNumber: userProfile?.phoneNumber || null,
         userDisplayName: userProfile?.name || 'Student',
         amount: amount,
         method: paymentMode,

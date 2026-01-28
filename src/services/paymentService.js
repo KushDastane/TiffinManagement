@@ -10,6 +10,18 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
+// Helper to normalize phone numbers (standardize to last 10 digits for Indian numbers)
+export const normalizePhone = (phone) => {
+    if (!phone) return null;
+    let clean = phone.toString().replace(/\D/g, '');
+    // Ensure we handle cases where users might input +91 or 0 prefix
+    if (clean.length > 10) {
+        clean = clean.slice(-10);
+    }
+    return clean;
+};
+
+
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
@@ -52,6 +64,7 @@ export const requestPayment = async (kitchenId, paymentData) => {
         const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
         await addDoc(paymentsRef, {
             userId: paymentData.userId,
+            phoneNumber: normalizePhone(paymentData.phoneNumber),
             userDisplayName: paymentData.userDisplayName,
             amount: parseFloat(paymentData.amount),
             type: 'credit',
@@ -87,11 +100,12 @@ export const getKitchenStudents = async (kitchenId) => {
 };
 
 // Record a manual payment (Admin)
-export const recordPayment = async (kitchenId, userId, amount, adminId, note = "Manual Entry") => {
+export const recordPayment = async (kitchenId, userId, phoneNumber, amount, adminId, note = "Manual Entry") => {
     try {
         const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
         await addDoc(paymentsRef, {
             userId,
+            phoneNumber: normalizePhone(phoneNumber),
             amount: parseFloat(amount),
             type: 'credit',
             method: 'CASH', // Manual entry usually implies Cash handling
@@ -108,20 +122,32 @@ export const recordPayment = async (kitchenId, userId, amount, adminId, note = "
     }
 };
 
-export const getStudentBalance = async (kitchenId, userId) => {
+export const getStudentBalance = async (kitchenId, userId, phoneNumber) => {
     try {
         // 1. Get Orders (Debits) - SCOPED TO KITCHEN
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
-        const qOrders = query(
-            ordersRef,
-            where('userId', '==', userId)
-        );
-        const ordersSnap = await getDocs(qOrders);
-        const totalDebits = ordersSnap.docs.reduce((sum, doc) => {
-            const data = doc.data();
-            // Count as debt if:
-            // 1. Not a trial (isTrial is explicitly false OR missing)
-            // 2. Status is CONFIRMED, COMPLETED, or if it's a manual order
+
+        let ordersList = [];
+
+        // Query by userId
+        const qOrdersById = query(ordersRef, where('userId', '==', userId));
+        const idOrdersSnap = await getDocs(qOrdersById);
+        idOrdersSnap.docs.forEach(d => ordersList.push({ ...d.data(), id: d.id }));
+
+        // Query by phoneNumber if available
+        const normalized = normalizePhone(phoneNumber);
+        if (normalized) {
+            const phoneFormats = [normalized, `+91${normalized}`];
+            const qOrdersByPhone = query(ordersRef, where('phoneNumber', 'in', phoneFormats));
+            const phoneOrdersSnap = await getDocs(qOrdersByPhone);
+            phoneOrdersSnap.docs.forEach(d => {
+                if (!ordersList.find(o => o.id === d.id)) {
+                    ordersList.push({ ...d.data(), id: d.id });
+                }
+            });
+        }
+
+        const totalDebits = ordersList.reduce((sum, data) => {
             const isNoTrial = data.isTrial !== true;
             const isDebtStatus = ['CONFIRMED', 'COMPLETED', 'DELIVERED'].includes(data.status) || data.isManual;
 
@@ -133,21 +159,42 @@ export const getStudentBalance = async (kitchenId, userId) => {
 
         // 2. Get Payments (Credits) - SCOPED TO KITCHEN
         const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
-        const qPayments = query(paymentsRef, where('userId', '==', userId), where('status', '==', 'accepted'));
-        const paymentsSnap = await getDocs(qPayments);
-        const totalCredits = paymentsSnap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+        let paymentsList = [];
 
-        // Also fetch Pending payments for display
-        const qPendingPayments = query(paymentsRef, where('userId', '==', userId), where('status', '==', 'pending'));
-        const pendingSnap = await getDocs(qPendingPayments);
+        // Query by userId
+        const qPaymentsById = query(paymentsRef, where('userId', '==', userId));
+        const idPaymentsSnap = await getDocs(qPaymentsById);
+        idPaymentsSnap.docs.forEach(d => paymentsList.push({ ...d.data(), id: d.id }));
+
+        // Query by phoneNumber
+        const normalizedPhone = normalizePhone(phoneNumber);
+        if (normalizedPhone) {
+            const phoneFormats = [normalizedPhone, `+91${normalizedPhone}`];
+            const qPaymentsByPhone = query(paymentsRef, where('phoneNumber', 'in', phoneFormats));
+            const phonePaymentsSnap = await getDocs(qPaymentsByPhone);
+            phonePaymentsSnap.docs.forEach(d => {
+                if (!paymentsList.find(p => p.id === d.id)) {
+                    paymentsList.push({ ...d.data(), id: d.id });
+                }
+            });
+        }
+
+        const acceptedPayments = paymentsList.filter(p => p.status === 'accepted');
+        const totalCredits = acceptedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+        const pendingPayments = paymentsList.filter(p => p.status === 'pending');
 
         return {
             balance: totalCredits - totalDebits,
             totalOrders: totalDebits,
             totalPaid: totalCredits,
-            orders: ordersSnap.docs.map(d => ({ ...d.data(), id: d.id, isDebit: true, date: d.data().createdAt })),
-            payments: paymentsSnap.docs.map(d => ({ ...d.data(), id: d.id, isDebit: false, date: d.data().createdAt })),
-            pendingPayments: pendingSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+            orders: ordersList
+                .filter(data => (data.isTrial !== true) && (['CONFIRMED', 'COMPLETED', 'DELIVERED'].includes(data.status) || data.isManual))
+                .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+                .map(d => ({ ...d, isDebit: true, date: d.createdAt })),
+            payments: acceptedPayments
+                .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+                .map(d => ({ ...d, isDebit: false, date: d.createdAt })),
+            pendingPayments: pendingPayments
         };
     } catch (error) {
         console.error("Error getting balance:", error);
@@ -163,11 +210,17 @@ export const getKitchenOutstandingSummary = async (kitchenId) => {
 
         let summary = [];
         let totalKitchenOutstanding = 0;
+        const processedPhones = new Set();
 
         for (const studentDoc of studentsSnap.docs) {
             const userId = studentDoc.id;
             const userData = studentDoc.data();
-            const { balance } = await getStudentBalance(kitchenId, userId);
+            const normalized = normalizePhone(userData.phoneNumber);
+
+            if (normalized && processedPhones.has(normalized)) continue;
+            if (normalized) processedPhones.add(normalized);
+
+            const { balance } = await getStudentBalance(kitchenId, userId, userData.phoneNumber);
 
             if (balance < 0) {
                 const outstanding = Math.abs(balance);
@@ -192,8 +245,54 @@ export const getKitchenOutstandingSummary = async (kitchenId) => {
 };
 
 // Real-time subs
-export const subscribeToHistory = (kitchenId, userId, callback) => {
-    // For simpler MVP, just re-using getStudentBalance or similar.
-    // Implementing a combined listener is complex. 
-    // We will stick to polling/focus-effect for now as done in previous screens.
+export const subscribeToMyPayments = (kitchenId, userId, phoneNumber, callback) => {
+    const paymentsRef = collection(db, 'kitchens', kitchenId, 'payments');
+    const normalized = normalizePhone(phoneNumber);
+
+    let paymentsById = [];
+    let paymentsByPhone = [];
+
+    const mergeAndEmit = () => {
+        const combined = [...paymentsById];
+        paymentsByPhone.forEach(p => {
+            if (!combined.find(prev => prev.id === p.id)) {
+                combined.push(p);
+            }
+        });
+        combined.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        callback(combined);
+    };
+
+    const unsubId = onSnapshot(
+        query(paymentsRef, where('userId', '==', userId), orderBy('createdAt', 'desc')),
+        (snapshot) => {
+            paymentsById = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            mergeAndEmit();
+        },
+        (error) => {
+            console.error("Error fetching my payments by ID:", error);
+            mergeAndEmit();
+        }
+    );
+
+    let unsubPhone = () => { };
+    if (normalized) {
+        const phoneFormats = [normalized, `+91${normalized}`];
+        unsubPhone = onSnapshot(
+            query(paymentsRef, where('phoneNumber', 'in', phoneFormats)),
+            (snapshot) => {
+                paymentsByPhone = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                mergeAndEmit();
+            },
+            (error) => {
+                console.error("Error fetching my payments by Phone:", error);
+                mergeAndEmit();
+            }
+        );
+    }
+
+    return () => {
+        unsubId();
+        unsubPhone();
+    };
 };

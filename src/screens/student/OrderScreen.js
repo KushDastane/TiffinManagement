@@ -92,7 +92,7 @@ const MenuCard = ({ title, description, price, selected, quantity, onSelect, onQ
 };
 
 export const OrderScreen = ({ navigation }) => {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth();
     const { tenant } = useTenant();
     const { primaryColor } = useTheme();
 
@@ -172,6 +172,7 @@ export const OrderScreen = ({ navigation }) => {
         setSaving(true);
         const orderData = {
             studentId: user.uid,
+            phoneNumber: userProfile?.phoneNumber,
             mealType: selectedSlot.toUpperCase(),
             slot: selectedSlot,
             isPriority: selectedSlot === 'lunch' ? isPriority : false,

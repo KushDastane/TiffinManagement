@@ -43,12 +43,12 @@ export const StudentDetailsScreen = ({ route, navigation }) => {
         if (!tenant?.id) return;
 
         // Fetch Balance
-        getStudentBalance(tenant.id, studentId).then(setBalanceData);
+        getStudentBalance(tenant.id, studentId, student?.phoneNumber).then(setBalanceData);
 
         // Subscribe to Orders
-        const unsubOrders = subscribeToMyOrders(tenant.id, studentId, setOrders);
+        const unsubOrders = subscribeToMyOrders(tenant.id, studentId, student?.phoneNumber, setOrders);
         return unsubOrders;
-    }, [tenant?.id, studentId]);
+    }, [tenant?.id, studentId, student?.phoneNumber]);
 
     if (loading) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><ActivityIndicator color="#ca8a04" /></View>;
     if (!student) return <View style={tw`flex-1 items-center justify-center bg-[#faf9f6]`}><Text>Student not found</Text></View>;

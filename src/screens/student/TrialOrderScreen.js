@@ -123,6 +123,7 @@ export const TrialOrderScreen = ({ route, navigation }) => {
                         const result = await placeOrder(kitchen.id, {
                             ...orderPayload,
                             userId: user.uid,
+                            phoneNumber: userProfile?.phoneNumber || null,
                             userDisplayName: userProfile?.phoneNumber || user.email,
                             isTrial: true,
                             paymentMethod: paymentMethod,

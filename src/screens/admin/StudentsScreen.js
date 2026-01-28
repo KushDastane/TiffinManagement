@@ -39,10 +39,36 @@ export const StudentsScreen = ({ navigation }) => {
             }
 
             const snap = await getDocs(q);
-            const newList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            let newList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // Deduplicate local state
+            const { normalizePhone } = require('../../services/paymentService');
+            const seen = new Map();
+            newList.forEach(s => {
+                const norm = normalizePhone(s.phoneNumber);
+                if (!norm) {
+                    seen.set(s.id, s);
+                    return;
+                }
+                const existing = seen.get(norm);
+                if (!existing || (existing.isBasic && !s.isBasic)) {
+                    seen.set(norm, s);
+                }
+            });
+            newList = Array.from(seen.values());
 
             if (getNext) {
-                setStudents(prev => [...prev, ...newList]);
+                setStudents(prev => {
+                    const combined = [...prev, ...newList];
+                    const finalSeen = new Map();
+                    combined.forEach(c => {
+                        const n = normalizePhone(c.phoneNumber);
+                        if (!n) { finalSeen.set(c.id, c); return; }
+                        const e = finalSeen.get(n);
+                        if (!e || (e.isBasic && !c.isBasic)) finalSeen.set(n, c);
+                    });
+                    return Array.from(finalSeen.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                });
             } else {
                 setStudents(newList);
             }

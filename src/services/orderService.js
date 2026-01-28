@@ -14,6 +14,17 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
+// Helper to normalize phone numbers (standardize to last 10 digits for Indian numbers)
+export const normalizePhone = (phone) => {
+    if (!phone) return null;
+    let clean = phone.toString().replace(/\D/g, '');
+    if (clean.length > 10) {
+        clean = clean.slice(-10);
+    }
+    return clean;
+};
+
+
 /**
  * Places a detailed order.
  * orderData: {
@@ -36,6 +47,7 @@ export const placeOrder = async (kitchenId, orderData) => {
 
         await addDoc(ordersRef, {
             ...orderData,
+            phoneNumber: normalizePhone(orderData.phoneNumber),
             kitchenId,
             dateId,
             status: orderData.status || 'PENDING',
@@ -66,17 +78,56 @@ export const subscribeToOrders = (kitchenId, dateId, callback) => {
     });
 };
 
-export const subscribeToMyOrders = (kitchenId, userId, callback) => {
+export const subscribeToMyOrders = (kitchenId, userId, phoneNumber, callback) => {
     const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
-    let q = query(ordersRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const normalized = normalizePhone(phoneNumber);
 
-    return onSnapshot(q, (snapshot) => {
-        const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        callback(orders);
-    }, (error) => {
-        console.error("Error fetching my orders:", error);
-        callback([]);
-    });
+    let ordersById = [];
+    let ordersByPhone = [];
+
+    const mergeAndEmit = () => {
+        const combined = [...ordersById];
+        ordersByPhone.forEach(o => {
+            if (!combined.find(prev => prev.id === o.id)) {
+                combined.push(o);
+            }
+        });
+        combined.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        callback(combined);
+    };
+
+    const unsubId = onSnapshot(
+        query(ordersRef, where('userId', '==', userId), orderBy('createdAt', 'desc')),
+        (snapshot) => {
+            ordersById = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            mergeAndEmit();
+        },
+        (error) => {
+            console.error("Error fetching my orders by ID:", error);
+            mergeAndEmit();
+        }
+    );
+
+    let unsubPhone = () => { };
+    if (normalized) {
+        const phoneFormats = [normalized, `+91${normalized}`];
+        unsubPhone = onSnapshot(
+            query(ordersRef, where('phoneNumber', 'in', phoneFormats)),
+            (snapshot) => {
+                ordersByPhone = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                mergeAndEmit();
+            },
+            (error) => {
+                console.error("Error fetching my orders by Phone:", error);
+                mergeAndEmit();
+            }
+        );
+    }
+
+    return () => {
+        unsubId();
+        unsubPhone();
+    };
 };
 export const updateOrder = async (kitchenId, orderId, updates) => {
     try {
@@ -96,10 +147,13 @@ export const placeManualOrder = async (kitchenId, orderData, adminId) => {
         if (!kitchenId) throw new Error("kitchenId is mandatory");
 
         const { phoneNumber, name, ...rest } = orderData;
+        const normalizedPhone = normalizePhone(phoneNumber);
 
         // 1. Find or Create User by Phone
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('phoneNumber', '==', phoneNumber));
+        // We need to find by normalized phone. 
+        // Note: The users collection should also be updated/queried carefully.
+        const q = query(usersRef, where('phoneNumber', 'in', [normalizedPhone, `+91${normalizedPhone}`]));
         const userSnap = await getDocs(q);
 
         let userId;
@@ -108,7 +162,7 @@ export const placeManualOrder = async (kitchenId, orderData, adminId) => {
         if (userSnap.empty) {
             // Create a basic "Hidden" account
             const newUserDoc = await addDoc(usersRef, {
-                phoneNumber,
+                phoneNumber: normalizedPhone,
                 name: displayName,
                 role: 'student',
                 isBasic: true, // Marker for manual-entry accounts
@@ -118,12 +172,15 @@ export const placeManualOrder = async (kitchenId, orderData, adminId) => {
             });
             userId = newUserDoc.id;
         } else {
-            const existingUser = userSnap.docs[0];
-            userId = existingUser.id;
-            displayName = existingUser.data().name || displayName;
+            // Prioritize non-basic account
+            const allMatches = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const bestMatch = allMatches.find(u => !u.isBasic) || allMatches[0];
+
+            userId = bestMatch.id;
+            displayName = bestMatch.name || displayName;
 
             // Ensure this kitchen is in their list
-            if (!(existingUser.data().joinedKitchens || []).includes(kitchenId)) {
+            if (!(bestMatch.joinedKitchens || []).includes(kitchenId)) {
                 await updateDoc(doc(db, 'users', userId), {
                     joinedKitchens: arrayUnion(kitchenId)
                 });
@@ -138,7 +195,7 @@ export const placeManualOrder = async (kitchenId, orderData, adminId) => {
             ...rest,
             userId,
             userDisplayName: displayName,
-            phoneNumber,
+            phoneNumber: normalizePhone(phoneNumber),
             kitchenId,
             dateId,
             status: 'CONFIRMED', // Manual orders are usually confirmed immediately
@@ -176,11 +233,12 @@ export const getLastOrderForUser = async (kitchenId, userId) => {
 };
 
 export const placeStudentOrder = async (kitchenId, orderData) => {
-    const { studentId, mealType, items } = orderData;
+    const { studentId, phoneNumber, mealType, items } = orderData;
 
     // Map simplified structure to our existing placeOrder schema
     const legacyPayload = {
         userId: studentId,
+        phoneNumber: phoneNumber,
         slot: mealType.toLowerCase(),
         isPriority: orderData.isPriority || false,
         type: items.itemType || 'ROTI_SABZI',

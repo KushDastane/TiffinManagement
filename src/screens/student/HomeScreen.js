@@ -252,7 +252,7 @@ export const HomeScreen = () => {
         if (!tenant?.id || !user?.uid) return;
         setLoading(true);
         try {
-            const ledger = await getStudentBalance(tenant.id, user.uid);
+            const ledger = await getStudentBalance(tenant.id, user.uid, userProfile?.phoneNumber);
             setBalance(ledger.balance);
         } catch (e) { console.log(e) }
         setLoading(false);
@@ -261,7 +261,7 @@ export const HomeScreen = () => {
     useEffect(() => {
         if (!tenant?.id || !user?.uid) return;
 
-        const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, (data) => {
+        const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, userProfile?.phoneNumber, (data) => {
             setMyOrders(data);
             // 1. Try to find order for the SPECIFIC active slot
             let today = data.find(o => o.dateId === dateId && o.slot === activeSlot);

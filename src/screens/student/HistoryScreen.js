@@ -4,6 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../../config/firebase";
+import { subscribeToMyOrders } from '../../services/orderService';
+
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, CheckCircle, Package } from 'lucide-react-native';
@@ -55,7 +57,7 @@ const statusTextStyle = (status) => {
 }
 
 export const HistoryScreen = () => {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth();
     const { tenant } = useTenant();
 
     const [orders, setOrders] = useState([]);
@@ -66,34 +68,14 @@ export const HistoryScreen = () => {
     useEffect(() => {
         if (!user || !tenant) return;
 
-        // Note: Using 'kitchens/{kitchenId}/orders' as per previous context, 
-        // OR top-level 'orders' collection if that's how it's set up.
-        // User's provided code used `collection(db, "orders")`, but in this multi-tenant app 
-        // we likely use `kitchens/{id}/orders`. Let's stick to the pattern used in HomeScreen/paymentService.
-        // HomeScreen used: `collection(db, 'kitchens', tenant.id, 'orders')`
-
-        const q = query(
-            collection(db, 'kitchens', tenant.id, 'orders'),
-            where("userId", "==", user.uid),
-            orderBy("createdAt", "desc")
-        );
-
-        const unsub = onSnapshot(q, (snap) => {
-            const list = snap.docs.map(d => ({
-                id: d.id,
-                ...d.data(),
-            }));
+        const unsub = subscribeToMyOrders(tenant.id, user.uid, userProfile?.phoneNumber, (list) => {
             setOrders(list);
-            setLoading(false);
-            setRefreshing(false);
-        }, (err) => {
-            console.error("Orders fetch error", err);
             setLoading(false);
             setRefreshing(false);
         });
 
         return () => unsub();
-    }, [user?.uid, tenant?.id]);
+    }, [user?.uid, tenant?.id, userProfile?.phoneNumber]);
 
     const filteredOrders = useMemo(() => {
         if (monthFilter === "ALL") return orders;
@@ -197,8 +179,8 @@ export const HistoryScreen = () => {
                             <Text style={tw`mb-4 text-xs font-black uppercase tracking-widest text-gray-400`}>{key}</Text>
                             {groupedOrders[key].map(o => {
                                 const { day, month } = formatDayPill(o.createdAt);
-                                const slotLabel = (o.slot || o.mealType || 'Meal').charAt(0).toUpperCase() + (o.slot || o.mealType || 'Meal').slice(1);
-                                const itemName = o.mainItem || (o.type === 'ROTI_SABZI' ? 'Roti Sabzi' : slotLabel);
+                                const slotLabel = (o.slot || o.mealType || 'Manual').charAt(0).toUpperCase() + (o.slot || o.mealType || 'Manual').slice(1);
+                                const itemName = o.orderDescription || o.mainItem || (o.type === 'ROTI_SABZI' ? 'Roti Sabzi' : slotLabel);
                                 const qty = o.quantity || 1;
                                 const total = o.totalAmount || 0;
                                 const itemPrice = o.price || (qty > 0 ? (total / qty) : 0);

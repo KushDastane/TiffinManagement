@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { useAuth } from "../../contexts/AuthContext";
 import { useTenant } from "../../contexts/TenantContext";
-import { getStudentBalance } from "../../services/paymentService";
+import { getStudentBalance, subscribeToMyPayments } from "../../services/paymentService";
+import { subscribeToMyOrders } from "../../services/orderService";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import tw from 'twrnc';
@@ -50,7 +51,7 @@ const LedgerEntryCard = ({ type, amount, label, date }) => {
 };
 
 export const KhataScreen = () => {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth();
     const { tenant } = useTenant();
     const { primaryColor } = useTheme();
     const navigation = useNavigation();
@@ -79,10 +80,10 @@ export const KhataScreen = () => {
     };
 
     const loadData = async () => {
-        if (!tenant?.id || !user?.uid) return;
+        if (!tenant?.id || !user?.uid || !userProfile?.phoneNumber) return;
         setLoading(true);
         try {
-            const summaryData = await getStudentBalance(tenant.id, user.uid);
+            const summaryData = await getStudentBalance(tenant.id, user.uid, userProfile?.phoneNumber);
             setSummary(summaryData);
 
             const combinedLedger = [
@@ -102,21 +103,23 @@ export const KhataScreen = () => {
         if (!tenant?.id || !user?.uid) return;
         loadData();
 
-        const q = query(
-            collection(db, "kitchens", tenant.id, "payments"),
-            where("userId", "==", user.uid),
-            orderBy("createdAt", "desc")
-        );
-
-        const unsub = onSnapshot(q, (snap) => {
-            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const unsubPayments = subscribeToMyPayments(tenant.id, user.uid, userProfile?.phoneNumber, (list) => {
             setPayments(list);
-        }, (error) => {
-            console.error("KhataScreen: payments listener error:", error);
+            // Also update the ledger from raw list for real-time feel if needed, 
+            // but loadData handles the complex balance merging.
+            // For ledger display, we can just use the payments list for the "pending/rejected" section.
         });
 
-        return () => unsub();
-    }, [tenant?.id, user?.uid]);
+        const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, userProfile?.phoneNumber, (orderList) => {
+            // Re-trigger loadData for full balance reconciliation when orders change
+            loadData();
+        });
+
+        return () => {
+            unsubPayments();
+            unsubOrders();
+        };
+    }, [tenant?.id, user?.uid, userProfile?.phoneNumber]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -248,7 +251,7 @@ export const KhataScreen = () => {
                                             type={item.type}
                                             amount={item.amount || item.totalAmount}
                                             label={item.source === "PAYMENT" ? "Balance Added" : (item.source === 'ORDER' ?
-                                                `${(item.slot || item.mealType || 'Meal').charAt(0).toUpperCase() + (item.slot || item.mealType || 'Meal').slice(1)} - ${item.mainItem || (item.type === 'ROTI_SABZI' ? 'Roti Sabzi' : 'Meal')}` : "Transaction")}
+                                                `${(item.slot || item.mealType || 'Manual').charAt(0).toUpperCase() + (item.slot || item.mealType || 'Manual').slice(1)} - ${item.orderDescription || item.mainItem || (item.type === 'ROTI_SABZI' ? 'Roti Sabzi' : 'Meal')}` : "Transaction")}
                                             date={dateStr}
                                         />
                                     );
