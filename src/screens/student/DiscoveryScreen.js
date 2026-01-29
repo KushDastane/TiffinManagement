@@ -11,18 +11,22 @@ export const DiscoveryScreen = ({ navigation }) => {
     const { userProfile } = useAuth();
 
     useEffect(() => {
+        if (!userProfile?.city || !userProfile?.pincode) {
+            navigation.replace("LocationPicker");
+            return;
+        }
         fetchKitchens();
-    }, []);
+    }, [userProfile]);
 
     const fetchKitchens = async (searchText = '') => {
         setLoading(true);
-        let data = await getAllKitchens(searchText);
+        const locationFilter = {
+            city: userProfile?.city,
+            pincode: userProfile?.pincode
+        };
 
-        // Hard Filter by Student Pincode
-        if (userProfile?.pincode) {
-            data = data.filter(k => k.address?.pinCode === userProfile.pincode);
-        }
-
+        // Pass both search text and location filter
+        let data = await getAllKitchens(searchText, locationFilter);
         setKitchens(data);
         setLoading(false);
     };

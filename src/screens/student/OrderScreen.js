@@ -111,6 +111,17 @@ export const OrderScreen = ({ navigation }) => {
     const [extrasQty, setExtrasQty] = useState({});
     const [isPriority, setIsPriority] = useState(false);
 
+    // Service Mode State
+    const [orderMode, setOrderMode] = useState(null); // 'DELIVERY' or 'PICKUP'
+    const [deliveryAddress, setDeliveryAddress] = useState(userProfile?.address || ""); // Default to user profile address
+    const [deliveryNotes, setDeliveryNotes] = useState("");
+
+    useEffect(() => {
+        if (tenant?.serviceMode) {
+            setOrderMode(tenant.serviceMode === 'BOTH' ? 'DELIVERY' : tenant.serviceMode);
+        }
+    }, [tenant?.serviceMode]);
+
     useEffect(() => {
         if (!tenant) return;
         const slots = getAvailableSlots(tenant);
@@ -191,6 +202,9 @@ export const OrderScreen = ({ navigation }) => {
             mealType: selectedSlot.toUpperCase(),
             slot: selectedSlot,
             isPriority: selectedSlot === 'lunch' ? isPriority : false,
+            serviceMode: orderMode,
+            deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddress : null,
+            deliveryNotes: orderMode === 'DELIVERY' ? deliveryNotes : null,
             items: {
                 item: selectedItem.label,
                 unitPrice: selectedItem.price,
@@ -397,32 +411,124 @@ export const OrderScreen = ({ navigation }) => {
                     </View>
                 )}
 
-                {selectedSlot === 'lunch' && selectedItem && (
+                {/* Service Mode Selector - Only if kitchen supports BOTH */}
+                {tenant?.serviceMode === 'BOTH' && (
                     <View style={tw`mt-8`}>
                         <View style={tw`flex-row items-center gap-2 mb-4`}>
-                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Priority Preparation</Text>
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Service Method</Text>
                             <View style={tw`h-[1px] flex-1 bg-gray-100`} />
                         </View>
-                        <Pressable
-                            onPress={() => setIsPriority(!isPriority)}
-                            style={[
-                                tw`flex-row items-center justify-between p-4 rounded-2xl border`,
-                                isPriority ? tw`bg-orange-50 border-orange-200 shadow-sm shadow-orange-100` : tw`bg-white border-gray-100 shadow-sm`
-                            ]}
-                        >
-                            <View style={tw`flex-row items-center gap-3`}>
-                                <View style={[tw`w-10 h-10 rounded-xl items-center justify-center`, isPriority ? tw`bg-orange-100` : tw`bg-gray-50`]}>
-                                    <Clock size={20} color={isPriority ? "#ea580c" : "#9ca3af"} />
+                        <View style={tw`flex-row gap-3`}>
+                            {[
+                                { id: 'DELIVERY', label: 'Delivery', icon: '🚚' },
+                                { id: 'PICKUP', label: 'Self Pickup', icon: '🏃' }
+                            ].map((mode) => (
+                                <Pressable
+                                    key={mode.id}
+                                    onPress={() => setOrderMode(mode.id)}
+                                    style={[
+                                        tw`flex-1 p-4 rounded-2xl border flex-row items-center justify-center gap-2`,
+                                        orderMode === mode.id ? tw`bg-gray-900 border-gray-900 shadow-lg shadow-gray-200` : tw`bg-white border-gray-100`
+                                    ]}
+                                >
+                                    <Text style={tw`text-sm`}>{mode.icon}</Text>
+                                    <Text style={[tw`text-[10px] font-black uppercase tracking-widest`, orderMode === mode.id ? tw`text-white` : tw`text-gray-400`]}>{mode.label}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    </View>
+                )}
+
+                {/* Delivery Info */}
+                {orderMode === 'DELIVERY' && (
+                    <View style={tw`mt-8`}>
+                        <View style={tw`flex-row items-center gap-2 mb-4`}>
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Delivery Details</Text>
+                            <View style={tw`h-[1px] flex-1 bg-gray-100`} />
+                        </View>
+                        <View style={tw`bg-white p-4 rounded-2xl border border-gray-100 shadow-sm`}>
+                            {/* Timing Info */}
+                            {tenant?.mealSlots?.[selectedSlot]?.deliveryStart && (
+                                <View style={tw`flex-row items-center gap-2 mb-4 bg-emerald-50 self-start px-2 py-1 rounded-lg`}>
+                                    <Clock size={10} color="#059669" />
+                                    <Text style={tw`text-[9px] font-black text-emerald-600 uppercase`}>
+                                        Delivery: {tenant.mealSlots[selectedSlot].deliveryStart} - {tenant.mealSlots[selectedSlot].deliveryEnd}
+                                    </Text>
                                 </View>
-                                <View>
-                                    <Text style={[tw`text-sm font-black`, isPriority ? tw`text-orange-900` : tw`text-gray-900`]}>Early Collection</Text>
-                                    <Text style={tw`text-[9px] font-bold text-gray-400 uppercase`}>Before College / Early Lunch</Text>
+                            )}
+
+                            {/* Delivery Partner info */}
+                            {(tenant?.deliveryBoyName || tenant?.deliveryBoyPhone) && (
+                                <View style={tw`flex-row items-center gap-3 mb-4 p-2 bg-gray-50 rounded-xl`}>
+                                    <View style={tw`w-8 h-8 rounded-lg bg-white items-center justify-center`}>
+                                        <Text style={tw`text-xs`}>🛵</Text>
+                                    </View>
+                                    <View>
+                                        <Text style={tw`text-[10px] font-black text-gray-900 uppercase`}>Delivery Partner</Text>
+                                        <Text style={tw`text-[9px] font-bold text-gray-400`}>
+                                            {tenant.deliveryBoyName || 'Partner'} {tenant.deliveryBoyPhone ? `• ${tenant.deliveryBoyPhone}` : ''}
+                                        </Text>
+                                    </View>
                                 </View>
+                            )}
+
+                            <View style={tw`mb-4`}>
+                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Delivery Address</Text>
+                                <TextInput
+                                    style={tw`bg-gray-50 p-4 rounded-xl font-bold text-gray-900 border border-gray-50`}
+                                    placeholder="Enter your specific room / flat / floor"
+                                    value={deliveryAddress}
+                                    onChangeText={setDeliveryAddress}
+                                    multiline
+                                />
                             </View>
-                            <View style={[tw`w-6 h-6 rounded-full border-2 items-center justify-center`, isPriority ? tw`bg-orange-500 border-orange-500` : tw`border-gray-200`]}>
-                                {isPriority && <CheckCircle size={14} color="white" />}
+                            <View>
+                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Notes</Text>
+                                <TextInput
+                                    style={tw`bg-gray-50 p-4 rounded-xl font-bold text-gray-900 border border-gray-50`}
+                                    placeholder="Any special instructions for delivery"
+                                    value={deliveryNotes}
+                                    onChangeText={setDeliveryNotes}
+                                />
                             </View>
-                        </Pressable>
+                        </View>
+                    </View>
+                )}
+
+                {/* Pickup Info */}
+                {orderMode === 'PICKUP' && (
+                    <View style={tw`mt-8`}>
+                        <View style={tw`flex-row items-center gap-2 mb-4`}>
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Pickup Details</Text>
+                            <View style={tw`h-[1px] flex-1 bg-gray-100`} />
+                        </View>
+                        <View style={tw`bg-white p-4 rounded-2xl border border-gray-100 shadow-sm`}>
+                            {/* Timing Info */}
+                            {tenant?.mealSlots?.[selectedSlot]?.pickupStart && (
+                                <View style={tw`flex-row items-center gap-2 mb-4 bg-amber-50 self-start px-2 py-1 rounded-lg`}>
+                                    <Clock size={10} color="#d97706" />
+                                    <Text style={tw`text-[9px] font-black text-amber-600 uppercase`}>
+                                        Pickup: {tenant.mealSlots[selectedSlot].pickupStart} - {tenant.mealSlots[selectedSlot].pickupEnd}
+                                    </Text>
+                                </View>
+                            )}
+
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Kitchen Address</Text>
+                            <View style={tw`bg-gray-50 p-4 rounded-xl`}>
+                                <Text style={tw`font-black text-gray-900`}>{tenant.name}</Text>
+                                <Text style={tw`text-xs text-gray-500 mt-1 font-medium`}>
+                                    {tenant.address?.building ? `${tenant.address.building}, ` : ''}
+                                    {tenant.address?.locality ? `${tenant.address.locality}, ` : ''}
+                                    {tenant.address?.city} {tenant.address?.pinCode ? `- ${tenant.address.pinCode}` : ''}
+                                </Text>
+                                {(tenant.phone || tenant.whatsapp) && (
+                                    <View style={tw`flex-row gap-4 mt-3 pt-3 border-t border-gray-100`}>
+                                        <Text style={tw`text-[9px] font-black text-blue-600 uppercase`}>📞 {tenant.phone}</Text>
+                                        <Text style={tw`text-[9px] font-black text-emerald-600 uppercase`}>💬 WhatsApp Available</Text>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
                     </View>
                 )}
 

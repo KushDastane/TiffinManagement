@@ -16,6 +16,7 @@ import {
     getEffectiveMenuDateKey,
     getEffectiveMealSlot,
     getAvailableSlots,
+    getBusinessDate,
 } from "../../services/menuService";
 import {
     subscribeToMyOrders,
@@ -166,9 +167,19 @@ const WeekSummary = ({ orders }) => {
 
     const days = useMemo(() => {
         const d = [];
+        const businessNow = getBusinessDate(new Date());
+
+        // Get the Monday of the current business week
+        const currentDay = businessNow.getDay(); // 0 is Sunday, 1 is Monday ...
+        const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay; // Adjust if Sunday
+
+        const monday = new Date(businessNow);
+        monday.setDate(businessNow.getDate() + diffToMonday);
+        monday.setHours(0, 0, 0, 0);
+
         for (let i = 0; i < 7; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() + i);
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
             d.push(date);
         }
         return d;
@@ -178,6 +189,8 @@ const WeekSummary = ({ orders }) => {
         const dateStr = date.toISOString().split("T")[0];
         return orders.some((o) => o.dateId === dateStr || o.orderDate === dateStr);
     };
+
+    const businessTodayStr = getBusinessDate(new Date()).toISOString().split("T")[0];
 
     return (
         <View style={tw`bg-white rounded-[35px] px-5 py-7 shadow-sm border border-gray-100 mb-6`}>
@@ -197,26 +210,33 @@ const WeekSummary = ({ orders }) => {
             <View style={tw`flex-row justify-between px-1`}>
                 {days.map((date, index) => {
                     const ordered = hasOrder(date);
-                    const isToday = index === 0;
+                    const dateStr = date.toISOString().split("T")[0];
+                    const isToday = dateStr === businessTodayStr;
 
                     return (
                         <View key={index} style={tw`items-center gap-3`}>
                             <View style={[
-                                tw`w-10 h-10 rounded-2xl items-center justify-center border`,
+                                tw`w-10 h-10 rounded-2xl items-center justify-center border relative`,
                                 ordered
-                                    ? tw`bg-gray-900 border-gray-900 shadow-lg shadow-gray-200`
+                                    ? tw`bg-emerald-50 border-emerald-100`
                                     : (isToday ? tw`bg-yellow-400 border-yellow-400 shadow-lg shadow-yellow-100` : tw`bg-gray-50 border-gray-50`)
                             ]}>
                                 <Text style={[
                                     tw`text-[10px] font-black uppercase`,
-                                    ordered ? tw`text-white` : (isToday ? tw`text-gray-900` : tw`text-gray-400`)
+                                    ordered ? tw`text-emerald-700` : (isToday ? tw`text-gray-900` : tw`text-gray-400`)
                                 ]}>
                                     {date.toLocaleDateString("en-US", { weekday: "narrow" })}
                                 </Text>
+
+                                {ordered && (
+                                    <View style={tw`absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full w-5 h-5 items-center justify-center border-2 border-white`}>
+                                        <CheckCircle size={8} color="white" strokeWidth={4} />
+                                    </View>
+                                )}
                             </View>
                             <View style={[
                                 tw`w-1.5 h-1.5 rounded-full`,
-                                ordered ? tw`bg-yellow-400` : (isToday ? tw`bg-gray-200` : tw`bg-transparent`)
+                                ordered ? tw`bg-emerald-400` : (isToday ? tw`bg-gray-200` : tw`bg-transparent`)
                             ]} />
                         </View>
                     );

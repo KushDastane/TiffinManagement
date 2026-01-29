@@ -7,22 +7,24 @@ import { getKitchenConfig, updateKitchenConfig, updateKitchen } from '../../serv
 import { logoutUser, updateUserProfile } from '../../services/authService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy } from 'lucide-react-native';
+import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
 // Helper Component for Triggers
 const InputTrigger = ({ label, value, onPress, placeholder, disabled }) => (
-    <View style={tw`flex-1`}>
-        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>{label}</Text>
+    <View style={tw`flex-1 items-center`}>
+        <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center`}>{label}</Text>
         <Pressable
             onPress={onPress}
             disabled={disabled}
-            style={[
-                tw`bg-white rounded-2xl px-4 py-3 border border-gray-100`,
-                disabled && tw`bg-gray-50 opacity-50`
+            style={({ pressed }) => [
+                tw`bg-gray-50 rounded-2xl px-4 py-3 border border-gray-100 flex-row items-center justify-center w-full`,
+                pressed && tw`bg-gray-100`,
+                disabled && tw`opacity-50`
             ]}
         >
-            <Text style={tw`font-bold text-gray-900`}>{value || placeholder}</Text>
+            <Clock size={12} color="#9ca3af" style={tw`mr-2`} />
+            <Text style={tw`text-sm font-black text-gray-900 text-center`}>{value || placeholder}</Text>
         </Pressable>
     </View>
 );
@@ -35,13 +37,28 @@ export const SettingsScreen = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // Kitchen Name Edit State
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [editedKitchenName, setEditedKitchenName] = useState(tenant?.name || '');
+    // Local Edit State
+    const [localKitchen, setLocalKitchen] = useState({
+        name: '',
+        address: { building: '', locality: '', city: '', pinCode: '' },
+        phone: '',
+        whatsapp: '',
+        deliveryBoyName: '',
+        deliveryBoyPhone: ''
+    });
 
     useEffect(() => {
-        setEditedKitchenName(tenant?.name || '');
-    }, [tenant?.name]);
+        if (tenant) {
+            setLocalKitchen({
+                name: tenant.name || '',
+                address: tenant.address || { building: '', locality: '', city: '', pinCode: '' },
+                phone: tenant.phone || '',
+                whatsapp: tenant.whatsapp || '',
+                deliveryBoyName: tenant.deliveryBoyName || '',
+                deliveryBoyPhone: tenant.deliveryBoyPhone || ''
+            });
+        }
+    }, [tenant]);
 
     useEffect(() => {
         const load = async () => {
@@ -127,11 +144,53 @@ export const SettingsScreen = () => {
         }
     };
 
+    const handleSaveBasic = async () => {
+        // Validation
+        if (!localKitchen.name?.trim()) return Alert.alert("Required", "Kitchen name is required");
+        if (!localKitchen.address?.building?.trim()) return Alert.alert("Required", "Building/Shop number is required");
+        if (!localKitchen.address?.locality?.trim()) return Alert.alert("Required", "Area/Locality is required");
+        if (!localKitchen.address?.city?.trim()) return Alert.alert("Required", "City is required");
+        if (!localKitchen.address?.pinCode?.trim() || localKitchen.address.pinCode.length !== 6) {
+            return Alert.alert("Invalid", "Please enter a valid 6-digit Pincode");
+        }
+        if (!localKitchen.phone?.trim() || localKitchen.phone.length < 10) {
+            return Alert.alert("Invalid", "Please enter a valid 10-digit Phone connection");
+        }
+
+        setSaving(true);
+        const result = await updateKitchen(tenant.id, {
+            name: localKitchen.name,
+            address: localKitchen.address,
+            phone: localKitchen.phone,
+            whatsapp: localKitchen.whatsapp
+        });
+        setSaving(false);
+        if (result.success) Alert.alert("Success", "Kitchen details updated");
+        else Alert.alert("Error", result.error);
+    };
+
+    const handleSavePartner = async () => {
+        // Validation
+        if (!localKitchen.deliveryBoyName?.trim()) return Alert.alert("Required", "Delivery partner name is required");
+        if (!localKitchen.deliveryBoyPhone?.trim() || localKitchen.deliveryBoyPhone.length < 10) {
+            return Alert.alert("Invalid", "Please enter a valid 10-digit Phone for delivery partner");
+        }
+
+        setSaving(true);
+        const result = await updateKitchen(tenant.id, {
+            deliveryBoyName: localKitchen.deliveryBoyName,
+            deliveryBoyPhone: localKitchen.deliveryBoyPhone
+        });
+        setSaving(false);
+        if (result.success) Alert.alert("Success", "Delivery partner details updated");
+        else Alert.alert("Error", result.error);
+    };
+
     const handleSave = async () => {
         setSaving(true);
         const result = await updateKitchenConfig(tenant.id, config);
         setSaving(false);
-        if (result.success) Alert.alert("Success", "Settings updated");
+        if (result.success) Alert.alert("Success", "Meal settings updated");
         else Alert.alert("Error", result.error);
     };
 
@@ -180,82 +239,172 @@ export const SettingsScreen = () => {
                 style={tw`flex-1`}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Kitchen Brief */}
-                <View style={tw`bg-white rounded-[30px] p-5 shadow-sm border border-gray-100 mb-5`}>
-                    <View style={tw`flex-row items-center justify-between`}>
-                        <View style={tw`flex-row items-center gap-4 flex-1`}>
-                            <View style={tw`w-12 h-12 rounded-2xl bg-yellow-100 items-center justify-center`}>
-                                <ChefHat size={22} color="#ca8a04" />
-                            </View>
-                            <View style={tw`flex-1`}>
-                                <Text style={tw`text-[10px] text-gray-400 font-bold uppercase tracking-widest`}>Kitchen Administrator</Text>
-                                {isEditingName ? (
-                                    <View style={tw`flex-row items-center gap-2 mt-1`}>
-                                        <TextInput
-                                            style={tw`flex-1 text-lg font-black text-gray-900 border-b border-yellow-400 pb-0.5`}
-                                            value={editedKitchenName}
-                                            onChangeText={setEditedKitchenName}
-                                            autoFocus
-                                        />
-                                        <Pressable
-                                            onPress={async () => {
-                                                if (!editedKitchenName.trim()) return;
-                                                setSaving(true);
-                                                await updateKitchen(tenant.id, { name: editedKitchenName.trim() });
-                                                setSaving(false);
-                                                setIsEditingName(false);
-                                            }}
-                                            style={tw`bg-gray-900 p-1.5 rounded-lg`}
-                                            disabled={saving}
-                                        >
-                                            <Check size={14} color="white" />
-                                        </Pressable>
-                                    </View>
-                                ) : (
-                                    <Pressable onLongPress={() => setIsEditingName(true)} delayLongPress={500} style={tw`flex-row items-center gap-2`}>
-                                        <Text style={tw`text-lg font-black text-gray-900`}>{tenant?.name}</Text>
-                                        <Pressable onPress={() => setIsEditingName(true)} style={tw`bg-gray-50 p-1.5 rounded-md`}>
-                                            <Edit2 size={12} color="#9ca3af" />
-                                        </Pressable>
-                                    </Pressable>
-                                )}
-                            </View>
-                        </View>
-                        <Pressable
-                            onPress={handleLogout}
-                            style={({ pressed }) => [
-                                tw`w-10 h-10 rounded-xl bg-red-50 items-center justify-center border border-red-100 ml-2`,
-                                pressed && tw`opacity-70 scale-90`
-                            ]}
-                        >
-                            <LogOut size={18} color="#b91c1c" />
-                        </Pressable>
+                {/* Kitchen Detail & Address */}
+                <View style={tw`bg-white rounded-[30px] p-6 shadow-sm border border-gray-100 mb-5`}>
+                    <View style={tw`flex-row items-center gap-2 mb-6`}>
+                        <MapPin size={16} color="#ca8a04" />
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Kitchen Details & Address</Text>
                     </View>
 
-                    {/* Join Code Section - No Overlap */}
-                    <View style={tw`mt-5 pt-4 border-t border-gray-50 flex-row justify-between items-center`}>
+                    <View style={tw`gap-4`}>
                         <View>
-                            <Text style={tw`text-[8px] font-black text-gray-300 uppercase tracking-widest`}>Invite Kitchen Joining Code</Text>
-                            <Text style={tw`text-base font-black text-gray-900 tracking-tight mt-0.5`}>{tenant?.joinCode || '...'}</Text>
+                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Shop / Kitchen Name</Text>
+                            <TextInput
+                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                value={localKitchen.name}
+                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, name: v })}
+                                placeholder="e.g. Grandma's Kitchen"
+                            />
                         </View>
+
+                        <View style={tw`flex-row gap-3`}>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Flat / Shop / Building</Text>
+                                <TextInput
+                                    style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                    value={localKitchen.address.building}
+                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, building: v } })}
+                                    placeholder="Shop No. 5"
+                                />
+                            </View>
+                        </View>
+
+                        <View>
+                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Area / Locality</Text>
+                            <TextInput
+                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                value={localKitchen.address.locality}
+                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, locality: v } })}
+                                placeholder="Sector 12, HSR Layout"
+                            />
+                        </View>
+
+                        <View style={tw`flex-row gap-3`}>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>City</Text>
+                                <TextInput
+                                    style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                    value={localKitchen.address.city}
+                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, city: v } })}
+                                    placeholder="Mumbai"
+                                />
+                            </View>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Pincode</Text>
+                                <TextInput
+                                    style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                    value={localKitchen.address.pinCode}
+                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, pinCode: v } })}
+                                    placeholder="400001"
+                                    keyboardType="numeric"
+                                    maxLength={6}
+                                />
+                            </View>
+                        </View>
+
+                        <View>
+                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Contact Number (WhatsApp)</Text>
+                            <TextInput
+                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                value={localKitchen.phone}
+                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, phone: v, whatsapp: v })}
+                                placeholder="9876543210"
+                                keyboardType="phone-pad"
+                            />
+                        </View>
+
                         <Pressable
-                            onPress={handleCopyCode}
-                            style={({ pressed }) => [
-                                tw`bg-yellow-100 items-center justify-center px-4 py-2 rounded-xl border border-yellow-200 flex-row gap-2`,
-                                pressed && tw`opacity-70 scale-95`
-                            ]}
+                            onPress={handleSaveBasic}
+                            disabled={saving}
+                            style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2 mt-2`}
                         >
-                            <Text style={tw`text-[10px] font-black text-yellow-800 uppercase`}>Copy Code</Text>
-                            <Copy size={12} color="#ca8a04" />
+                            {saving ? <ActivityIndicator color="white" /> : (
+                                <>
+                                    <Save size={14} color="white" />
+                                    <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Kitchen Details</Text>
+                                </>
+                            )}
                         </Pressable>
                     </View>
+                </View>
+
+                {/* Service Mode */}
+                <View style={tw`bg-white rounded-[30px] p-6 shadow-sm border border-gray-100 mb-5`}>
+                    <View style={tw`flex-row items-center gap-2 mb-6`}>
+                        <ShieldCheck size={16} color="#ca8a04" />
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Service Mode</Text>
+                    </View>
+
+                    <View style={tw`flex-row gap-2 mb-6`}>
+                        {[
+                            { id: 'DELIVERY', label: 'Delivery' },
+                            { id: 'PICKUP', label: 'Pickup Only' },
+                            { id: 'BOTH', label: 'Both' }
+                        ].map((m) => (
+                            <Pressable
+                                key={m.id}
+                                onPress={() => updateKitchen(tenant.id, { serviceMode: m.id })}
+                                style={[
+                                    tw`flex-1 py-3 rounded-2xl border items-center justify-center`,
+                                    tenant?.serviceMode === m.id ? tw`bg-gray-900 border-gray-900` : tw`bg-gray-50 border-gray-100`
+                                ]}
+                            >
+                                <Text style={[
+                                    tw`text-[10px] font-black uppercase tracking-widest`,
+                                    tenant?.serviceMode === m.id ? tw`text-white` : tw`text-gray-400`
+                                ]}>{m.label}</Text>
+                            </Pressable>
+                        ))}
+                    </View>
+
+                    {/* Delivery Partner Details */}
+                    {(tenant?.serviceMode === 'DELIVERY' || tenant?.serviceMode === 'BOTH') && (
+                        <View style={tw`pt-4 border-t border-gray-50 gap-4 items-center`}>
+                            <Text style={tw`text-[9px] font-black text-yellow-600 uppercase tracking-widest mb-1 text-center`}>Delivery Partner Information</Text>
+                            <View style={tw`flex-row gap-3`}>
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center`}>Name</Text>
+                                    <TextInput
+                                        style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-black text-sm text-gray-900 text-center`}
+                                        value={localKitchen.deliveryBoyName}
+                                        onChangeText={(v) => setLocalKitchen({ ...localKitchen, deliveryBoyName: v })}
+                                        placeholder="Name"
+                                        placeholderTextColor="#9ca3af"
+                                    />
+                                </View>
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center`}>Phone</Text>
+                                    <TextInput
+                                        style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-black text-sm text-gray-900 text-center`}
+                                        value={localKitchen.deliveryBoyPhone}
+                                        onChangeText={(v) => setLocalKitchen({ ...localKitchen, deliveryBoyPhone: v })}
+                                        placeholder="Phone"
+                                        placeholderTextColor="#9ca3af"
+                                        keyboardType="phone-pad"
+                                    />
+                                </View>
+                            </View>
+                            <Pressable
+                                onPress={handleSavePartner}
+                                disabled={saving}
+                                style={tw`bg-gray-900 rounded-2xl py-3 px-8 items-center justify-center flex-row gap-2 mt-2 w-full`}
+                            >
+                                {saving ? <ActivityIndicator color="white" /> : (
+                                    <>
+                                        <Save size={14} color="white" />
+                                        <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Partner Details</Text>
+                                    </>
+                                )}
+                            </Pressable>
+                        </View>
+                    )}
                 </View>
 
                 {/* Meal Slots */}
                 <View style={tw`bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-5`}>
                     <View style={tw`flex-row items-center gap-2 mb-6`}>
                         <Clock size={16} color="#ca8a04" />
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Meal Timings</Text>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Meal Timings & Windows</Text>
                     </View>
 
                     {[
@@ -268,8 +417,8 @@ export const SettingsScreen = () => {
                         const Icon = m.icon;
 
                         return (
-                            <View key={m.id} style={tw`mb-6 last:mb-0`}>
-                                <View style={tw`flex-row items-center justify-between mb-3`}>
+                            <View key={m.id} style={tw`mb-8 last:mb-0`}>
+                                <View style={tw`flex-row items-center justify-between mb-4`}>
                                     <View style={tw`flex-row items-center gap-3`}>
                                         <View style={tw`w-8 h-8 rounded-lg ${slot.active ? 'bg-yellow-50' : 'bg-gray-50'} items-center justify-center`}>
                                             <Icon size={16} color={slot.active ? "#ca8a04" : "#9ca3af"} />
@@ -292,19 +441,61 @@ export const SettingsScreen = () => {
                                 </View>
 
                                 {slot.active && (
-                                    <View style={tw`flex-row gap-4 pl-11`}>
-                                        <InputTrigger
-                                            label="From"
-                                            value={slot.start}
-                                            onPress={() => openPicker('time', 'mealSlots', `${m.id}.start`, slot.start)}
-                                            placeholder="00:00"
-                                        />
-                                        <InputTrigger
-                                            label="To"
-                                            value={slot.end}
-                                            onPress={() => openPicker('time', 'mealSlots', `${m.id}.end`, slot.end)}
-                                            placeholder="00:00"
-                                        />
+                                    <View style={tw`mt-2 gap-4 items-center`}>
+                                        <View style={tw`flex-row gap-4 w-full px-4`}>
+                                            <InputTrigger
+                                                label="Ordering Start"
+                                                value={slot.start}
+                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.start`, slot.start)}
+                                                placeholder="00:00"
+                                            />
+                                            <InputTrigger
+                                                label="Ordering End"
+                                                value={slot.end}
+                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.end`, slot.end)}
+                                                placeholder="00:00"
+                                            />
+                                        </View>
+
+                                        {(tenant?.serviceMode === 'PICKUP' || tenant?.serviceMode === 'BOTH') && (
+                                            <View style={tw`bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full items-center`}>
+                                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center`}>Pickup Window</Text>
+                                                <View style={tw`flex-row gap-4 w-full`}>
+                                                    <InputTrigger
+                                                        label="From"
+                                                        value={slot.pickupStart || slot.start}
+                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.pickupStart`, slot.pickupStart || slot.start)}
+                                                        placeholder="00:00"
+                                                    />
+                                                    <InputTrigger
+                                                        label="To"
+                                                        value={slot.pickupEnd || slot.end}
+                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.pickupEnd`, slot.pickupEnd || slot.end)}
+                                                        placeholder="00:00"
+                                                    />
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {(tenant?.serviceMode === 'DELIVERY' || tenant?.serviceMode === 'BOTH') && (
+                                            <View style={tw`bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full items-center`}>
+                                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center`}>Delivery Window</Text>
+                                                <View style={tw`flex-row gap-4 w-full`}>
+                                                    <InputTrigger
+                                                        label="From"
+                                                        value={slot.deliveryStart || slot.start}
+                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.deliveryStart`, slot.deliveryStart || slot.start)}
+                                                        placeholder="00:00"
+                                                    />
+                                                    <InputTrigger
+                                                        label="To"
+                                                        value={slot.deliveryEnd || slot.end}
+                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.deliveryEnd`, slot.deliveryEnd || slot.end)}
+                                                        placeholder="00:00"
+                                                    />
+                                                </View>
+                                            </View>
+                                        )}
                                     </View>
                                 )}
                             </View>

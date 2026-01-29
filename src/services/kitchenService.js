@@ -73,6 +73,7 @@ export const createKitchen = async (ownerId, kitchenData) => {
                 overrides: {}
             },
             kitchenType,
+            serviceMode: 'DELIVERY', // Default
             ...rest
         };
 
@@ -143,13 +144,22 @@ export const switchKitchen = async (userId, kitchenId) => {
         return { error: error.message };
     }
 };
-export const getAllKitchens = async (filter = '') => {
+
+export const getAllKitchens = async (filter = '', locationFilter = null) => {
     try {
         const kitchensRef = collection(db, 'kitchens');
         let q = query(kitchensRef, where('status', '==', 'active'));
 
         const querySnapshot = await getDocs(q);
         let kitchens = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Strict Location Filtering if provided
+        if (locationFilter) {
+            kitchens = kitchens.filter(k =>
+                k.address?.city?.toLowerCase() === locationFilter.city?.toLowerCase() ||
+                k.address?.pinCode === locationFilter.pincode
+            );
+        }
 
         if (filter) {
             const lowerFilter = filter.toLowerCase();
@@ -158,6 +168,7 @@ export const getAllKitchens = async (filter = '') => {
                 (k.address?.city && k.address.city.toLowerCase().includes(lowerFilter)) ||
                 (k.address?.pinCode && k.address.pinCode.includes(lowerFilter)) ||
                 (k.address?.line1 && k.address.line1.toLowerCase().includes(lowerFilter)) ||
+                (k.address?.building && k.address.building.toLowerCase().includes(lowerFilter)) ||
                 (k.area && k.area.toLowerCase().includes(lowerFilter)) ||
                 (k.locality && k.locality.toLowerCase().includes(lowerFilter))
             );

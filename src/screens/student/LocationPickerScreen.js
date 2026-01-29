@@ -1,15 +1,65 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import * as Location from 'expo-location';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateUserProfile } from '../../services/authService';
 import tw from 'twrnc';
-import { MapPin, ArrowRight } from 'lucide-react-native';
+import { MapPin, ArrowRight, Navigation } from 'lucide-react-native';
 
 export const LocationPickerScreen = ({ navigation }) => {
     const { user, userProfile } = useAuth();
     const [city, setCity] = useState('');
     const [pincode, setPincode] = useState('');
+    const [area, setArea] = useState('');
     const [loading, setLoading] = useState(false);
+    const [detecting, setDetecting] = useState(false);
+
+    const detectLocation = async () => {
+        try {
+            setDetecting(true);
+            const { status } = await Location.requestForegroundPermissionsAsync();
+
+            if (status !== 'granted') {
+                Alert.alert("Permission Denied", "Please allow location access to find kitchens automatically.");
+                setDetecting(false);
+                return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({});
+            const { latitude, longitude } = location.coords;
+
+            // Reverse Geocode using Nominatim (Free)
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+                {
+                    headers: {
+                        'User-Agent': 'DabbaMe-App'
+                    }
+                }
+            );
+            const data = await response.json();
+
+            if (data && data.address) {
+                const addr = data.address;
+                const detectedCity = addr.city || addr.town || addr.village || addr.suburb || '';
+                const detectedPin = addr.postcode || '';
+                const detectedArea = addr.neighbourhood || addr.suburb || addr.road || '';
+
+                setCity(detectedCity);
+                setPincode(detectedPin);
+                setArea(detectedArea);
+
+                if (!detectedCity || !detectedPin) {
+                    Alert.alert("Partial Detection", "We found your location but please verify the City and Pincode.");
+                }
+            }
+        } catch (error) {
+            console.error("Location detection error:", error);
+            Alert.alert("Error", "Could not detect location. Please enter manually.");
+        } finally {
+            setDetecting(false);
+        }
+    };
 
     const handleSave = async () => {
         if (!city.trim() || !pincode.trim()) {
@@ -26,14 +76,13 @@ export const LocationPickerScreen = ({ navigation }) => {
         const result = await updateUserProfile(user.uid, {
             city: city.trim(),
             pincode: pincode.trim(),
+            area: area.trim(),
             locationSet: true
         });
         setLoading(false);
 
         if (result.error) {
             Alert.alert("Error", result.error);
-        } else {
-            // Navigation will be handled by RootNavigator reacting to userProfile change
         }
     };
 
@@ -51,6 +100,21 @@ export const LocationPickerScreen = ({ navigation }) => {
                 </View>
 
                 <View style={tw`space-y-4`}>
+                    <TouchableOpacity
+                        onPress={detectLocation}
+                        disabled={detecting}
+                        style={tw`bg-blue-50 border border-blue-100 rounded-2xl p-4 flex-row items-center justify-center mb-4`}
+                    >
+                        {detecting ? (
+                            <ActivityIndicator color="#2563eb" />
+                        ) : (
+                            <>
+                                <Navigation size={16} color="#2563eb" style={tw`mr-2`} />
+                                <Text style={tw`text-blue-600 font-black text-xs uppercase tracking-widest`}>Detect My Location</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+
                     <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4`}>
                         <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>City</Text>
                         <TextInput
@@ -58,6 +122,17 @@ export const LocationPickerScreen = ({ navigation }) => {
                             placeholder="e.g. Mumbai, Pune"
                             value={city}
                             onChangeText={setCity}
+                            placeholderTextColor="#9ca3af"
+                        />
+                    </View>
+
+                    <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 mt-4`}>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Locality / Area</Text>
+                        <TextInput
+                            style={tw`text-base font-bold text-gray-900`}
+                            placeholder="e.g. HSR Layout, Sector 7"
+                            value={area}
+                            onChangeText={setArea}
                             placeholderTextColor="#9ca3af"
                         />
                     </View>
@@ -78,7 +153,7 @@ export const LocationPickerScreen = ({ navigation }) => {
 
                 <TouchableOpacity
                     onPress={handleSave}
-                    disabled={loading}
+                    disabled={loading || detecting}
                     style={tw`bg-gray-900 rounded-2xl py-4 mt-8 flex-row items-center justify-center shadow-lg shadow-gray-200`}
                 >
                     {loading ? (
