@@ -13,53 +13,81 @@ export const LocationPickerScreen = ({ navigation }) => {
     const [area, setArea] = useState('');
     const [loading, setLoading] = useState(false);
     const [detecting, setDetecting] = useState(false);
+    const [autoDetected, setAutoDetected] = useState(false);
 
-    const detectLocation = async () => {
-        try {
-            setDetecting(true);
-            const { status } = await Location.requestForegroundPermissionsAsync();
+  const detectLocation = async () => {
+    try {
+        setDetecting(true);
 
-            if (status !== 'granted') {
-                Alert.alert("Permission Denied", "Please allow location access to find kitchens automatically.");
-                setDetecting(false);
-                return;
-            }
-
-            const location = await Location.getCurrentPositionAsync({});
-            const { latitude, longitude } = location.coords;
-
-            // Reverse Geocode using Nominatim (Free)
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
-                {
-                    headers: {
-                        'User-Agent': 'DabbaMe-App'
-                    }
-                }
-            );
-            const data = await response.json();
-
-            if (data && data.address) {
-                const addr = data.address;
-                const detectedCity = addr.city || addr.town || addr.village || addr.suburb || '';
-                const detectedPin = addr.postcode || '';
-                const detectedArea = addr.neighbourhood || addr.suburb || addr.road || '';
-
-                setCity(detectedCity);
-                setPincode(detectedPin);
-                setArea(detectedArea);
-
-                if (!detectedCity || !detectedPin) {
-                    Alert.alert("Partial Detection", "We found your location but please verify the City and Pincode.");
-                }
-            }
-        } catch (error) {
-            console.error("Location detection error:", error);
-            Alert.alert("Error", "Could not detect location. Please enter manually.");
-        } finally {
-            setDetecting(false);
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert("Permission Denied", "Please allow location access.");
+            return;
         }
-    };
+
+        const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.BestForNavigation
+        });
+
+        const { latitude, longitude } = location.coords;
+
+        // 1️⃣ Reverse geocode from Expo (often more accurate)
+        const expoReverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+
+        let detectedCity = '';
+        let detectedPin = '';
+        let detectedArea = '';
+
+        if (expoReverse?.length) {
+            const expoAddr = expoReverse[0];
+            detectedCity = expoAddr.city || expoAddr.subregion || '';
+            detectedPin = expoAddr.postalCode || '';
+            detectedArea = expoAddr.district || expoAddr.street || '';
+        }
+
+        // 2️⃣ Nominatim fallback for locality precision
+        const nominatim = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+            { headers: { 'User-Agent': 'DabbaMe-App' } }
+        );
+        const nomData = await nominatim.json();
+
+        if (nomData?.address) {
+            detectedCity = detectedCity || nomData.address.city || nomData.address.town || '';
+            detectedArea = detectedArea || nomData.address.suburb || nomData.address.neighbourhood || '';
+        }
+
+        // 3️⃣ Extra postal verification (best accuracy)
+        let postalPin = detectedPin;
+
+        try {
+            const postalRes = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            const postalData = await postalRes.json();
+            postalPin = postalData.postcode || postalPin;
+        } catch {}
+
+        setCity(detectedCity);
+        setArea(detectedArea);
+        setPincode(postalPin);
+        setAutoDetected(true);
+
+        // Smart warnings
+        if (!postalPin) {
+            Alert.alert("Verify Pincode", "City detected. Please enter exact pincode.");
+        } else {
+            Alert.alert("Location Detected", "Please verify pincode accuracy.");
+        }
+
+    } catch (err) {
+        console.error("Location error:", err);
+        Alert.alert("Error", "Could not detect location.");
+    } finally {
+        setDetecting(false);
+    }
+};
+
 
     const handleSave = async () => {
         if (!city.trim() || !pincode.trim()) {
@@ -137,8 +165,13 @@ export const LocationPickerScreen = ({ navigation }) => {
                         />
                     </View>
 
-                    <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 mt-4`}>
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Pincode</Text>
+                    <View style={tw`bg-gray-50 border ${autoDetected ? 'border-yellow-300' : 'border-gray-100'} rounded-2xl p-4 mt-4`}>
+                        <View style={tw`flex-row items-center justify-between mb-1`}>
+                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1`}>Pincode</Text>
+                            {autoDetected && (
+                                <Text style={tw`text-[8px] font-black text-yellow-600 uppercase tracking-widest`}>Double-check once</Text>
+                            )}
+                        </View>
                         <TextInput
                             style={tw`text-base font-bold text-gray-900`}
                             placeholder="e.g. 400001"

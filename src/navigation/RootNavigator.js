@@ -1,10 +1,10 @@
-// DabbaMe Root Navigator
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
+import { logoutUser } from '../services/authService';
 
 import { AuthStack } from './AuthStack';
 import { AdminStack } from './AdminStack';

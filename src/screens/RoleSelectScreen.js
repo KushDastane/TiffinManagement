@@ -67,13 +67,6 @@ export const RoleSelectScreen = () => {
                         </View>
                         <ArrowRight size={16} color="#374151" />
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => logoutUser()}
-                        style={tw`mt-10 self-center flex-row items-center gap-2 p-3`}
-                    >
-                        <Text style={tw`text-gray-400 font-black text-[10px] uppercase tracking-widest`}>Not You? Logout</Text>
-                    </TouchableOpacity>
                 </View>
             )}
         </View>

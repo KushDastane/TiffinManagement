@@ -253,6 +253,7 @@ export const HomeScreen = () => {
 
     // Data State
     const [balance, setBalance] = useState(0);
+    const [balanceLoading, setBalanceLoading] = useState(true);
     const [myOrders, setMyOrders] = useState([]);
     const [todaysOrder, setTodaysOrder] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
@@ -268,16 +269,22 @@ export const HomeScreen = () => {
         return "Good Evening";
     };
 
-    const fetchData = async () => {
+    const fetchBalance = async () => {
         if (!tenant?.id || !user?.uid) return;
-        setLoading(true);
+        setBalanceLoading(true);
         try {
             const ledger = await getStudentBalance(tenant.id, user.uid, userProfile?.phoneNumber);
             setBalance(ledger.balance);
         } catch (e) { console.log(e) }
-        setLoading(false);
+        setBalanceLoading(false);
     };
 
+    // Separate effect for balance - only runs when kitchen or user changes
+    useEffect(() => {
+        fetchBalance();
+    }, [tenant?.id, user?.uid]);
+
+    // Separate effect for orders - runs when dateId or activeSlot changes
     useEffect(() => {
         if (!tenant?.id || !user?.uid) return;
 
@@ -295,14 +302,14 @@ export const HomeScreen = () => {
             setTodaysOrder(today);
         });
 
-        fetchData();
+        setLoading(false);
         return () => unsubOrders();
     }, [tenant?.id, user?.uid, dateId, activeSlot]);
 
 
     const onRefresh = async () => {
         setRefreshing(true);
-        await fetchData();
+        await fetchBalance();
         setRefreshing(false);
     };
 
@@ -551,7 +558,7 @@ export const HomeScreen = () => {
                 <WeekSummary orders={myOrders} />
 
                 {/* Wallet Balance */}
-                <WalletCard balance={balance} loading={loading} />
+                <WalletCard balance={balance} loading={balanceLoading} />
 
             </ScrollView>
         </View>

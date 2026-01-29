@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { joinKitchen } from '../../services/kitchenService';
 import tw from 'twrnc';
+import { ChefHat, ArrowRight, Key } from 'lucide-react-native';
 
 export const JoinKitchenScreen = () => {
     const { user } = useAuth();
@@ -11,7 +12,7 @@ export const JoinKitchenScreen = () => {
 
     const handleJoin = async () => {
         if (!joinCode.trim() || joinCode.length < 8) {
-            Alert.alert("Error", "Please enter a valid code (e.g., ZBJ-2929)");
+            Alert.alert("Invalid Code", "Please enter a valid 8-character code (e.g., ZBJ-2929)");
             return;
         }
 
@@ -35,36 +36,62 @@ export const JoinKitchenScreen = () => {
     };
 
     return (
-        <View style={tw`flex-1 bg-white items-center justify-center p-4`}>
-            <Text style={tw`text-2xl font-black mb-4 text-gray-900`}>Join a Kitchen</Text>
-            <Text style={tw`text-gray-500 mb-8 text-center px-4 font-bold`}>
-                Enter the 8-character code (e.g., ZBJ-2929) shared by your kitchen manager.
+        <ScrollView
+            style={tw`flex-1 bg-white`}
+            contentContainerStyle={tw`flex-grow items-center justify-center p-6`}
+            showsVerticalScrollIndicator={false}
+        >
+            {/* Icon */}
+            <View style={tw`w-20 h-20 bg-yellow-50 rounded-3xl items-center justify-center mb-6`}>
+                <ChefHat size={36} color="#ca8a04" />
+            </View>
+
+            {/* Header */}
+            <Text style={tw`text-2xl font-black text-gray-900 text-center tracking-tight mb-2`}>
+                Join a Kitchen
+            </Text>
+            <Text style={tw`text-gray-500 text-sm font-medium text-center px-8 mb-10 leading-relaxed`}>
+                Enter the code shared by{'\n'}your kitchen
             </Text>
 
-            <TextInput
-                style={tw`w-full max-w-xs border-2 border-dashed border-gray-300 rounded-3xl p-6 mb-8 text-3xl text-center font-black tracking-widest uppercase text-gray-900 focus:border-yellow-400`}
-                placeholder="ZBJ-2929"
-                placeholderTextColor="#d1d5db"
-                maxLength={8}
-                value={joinCode}
-                onChangeText={handleTextChange}
-                autoCapitalize="characters"
-            />
+            {/* Code Input */}
+            <View style={tw`w-full max-w-sm mb-8`}>
+                <View style={tw`bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-6 items-center`}>
 
+                    <TextInput
+                        style={tw`text-4xl text-center font-black tracking-[8px] uppercase text-gray-900 w-full`}
+                        placeholder="ZBJ-2929"
+                        placeholderTextColor="#d1d5db"
+                        maxLength={8}
+                        value={joinCode}
+                        onChangeText={handleTextChange}
+                        autoCapitalize="characters"
+                        selectionColor="#ca8a04"
+                    />
+                </View>
+
+            </View>
+
+            {/* Join Button */}
             <TouchableOpacity
-                style={[
-                    tw`w-full max-w-sm bg-yellow-400 rounded-lg p-4 items-center shadow-sm`,
-                    loading ? tw`opacity-70` : null
-                ]}
+                style={tw`w-full max-w-sm bg-yellow-400 rounded-xl py-4 items-center flex-row justify-center gap-2 shadow-sm ${loading ? 'opacity-70' : ''}`}
                 onPress={handleJoin}
                 disabled={loading}
+                activeOpacity={0.8}
             >
                 {loading ? (
                     <ActivityIndicator color="black" />
                 ) : (
-                    <Text style={tw`text-black font-bold text-lg`}>Join Kitchen</Text>
+                    <>
+                        <Text style={tw`text-black font-black text-sm uppercase tracking-widest`}>
+                            Join Kitchen
+                        </Text>
+                        <ArrowRight size={16} color="black" />
+                    </>
                 )}
             </TouchableOpacity>
-        </View>
+
+            {/* Help Text */}
+        </ScrollView>
     );
 };

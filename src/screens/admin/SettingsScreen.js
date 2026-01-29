@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { getKitchenConfig, updateKitchenConfig, updateKitchen } from '../../services/kitchenService';
@@ -9,6 +9,20 @@ import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
+
+// Helper to format 24h string to 12h display
+const formatTime12h = (time24) => {
+    if (!time24) return '';
+    try {
+        const [hours, minutes] = time24.split(':');
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${minutes} ${ampm}`;
+    } catch (e) {
+        return time24;
+    }
+};
 
 // Helper Component for Triggers
 const InputTrigger = ({ label, value, onPress, placeholder, disabled }) => (
@@ -24,7 +38,9 @@ const InputTrigger = ({ label, value, onPress, placeholder, disabled }) => (
             ]}
         >
             <Clock size={12} color="#9ca3af" style={tw`mr-2`} />
-            <Text style={tw`text-sm font-black text-gray-900 text-center`}>{value || placeholder}</Text>
+            <Text style={tw`text-sm font-black text-gray-900 text-center`}>
+                {value?.includes(':') ? formatTime12h(value) : (value || placeholder)}
+            </Text>
         </Pressable>
     </View>
 );
@@ -35,7 +51,9 @@ export const SettingsScreen = () => {
 
     const [config, setConfig] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+    const [savingBasic, setSavingBasic] = useState(false);
+    const [savingPartner, setSavingPartner] = useState(false);
+    const [savingConfig, setSavingConfig] = useState(false);
 
     // Local Edit State
     const [localKitchen, setLocalKitchen] = useState({
@@ -90,17 +108,7 @@ export const SettingsScreen = () => {
         setPicker({ show: true, mode, field, subField, value: date });
     };
 
-    const handlePickerChange = (event, selectedDate) => {
-        if (event.type === 'dismissed') {
-            setPicker(prev => ({ ...prev, show: false }));
-            return;
-        }
-
-        const currentDate = selectedDate || picker.value;
-        if (Platform.OS === 'android') {
-            setPicker(prev => ({ ...prev, show: false }));
-        }
-
+    const handlePickerConfirm = (selectedDate) => {
         if (selectedDate) {
             let newValue;
             if (picker.mode === 'time') {
@@ -140,8 +148,12 @@ export const SettingsScreen = () => {
             }
 
             // Update picker val
-            setPicker(prev => ({ ...prev, value: selectedDate }));
+            setPicker(prev => ({ ...prev, show: false, value: selectedDate }));
         }
+    };
+
+    const handlePickerCancel = () => {
+        setPicker(prev => ({ ...prev, show: false }));
     };
 
     const handleSaveBasic = async () => {
@@ -157,14 +169,14 @@ export const SettingsScreen = () => {
             return Alert.alert("Invalid", "Please enter a valid 10-digit Phone connection");
         }
 
-        setSaving(true);
+        setSavingBasic(true);
         const result = await updateKitchen(tenant.id, {
             name: localKitchen.name,
             address: localKitchen.address,
             phone: localKitchen.phone,
             whatsapp: localKitchen.whatsapp
         });
-        setSaving(false);
+        setSavingBasic(false);
         if (result.success) Alert.alert("Success", "Kitchen details updated");
         else Alert.alert("Error", result.error);
     };
@@ -176,20 +188,27 @@ export const SettingsScreen = () => {
             return Alert.alert("Invalid", "Please enter a valid 10-digit Phone for delivery partner");
         }
 
-        setSaving(true);
+        setSavingPartner(true);
         const result = await updateKitchen(tenant.id, {
             deliveryBoyName: localKitchen.deliveryBoyName,
             deliveryBoyPhone: localKitchen.deliveryBoyPhone
         });
-        setSaving(false);
+        setSavingPartner(false);
         if (result.success) Alert.alert("Success", "Delivery partner details updated");
         else Alert.alert("Error", result.error);
     };
 
     const handleSave = async () => {
-        setSaving(true);
+        // Validation for Holiday Mode
+        if (config?.holiday?.active) {
+            if (!config.holiday.from || !config.holiday.to || !config.holiday.reason?.trim()) {
+                return Alert.alert("Required", "Please fill 'From', 'To', and 'Reason' for Holiday Mode");
+            }
+        }
+
+        setSavingConfig(true);
         const result = await updateKitchenConfig(tenant.id, config);
-        setSaving(false);
+        setSavingConfig(false);
         if (result.success) Alert.alert("Success", "Meal settings updated");
         else Alert.alert("Error", result.error);
     };
@@ -315,10 +334,10 @@ export const SettingsScreen = () => {
 
                         <Pressable
                             onPress={handleSaveBasic}
-                            disabled={saving}
+                            disabled={savingBasic}
                             style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2 mt-2`}
                         >
-                            {saving ? <ActivityIndicator color="white" /> : (
+                            {savingBasic ? <ActivityIndicator color="white" /> : (
                                 <>
                                     <Save size={14} color="white" />
                                     <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Kitchen Details</Text>
@@ -386,10 +405,10 @@ export const SettingsScreen = () => {
                             </View>
                             <Pressable
                                 onPress={handleSavePartner}
-                                disabled={saving}
+                                disabled={savingPartner}
                                 style={tw`bg-gray-900 rounded-2xl py-3 px-8 items-center justify-center flex-row gap-2 mt-2 w-full`}
                             >
-                                {saving ? <ActivityIndicator color="white" /> : (
+                                {savingPartner ? <ActivityIndicator color="white" /> : (
                                     <>
                                         <Save size={14} color="white" />
                                         <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Partner Details</Text>
@@ -542,10 +561,10 @@ export const SettingsScreen = () => {
                             />
                             <Pressable
                                 onPress={handleSave}
-                                disabled={saving}
+                                disabled={savingConfig}
                                 style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
                             >
-                                {saving ? <ActivityIndicator color="white" /> : (
+                                {savingConfig ? <ActivityIndicator color="white" /> : (
                                     <>
                                         <Save size={14} color="white" />
                                         <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Holiday Settings</Text>
@@ -558,29 +577,30 @@ export const SettingsScreen = () => {
 
 
 
-                <Text style={tw`text-center text-xs text-gray-300 mt-10 uppercase font-bold tracking-widest`}>DabbaMe v1.0.0 • Production</Text>
+                {/* Sign Out Button */}
+                <Pressable
+                    onPress={handleLogout}
+                    style={({ pressed }) => [
+                        tw`bg-red-50 rounded-[24px] p-6 mb-5 flex-row items-center justify-center gap-3 border border-red-100`,
+                        pressed && tw`bg-red-100`
+                    ]}
+                >
+                    <LogOut size={20} color="#dc2626" />
+                    <Text style={tw`text-red-600 font-black text-sm uppercase tracking-widest`}>Sign Out</Text>
+                </Pressable>
+
+                <Text style={tw`text-center text-xs text-gray-300 mt-2 uppercase font-bold tracking-widest`}>DabbaMe v1.0.0 • Production</Text>
             </ScrollView>
 
-            {picker.show && (
-                <DateTimePicker
-                    value={picker.value}
-                    mode={picker.mode}
-                    is24Hour={picker.mode === 'time'}
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handlePickerChange}
-                    style={Platform.OS === 'ios' ? { backgroundColor: 'white', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 } : {}}
-                    minimumDate={picker.mode === 'date' ? new Date() : undefined}
-                />
-            )}
-
-            {/* iOS Done Button */}
-            {Platform.OS === 'ios' && picker.show && (
-                <View style={tw`absolute bottom-[200px] left-0 right-0 bg-gray-100 p-2 z-50 flex-row justify-end border-t border-gray-200`}>
-                    <Pressable onPress={() => setPicker(prev => ({ ...prev, show: false }))} style={tw`bg-blue-500 px-4 py-2 rounded-lg`}>
-                        <Text style={tw`text-white font-bold`}>Done</Text>
-                    </Pressable>
-                </View>
-            )}
+            <DateTimePickerModal
+                isVisible={picker.show}
+                mode={picker.mode}
+                date={picker.value}
+                onConfirm={handlePickerConfirm}
+                onCancel={handlePickerCancel}
+                is24Hour={false}
+                minimumDate={picker.mode === 'date' ? new Date() : undefined}
+            />
         </View>
     );
 };

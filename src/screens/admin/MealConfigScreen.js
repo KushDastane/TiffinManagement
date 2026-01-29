@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Switch, ActivityIndicator, Alert, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useTenant } from '../../contexts/TenantContext';
 import { updateKitchen } from '../../services/kitchenService';
 import { useTheme } from '../../contexts/ThemeContext';
 import tw from 'twrnc';
+
+// Helper to format 24h string to 12h display
+const formatTime12h = (time24) => {
+    if (!time24) return '';
+    try {
+        const [hours, minutes] = time24.split(':');
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${minutes} ${ampm}`;
+    } catch (e) {
+        return time24;
+    }
+};
 
 export const MealConfigScreen = () => {
     const { tenant } = useTenant();
@@ -54,26 +68,19 @@ export const MealConfigScreen = () => {
         setPickerConfig({ show: true, index, field, value: date });
     };
 
-    const onTimeChange = (event, selectedDate) => {
-        if (event.type === 'dismissed') {
-            setPickerConfig(prev => ({ ...prev, show: false }));
-            return;
-        }
-
-        const currentDate = selectedDate || pickerConfig.value;
-        if (Platform.OS === 'android') {
-            setPickerConfig(prev => ({ ...prev, show: false }));
-        }
-
+    const handleConfirm = (selectedDate) => {
         if (selectedDate) {
             const hours = selectedDate.getHours().toString().padStart(2, '0');
             const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
             const timeString = `${hours}:${minutes}`;
             updateSlot(pickerConfig.index, { [pickerConfig.field]: timeString });
 
-            // Update picker value too to avoid jump
-            setPickerConfig(prev => ({ ...prev, value: selectedDate }));
+            setPickerConfig(prev => ({ ...prev, show: false, value: selectedDate }));
         }
+    };
+
+    const handleCancel = () => {
+        setPickerConfig(prev => ({ ...prev, show: false }));
     };
 
     const handleSave = async () => {
@@ -316,25 +323,14 @@ export const MealConfigScreen = () => {
                 <View style={tw`h-20`} />
             </ScrollView>
 
-            {pickerConfig.show && (
-                <DateTimePicker
-                    value={pickerConfig.value}
-                    mode="time"
-                    is24Hour={false}
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onTimeChange}
-                    style={Platform.OS === 'ios' ? { backgroundColor: 'white', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 } : {}}
-                />
-            )}
-
-            {/* iOS Close Button for Picker */}
-            {Platform.OS === 'ios' && pickerConfig.show && (
-                <View style={tw`absolute bottom-[200px] left-0 right-0 bg-gray-100 p-2 z-50 flex-row justify-end border-t border-gray-200`}>
-                    <Pressable onPress={() => setPickerConfig(prev => ({ ...prev, show: false }))} style={tw`bg-blue-500 px-4 py-2 rounded-lg`}>
-                        <Text style={tw`text-white font-bold`}>Done</Text>
-                    </Pressable>
-                </View>
-            )}
+            <DateTimePickerModal
+                isVisible={pickerConfig.show}
+                mode="time"
+                date={pickerConfig.value}
+                onConfirm={handleConfirm}
+                onCancel={handleCancel}
+                is24Hour={false}
+            />
         </View>
     );
 };

@@ -7,6 +7,19 @@ import { JoinKitchenScreen } from '../screens/student/JoinKitchenScreen';
 const Stack = createNativeStackNavigator();
 
 export const UnjoinedStudentStack = () => {
+    const headerOptions = {
+        headerStyle: {
+            backgroundColor: '#ffffff',
+        },
+        headerTitleStyle: {
+            fontSize: 22, // text-2xl equivalent
+            fontWeight: '900', // font-black equivalent
+            color: '#111827', // text-gray-900
+        },
+        headerTintColor: '#111827',
+        headerShadowVisible: false,
+    };
+
     return (
         <Stack.Navigator>
             <Stack.Screen
@@ -15,14 +28,12 @@ export const UnjoinedStudentStack = () => {
                 options={{ headerShown: false }}
             />
             <Stack.Screen
-                name="TrialOrder"
-                component={TrialOrderScreen}
-                options={{ title: 'Trial Order' }}
-            />
-            <Stack.Screen
                 name="JoinKitchen"
                 component={JoinKitchenScreen}
-                options={{ title: 'Join Kitchen' }}
+                options={{
+                    title: '',
+                    ...headerOptions
+                }}
             />
         </Stack.Navigator>
     );

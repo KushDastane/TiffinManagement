@@ -140,12 +140,15 @@ export const ProfileScreen = () => {
                 )}
 
                 {/* Logout Button - Minimalist Understated */}
-                <Pressable
+                 <Pressable
                     onPress={handleLogout}
-                    style={tw`w-full bg-white border border-red-50 rounded-2xl py-4 flex-row items-center justify-center gap-2 shadow-sm`}
+                    style={({ pressed }) => [
+                        tw`bg-red-50 rounded-[24px] p-4 mb-5 flex-row items-center justify-center gap-3 border border-red-100`,
+                        pressed && tw`bg-red-100`
+                    ]}
                 >
-                    <LogOut size={16} color="#ef4444" />
-                    <Text style={tw`text-red-500 font-black text-[11px] uppercase tracking-widest`}>Sign Out Account</Text>
+                    <LogOut size={20} color="#dc2626" />
+                    <Text style={tw`text-red-600 font-black text-sm uppercase tracking-widest`}>Sign Out</Text>
                 </Pressable>
 
                 <Text style={tw`text-center text-xs text-gray-300 mt-8`}>v1.0.0 • DabbaMe</Text>

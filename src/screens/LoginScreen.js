@@ -14,14 +14,16 @@ export const LoginScreen = () => {
     const [verificationCode, setVerificationCode] = useState('');
     const [verificationId, setVerificationId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     const recaptchaVerifier = useRef(null);
 
     // Step: 'phone' | 'otp'
     const [step, setStep] = useState('phone');
 
     const handleSendOTP = async () => {
-        if (!phoneNumber || phoneNumber.length < 10) {
-            Alert.alert("Invalid Phone", "Please enter a valid 10 digit number");
+        setError('');
+        if (!phoneNumber || phoneNumber.length !== 10) {
+            setError("Please enter a valid 10-digit phone number");
             return;
         }
         setLoading(true);
@@ -31,7 +33,7 @@ export const LoginScreen = () => {
         setLoading(false);
 
         if (result.error) {
-            Alert.alert("Error sending OTP", result.error);
+            setError(result.error);
         } else {
             setVerificationId(result.confirmationResult);
             setStep('otp');
@@ -39,11 +41,15 @@ export const LoginScreen = () => {
     };
 
     const handleVerifyOTP = async () => {
-        if (!verificationCode || verificationCode.length < 6) return;
+        setError('');
+        if (!verificationCode || verificationCode.length < 6) {
+            setError("Please enter a valid 6-digit OTP");
+            return;
+        }
         setLoading(true);
         const result = await verifyOTP(verificationId, verificationCode);
         setLoading(false);
-        if (result.error) Alert.alert("Failed", result.error);
+        if (result.error) setError(result.error);
     };
 
     return (
@@ -81,6 +87,12 @@ export const LoginScreen = () => {
                             />
                         </View>
 
+                        {error && (
+                            <View style={tw`mb-3`}>
+                                <Text style={tw`text-red-500 text-xs font-bold text-center`}>{error}</Text>
+                            </View>
+                        )}
+
                         <TouchableOpacity
                             style={tw`w-full bg-yellow-400 rounded-xl py-3.5 shadow-sm items-center flex-row justify-center gap-2`}
                             onPress={handleSendOTP}
@@ -110,6 +122,12 @@ export const LoginScreen = () => {
                             />
                         </View>
 
+                        {error && (
+                            <View style={tw`mb-3`}>
+                                <Text style={tw`text-red-500 text-xs font-bold text-center`}>{error}</Text>
+                            </View>
+                        )}
+
                         <TouchableOpacity
                             style={tw`w-full bg-gray-900 rounded-xl py-3.5 shadow-sm items-center flex-row justify-center gap-2`}
                             onPress={handleVerifyOTP}
@@ -123,7 +141,7 @@ export const LoginScreen = () => {
                             )}
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => setStep('phone')} style={tw`mt-4 self-center flex-row items-center gap-1 p-2`}>
+                        <TouchableOpacity onPress={() => { setStep('phone'); setError(''); }} style={tw`mt-4 self-center flex-row items-center gap-1 p-2`}>
                             <ChevronLeft size={12} color="#9ca3af" />
                             <Text style={tw`text-gray-400 font-bold text-[10px] uppercase tracking-widest`}>Change Number</Text>
                         </TouchableOpacity>

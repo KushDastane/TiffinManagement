@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, BackHandler } from 'react-native';
+import * as Location from 'expo-location';
 import { useAuth } from '../../contexts/AuthContext';
 import { createKitchen } from '../../services/kitchenService';
 import { updateUserProfile } from '../../services/authService';
 import tw from 'twrnc';
-import { ChefHat, ArrowRight, ChevronLeft } from 'lucide-react-native';
+import { ChefHat, ArrowRight, ChevronLeft, Navigation } from 'lucide-react-native';
 
 export const CreateKitchenScreen = () => {
     const { user } = useAuth();
@@ -19,6 +20,8 @@ export const CreateKitchenScreen = () => {
     const [kitchenType, setKitchenType] = useState('DABBA'); // Default Type
     const [loading, setLoading] = useState(false);
     const [resetting, setResetting] = useState(false);
+    const [detecting, setDetecting] = useState(false);
+    const [autoDetected, setAutoDetected] = useState(false);
 
     const types = [
         { id: 'DABBA', label: 'Tiffin Service', icon: '🍱', desc: 'Fixed meals (Lunch/Dinner)' }
@@ -45,6 +48,60 @@ export const CreateKitchenScreen = () => {
         const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
         return () => subscription.remove();
     }, []);
+
+    const detectLocation = async () => {
+        try {
+            setDetecting(true);
+            const { status } = await Location.requestForegroundPermissionsAsync();
+
+            if (status !== 'granted') {
+                Alert.alert("Permission Denied", "Please allow location access to auto-fill your address.");
+                setDetecting(false);
+                return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High
+            });
+            const { latitude, longitude } = location.coords;
+
+            // Reverse Geocode using Nominatim (Free)
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+                {
+                    headers: {
+                        'User-Agent': 'DabbaMe-App'
+                    }
+                }
+            );
+            const data = await response.json();
+
+            if (data && data.address) {
+                const addr = data.address;
+                const detectedCity = addr.city || addr.town || addr.village || addr.suburb || '';
+                const detectedPin = addr.postcode || '';
+                const detectedLocality = addr.neighbourhood || addr.suburb || addr.road || '';
+                const detectedBuilding = addr.house_number || '';
+
+                setCity(detectedCity);
+                setPincode(detectedPin);
+                setLocality(detectedLocality);
+                if (detectedBuilding) setBuilding(detectedBuilding);
+                setAutoDetected(true);
+
+                if (!detectedCity || !detectedPin) {
+                    Alert.alert("Partial Detection", "We found your location but please verify the address details.");
+                } else {
+                    Alert.alert("Location Detected", "Please verify your Pincode and address are correct.");
+                }
+            }
+        } catch (error) {
+            console.error("Location detection error:", error);
+            Alert.alert("Error", "Could not detect location. Please enter manually.");
+        } finally {
+            setDetecting(false);
+        }
+    };
 
     const handleCreate = async () => {
         if (!name.trim()) {
@@ -131,6 +188,21 @@ export const CreateKitchenScreen = () => {
                 <View style={tw`bg-gray-50/50 border border-gray-100 rounded-2xl p-4 mb-4`}>
                     <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-4`}>Kitchen Location</Text>
 
+                    <TouchableOpacity
+                        onPress={detectLocation}
+                        disabled={detecting}
+                        style={tw`bg-blue-50 border border-blue-100 rounded-2xl p-4 flex-row items-center justify-center mb-4`}
+                    >
+                        {detecting ? (
+                            <ActivityIndicator color="#2563eb" />
+                        ) : (
+                            <>
+                                <Navigation size={16} color="#2563eb" style={tw`mr-2`} />
+                                <Text style={tw`text-blue-600 font-black text-xs uppercase tracking-widest`}>Detect My Location</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+
                     <View style={tw`bg-white border border-gray-100 rounded-xl p-3 mb-3`}>
                         <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Flat / Shop / Building</Text>
                         <TextInput
@@ -164,8 +236,13 @@ export const CreateKitchenScreen = () => {
                                 placeholderTextColor="#9ca3af"
                             />
                         </View>
-                        <View style={tw`flex-1 bg-white border border-gray-100 rounded-xl p-3`}>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Pincode</Text>
+                        <View style={tw`flex-1 bg-white border ${autoDetected ? 'border-yellow-300' : 'border-gray-100'} rounded-xl p-3`}>
+                            <View style={tw`flex-row items-center justify-between mb-1`}>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1`}>Pincode</Text>
+                                {autoDetected && (
+                                    <Text style={tw`text-[8px] font-black text-yellow-600 uppercase tracking-widest`}>Please Verify</Text>
+                                )}
+                            </View>
                             <TextInput
                                 style={tw`w-full text-base font-bold text-gray-900`}
                                 placeholder="6 Digits"
