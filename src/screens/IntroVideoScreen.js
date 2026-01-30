@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, BackHandler, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode, Audio } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Play, Pause, RotateCcw, Volume2, VolumeX, ChevronLeft, Rewind, FastForward } from 'lucide-react-native';
 import tw from 'twrnc';
@@ -103,6 +103,19 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
         }
     };
 
+    useEffect(() => {
+        // Essential for iOS/Android audio behavior
+        Audio.setAudioModeAsync({
+            allowsRecordingIOS: false,
+            staysActiveInBackground: false,
+            interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
+            playsInSilentModeIOS: true,
+            shouldDuckAndroid: true,
+            interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
+            playThroughEarpieceAndroid: false,
+        });
+    }, []);
+
     const togglePlayPause = () => {
         if (status.didJustFinish) {
             videoRef.current.replayAsync();
@@ -115,8 +128,12 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
         }
     };
 
-    const toggleMute = () => {
-        setIsMuted(!isMuted);
+    const toggleMute = async () => {
+        const newMuted = !isMuted;
+        setIsMuted(newMuted);
+        if (videoRef.current) {
+            await videoRef.current.setIsMutedAsync(newMuted);
+        }
     };
 
     const handleReplay = () => {
@@ -169,7 +186,7 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
                                 updateUserProfile(user.uid, { role: null });
                             }
                         }}
-                        style={tw`absolute top-14 left-3 p-2 bg-gray-50 rounded-full z-50`}
+                        style={tw`absolute top-5 left-3 p-2 bg-gray-50 rounded-full z-50`}
                         disabled={resetting}
                     >
                         {resetting
@@ -215,34 +232,20 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
                             )}
 
                             {videoLoaded && (
-                                <TouchableOpacity
-                                    activeOpacity={1}
-                                    onPress={() => {
-                                        if (showControls) togglePlayPause();
-                                        else resetControlsTimer();
-                                    }}
-                                    style={tw`absolute inset-0 justify-between p-3`}
-                                >
+                                <View style={tw`absolute inset-0`} pointerEvents="box-none">
 
-                                    {/* Mute - Only visible when controls are shown */}
-                                    {showControls && (
-                                        <View style={tw`flex-row justify-end`}>
-                                            <TouchableOpacity
-                                                onPress={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleMute();
-                                                    resetControlsTimer();
-                                                }}
-                                                style={tw`w-8 h-8 bg-black/30 rounded-full items-center justify-center`}
-                                            >
-                                                {isMuted ? <VolumeX size={16} color="white" /> : <Volume2 size={16} color="white" />}
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
+                                    {/* 1. Background Tap Layer (Lowest) */}
+                                    <TouchableOpacity
+                                        activeOpacity={1}
+                                        onPress={() => {
+                                            if (showControls) togglePlayPause();
+                                            else resetControlsTimer();
+                                        }}
+                                        style={tw`absolute inset-0`}
+                                    />
 
-                                    {/* Double Tap Seek Zones (Left/Right) - Always active but transparent */}
+                                    {/* 2. Double Tap Seek Zones (Middle Layer) */}
                                     <View style={tw`absolute inset-0 flex-row`} pointerEvents="box-none">
-                                        {/* Left Zone */}
                                         <TouchableOpacity
                                             activeOpacity={1}
                                             style={tw`flex-1 h-full`}
@@ -260,7 +263,6 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
                                             }}
                                         />
                                         <View style={tw`flex-1 h-full`} pointerEvents="none" />
-                                        {/* Right Zone */}
                                         <TouchableOpacity
                                             activeOpacity={1}
                                             style={tw`flex-1 h-full`}
@@ -279,82 +281,102 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
                                         />
                                     </View>
 
-                                    {/* Center Controls HUD - Only visible when controls are shown */}
-                                    {showControls && (
-                                        <View style={tw`absolute inset-0 items-center justify-center flex-row gap-6`} pointerEvents="box-none">
-                                            <TouchableOpacity
-                                                onPress={(e) => {
-                                                    e.stopPropagation();
-                                                    handleSeekRelative(-10);
-                                                    resetControlsTimer();
-                                                }}
-                                                style={tw`w-12 h-12 bg-black/30 rounded-full items-center justify-center backdrop-blur-sm shadow-xl active:scale-90`}
-                                            >
-                                                <Rewind size={24} color="white" fill="white" />
-                                            </TouchableOpacity>
+                                    {/* 3. Interactive HUD layer (Top Layer) */}
+                                    <View style={tw`absolute inset-0 justify-between p-3`} pointerEvents="box-none">
 
-                                            <TouchableOpacity
-                                                onPress={(e) => {
-                                                    e.stopPropagation();
-                                                    togglePlayPause();
-                                                    resetControlsTimer();
-                                                }}
-                                                style={tw`w-16 h-16 bg-black/40 rounded-full items-center justify-center backdrop-blur-md shadow-2xl active:scale-95`}
-                                            >
-                                                {status.didJustFinish ? (
-                                                    <RotateCcw size={32} color="white" />
-                                                ) : (
-                                                    status.isPlaying ? <Pause size={32} color="white" fill="white" /> : <Play size={32} color="white" fill="white" />
-                                                )}
-                                            </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                onPress={(e) => {
-                                                    e.stopPropagation();
-                                                    handleSeekRelative(10);
-                                                    resetControlsTimer();
-                                                }}
-                                                style={tw`w-12 h-12 bg-black/30 rounded-full items-center justify-center backdrop-blur-sm shadow-xl active:scale-90`}
-                                            >
-                                                <FastForward size={24} color="white" fill="white" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
-
-                                    {/* Seek Bar - Only visible when controls are shown */}
-                                    {showControls && (
-                                        <View style={tw`w-full gap-1`} pointerEvents="box-none">
-                                            <View style={tw`flex-row justify-between px-1`}>
-                                                <Text style={tw`text-white text-[10px] font-mono font-bold`}>
-                                                    {formatTime(isSeeking ? seekValue : status.positionMillis)}
-                                                </Text>
-                                                <Text style={tw`text-white/70 text-[10px] font-mono font-bold`}>
-                                                    {formatTime(status.durationMillis)}
-                                                </Text>
+                                        {/* Mute Button */}
+                                        {showControls && (
+                                            <View style={tw`flex-row justify-end`} pointerEvents="box-none">
+                                                <TouchableOpacity
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleMute();
+                                                        resetControlsTimer();
+                                                    }}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    style={tw`w-10 h-10 bg-black/40 rounded-full items-center justify-center shadow-lg`}
+                                                >
+                                                    {isMuted ? <VolumeX size={20} color="white" /> : <Volume2 size={20} color="white" />}
+                                                </TouchableOpacity>
                                             </View>
+                                        )}
 
-                                            <Slider
-                                                style={{ width: '100%', height: 20 }}
-                                                minimumValue={0}
-                                                maximumValue={status.durationMillis || 1}
-                                                value={seekValue}
-                                                onValueChange={onSeek}
-                                                onSlidingStart={() => {
-                                                    onSlidingStart();
-                                                    if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
-                                                }}
-                                                onSlidingComplete={(val) => {
-                                                    onSlidingComplete(val);
-                                                    resetControlsTimer();
-                                                }}
-                                                minimumTrackTintColor="#FACC15"
-                                                maximumTrackTintColor="rgba(255,255,255,0.3)"
-                                                thumbTintColor="#FACC15"
-                                            />
-                                        </View>
-                                    )}
+                                        {/* Center HUD */}
+                                        {showControls && (
+                                            <View style={tw`absolute inset-0 items-center justify-center flex-row gap-6`} pointerEvents="box-none">
+                                                <TouchableOpacity
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSeekRelative(-10);
+                                                        resetControlsTimer();
+                                                    }}
+                                                    style={tw`w-12 h-12 bg-black/30 rounded-full items-center justify-center backdrop-blur-sm shadow-xl active:scale-90`}
+                                                >
+                                                    <Rewind size={24} color="white" fill="white" />
+                                                </TouchableOpacity>
 
-                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        togglePlayPause();
+                                                        resetControlsTimer();
+                                                    }}
+                                                    style={tw`w-16 h-16 bg-black/40 rounded-full items-center justify-center backdrop-blur-md shadow-2xl active:scale-95`}
+                                                >
+                                                    {status.didJustFinish ? (
+                                                        <RotateCcw size={32} color="white" />
+                                                    ) : (
+                                                        status.isPlaying ? <Pause size={32} color="white" fill="white" /> : <Play size={32} color="white" fill="white" />
+                                                    )}
+                                                </TouchableOpacity>
+
+                                                <TouchableOpacity
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSeekRelative(10);
+                                                        resetControlsTimer();
+                                                    }}
+                                                    style={tw`w-12 h-12 bg-black/30 rounded-full items-center justify-center backdrop-blur-sm shadow-xl active:scale-90`}
+                                                >
+                                                    <FastForward size={24} color="white" fill="white" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
+
+                                        {/* Seek Bar */}
+                                        {showControls && (
+                                            <View style={tw`w-full gap-1 p-2 bg-black/20 rounded-2xl`} pointerEvents="box-none">
+                                                <View style={tw`flex-row justify-between px-1`} pointerEvents="none">
+                                                    <Text style={tw`text-white text-[10px] font-mono font-bold`}>
+                                                        {formatTime(isSeeking ? seekValue : status.positionMillis)}
+                                                    </Text>
+                                                    <Text style={tw`text-white/70 text-[10px] font-mono font-bold`}>
+                                                        {formatTime(status.durationMillis)}
+                                                    </Text>
+                                                </View>
+
+                                                <Slider
+                                                    style={{ width: '100%', height: 24 }}
+                                                    minimumValue={0}
+                                                    maximumValue={status.durationMillis || 1}
+                                                    value={seekValue}
+                                                    onValueChange={onSeek}
+                                                    onSlidingStart={() => {
+                                                        onSlidingStart();
+                                                        if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+                                                    }}
+                                                    onSlidingComplete={(val) => {
+                                                        onSlidingComplete(val);
+                                                        resetControlsTimer();
+                                                    }}
+                                                    minimumTrackTintColor="#FACC15"
+                                                    maximumTrackTintColor="rgba(255,255,255,0.3)"
+                                                    thumbTintColor="#FACC15"
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
+                                </View>
                             )}
                         </View>
 
