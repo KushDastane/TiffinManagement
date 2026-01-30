@@ -13,6 +13,8 @@ import {
     limit
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getKitchenConfig } from './kitchenService';
+import { getStudentBalance } from './paymentService';
 
 // Helper to normalize phone numbers (standardize to last 10 digits for Indian numbers)
 export const normalizePhone = (phone) => {
@@ -41,6 +43,18 @@ export const normalizePhone = (phone) => {
 export const placeOrder = async (kitchenId, orderData) => {
     try {
         if (!kitchenId) throw new Error("kitchenId is mandatory for all orders");
+
+        // Safety Due Limit Check for non-manual orders
+        if (!orderData.isManual) {
+            const config = await getKitchenConfig(kitchenId);
+            const { balance } = await getStudentBalance(kitchenId, orderData.userId, orderData.phoneNumber);
+            const maxDue = config?.maxDueLimit || 300;
+            const total = orderData.totalAmount || 0;
+
+            if (balance - total < -maxDue) {
+                return { error: `Order restricted. Due limit of ₹${maxDue} exceeded.` };
+            }
+        }
 
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
         const dateId = new Date().toISOString().split('T')[0];

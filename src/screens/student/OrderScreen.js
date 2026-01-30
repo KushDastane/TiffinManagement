@@ -20,6 +20,7 @@ import {
 import {
     placeStudentOrder,
 } from "../../services/orderService";
+import { getStudentBalance } from "../../services/paymentService";
 import { useTheme } from "../../contexts/ThemeContext";
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -115,6 +116,7 @@ export const OrderScreen = ({ navigation }) => {
     const [orderMode, setOrderMode] = useState(null); // 'DELIVERY' or 'PICKUP'
     const [deliveryAddress, setDeliveryAddress] = useState(userProfile?.address || ""); // Default to user profile address
     const [deliveryNotes, setDeliveryNotes] = useState("");
+    const [balance, setBalance] = useState(0);
 
     useEffect(() => {
         if (tenant?.serviceMode) {
@@ -163,6 +165,16 @@ export const OrderScreen = ({ navigation }) => {
         };
     }, [tenant?.id, user?.uid, selectedSlot]);
 
+    useEffect(() => {
+        const fetchBalance = async () => {
+            if (tenant?.id && user?.uid) {
+                const result = await getStudentBalance(tenant.id, user.uid, userProfile?.phoneNumber);
+                setBalance(result.balance || 0);
+            }
+        };
+        fetchBalance();
+    }, [tenant?.id, user?.uid, userProfile?.phoneNumber]);
+
     // Determine if placing order is allowed based on timing
     const slotStatus = useMemo(() => {
         if (!tenant?.mealSlots?.[selectedSlot]) return 'ENDED';
@@ -194,6 +206,18 @@ export const OrderScreen = ({ navigation }) => {
 
     const handlePlaceOrder = async () => {
         if (!selectedItem || !canPlaceOrder) return;
+
+        // Check Due Limit
+        const maxDue = tenant.maxDueLimit || 300;
+        const potentialBalance = balance - total;
+
+        if (potentialBalance < -maxDue) {
+            Alert.alert(
+                "Order Restricted",
+                `Your unpaid balance (₹${Math.abs(potentialBalance)}) would exceed this kitchen's due limit of ₹${maxDue}. Please clear your dues in the 'Khata' section to continue ordering.`
+            );
+            return;
+        }
 
         setSaving(true);
         const orderData = {

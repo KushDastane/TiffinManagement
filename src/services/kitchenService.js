@@ -74,6 +74,7 @@ export const createKitchen = async (ownerId, kitchenData) => {
             },
             kitchenType,
             serviceMode: 'DELIVERY', // Default
+            maxDueLimit: 300, // Default limit
             ...rest
         };
 
@@ -206,7 +207,8 @@ export const getKitchenConfig = async (kitchenId) => {
                 openTime: data.openTime || '07:00',
                 closeTime: data.closeTime || '21:00',
                 holiday: data.holiday || { active: false, from: '', to: '', reason: '' },
-                mealSlots: data.mealSlots || {}
+                mealSlots: data.mealSlots || {},
+                maxDueLimit: data.maxDueLimit || 300
             };
         }
         return null;

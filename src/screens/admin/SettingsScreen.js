@@ -7,7 +7,7 @@ import { getKitchenConfig, updateKitchenConfig, updateKitchen } from '../../serv
 import { logoutUser, updateUserProfile } from '../../services/authService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin } from 'lucide-react-native';
+import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin, CreditCard, Info } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
 // Helper to format 24h string to 12h display
@@ -575,7 +575,46 @@ export const SettingsScreen = () => {
                     )}
                 </View>
 
+                {/* Payments & Credit Control */}
+                <View style={tw`bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-5`}>
+                    <View style={tw`flex-row items-center gap-2 mb-6`}>
+                        <CreditCard size={16} color="#ca8a04" />
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Payments & Credit Control</Text>
+                    </View>
 
+                    <View style={tw`gap-4`}>
+                        <View>
+                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Maximum Due Limit per Student (₹)</Text>
+                            <TextInput
+                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                value={config?.maxDueLimit?.toString()}
+                                onChangeText={(v) => setConfig({ ...config, maxDueLimit: parseInt(v) || 0 })}
+                                placeholder="e.g. 300"
+                                keyboardType="numeric"
+                            />
+                        </View>
+
+                        <View style={tw`bg-amber-50 rounded-2xl p-4 flex-row gap-3 border border-amber-100`}>
+                            <Info size={16} color="#ca8a04" style={tw`mt-0.5`} />
+                            <Text style={tw`flex-1 text-[11px] font-bold text-amber-800 leading-4`}>
+                                Kitchens control how much unpaid balance a student can accumulate before ordering is restricted.
+                            </Text>
+                        </View>
+
+                        <Pressable
+                            onPress={handleSave}
+                            disabled={savingConfig}
+                            style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2 mt-2`}
+                        >
+                            {savingConfig ? <ActivityIndicator color="white" /> : (
+                                <>
+                                    <Save size={14} color="white" />
+                                    <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Credit Policy</Text>
+                                </>
+                            )}
+                        </Pressable>
+                    </View>
+                </View>
 
                 {/* Sign Out Button */}
                 <Pressable
