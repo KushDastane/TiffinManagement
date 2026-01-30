@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
 import { logoutUser } from '../services/authService';
@@ -15,31 +16,69 @@ import { CreateKitchenScreen } from '../screens/admin/CreateKitchenScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
 import { StudentSetupScreen } from '../screens/StudentSetupScreen';
 import { LocationPickerScreen } from '../screens/student/LocationPickerScreen';
+import { IntroVideoScreen } from '../screens/IntroVideoScreen';
+import { VIDEO_CONFIG } from '../config/videoConfig';
 
 const Stack = createNativeStackNavigator();
 
 export const RootNavigator = () => {
     const { user, userProfile, loading: authLoading } = useAuth();
     const { loading: tenantLoading } = useTenant();
+    const [introWatched, setIntroWatched] = useState(null); // null = checking, false = not watched, true = watched
+
+    // Check intro video status when role is available
+    useEffect(() => {
+        const checkIntroStatus = async () => {
+            if (userProfile?.role) {
+                const storageKey = userProfile.role === 'admin'
+                    ? VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_ADMIN
+                    : VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_STUDENT;
+
+                try {
+                    const hasWatched = await AsyncStorage.getItem(storageKey);
+                    // DEBUG: Force false to show video
+                    setIntroWatched(false);
+                } catch (e) {
+                    console.error("Error checking intro video status", e);
+                    setIntroWatched(false); // DEBUG: Find intro video
+                }
+            } else {
+                setIntroWatched(null);
+            }
+        };
+
+        checkIntroStatus();
+    }, [userProfile?.role]);
+
+    const handleIntroFinish = () => {
+        setIntroWatched(true);
+    };
+
+    if (authLoading || tenantLoading || (userProfile?.role && introWatched === null)) {
+        return <LoadingScreen />;
+    }
 
     return (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {(authLoading || tenantLoading) ? (
-                <Stack.Screen name="Loading" component={LoadingScreen} />
-            ) : !user ? (
+            {!user ? (
                 <Stack.Screen name="Auth" component={AuthStack} />
             ) : (!userProfile?.role) ? (
                 // 1. First, select role (Admin vs Student)
                 <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
+            ) : !introWatched ? (
+                // 2. Show Intro Video if not watched
+                <Stack.Screen name="IntroVideo">
+                    {(props) => <IntroVideoScreen {...props} role={userProfile.role} onFinish={handleIntroFinish} />}
+                </Stack.Screen>
             ) : userProfile.role === 'admin' ? (
-                // 2a. Admin Flow
+                // 3a. Admin Flow
                 !userProfile.currentKitchenId ? (
                     <Stack.Screen name="CreateKitchen" component={CreateKitchenScreen} options={{ title: 'Create Your Kitchen' }} />
                 ) : (
                     <Stack.Screen name="AdminRoot" component={AdminStack} />
                 )
             ) : (
-                // 2b. Student Flow
+                // 3b. Student Flow
                 !userProfile.name ? (
                     // Only ask for name IF they are a student and haven't set it yet
                     <Stack.Screen name="Setup" component={StudentSetupScreen} />

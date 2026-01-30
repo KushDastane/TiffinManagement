@@ -55,11 +55,11 @@ export const LoginScreen = () => {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={tw`flex-1 bg-white items-center justify-center`}
+            style={tw`flex-1 bg-white items-center justify-center px-6 pt-12 pb-6`}
         >
-            <View style={tw`w-full max-w-[85%] px-4`}>
+            <View style={tw`w-full max-w-[85%]`}>
                 {/* Compact Header */}
-                <Animated.View layout={Layout.springify()} style={tw`items-center mb-8`}>
+                <Animated.View layout={Layout.springify()} style={tw`items-center mb-10`}>
                     <View style={[tw`w-14 h-14 bg-yellow-100 rounded-2xl items-center justify-center mb-3`, { transform: [{ rotate: '3deg' }] }]}>
                         <Text style={tw`text-2xl`}>🍱</Text>
                     </View>
@@ -73,17 +73,18 @@ export const LoginScreen = () => {
 
                 {step === 'phone' ? (
                     <Animated.View entering={FadeIn} exiting={FadeOut} style={tw`w-full`}>
-                        <View style={tw`bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4 flex-row items-center focus:border-yellow-400`}>
+                        <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex-row items-center focus:border-yellow-400`}>
                             <Phone size={16} color="#9ca3af" style={tw`mr-3 ml-1`} />
                             <Text style={tw`text-sm font-bold text-gray-500 mr-2`}>+91</Text>
                             <TextInput
-                                style={tw`flex-1 text-base font-bold text-gray-900 h-full`}
+                                style={tw`flex-1 text-lg font-bold text-gray-900 h-full py-1`}
                                 placeholder="XXXXX XXXXX"
                                 keyboardType="phone-pad"
                                 value={phoneNumber}
                                 onChangeText={setPhoneNumber}
                                 autoFocus
                                 selectionColor="#ca8a04"
+                                placeholderTextColor="#9ca3af"
                             />
                         </View>
 
@@ -94,24 +95,24 @@ export const LoginScreen = () => {
                         )}
 
                         <TouchableOpacity
-                            style={tw`w-full bg-yellow-400 rounded-xl py-3.5 shadow-sm items-center flex-row justify-center gap-2`}
+                            style={tw`w-full bg-yellow-400 rounded-2xl py-4 shadow-sm items-center flex-row justify-center gap-2`}
                             onPress={handleSendOTP}
                             disabled={loading}
                         >
                             {loading ? <ActivityIndicator size="small" color="black" /> : (
                                 <>
                                     <Text style={tw`text-black font-black text-xs uppercase tracking-widest`}>Get OTP</Text>
-                                    <ArrowRight size={14} color="black" />
+                                    <ArrowRight size={16} color="black" />
                                 </>
                             )}
                         </TouchableOpacity>
                     </Animated.View>
                 ) : (
                     <Animated.View entering={SlideInRight} exiting={SlideOutLeft} style={tw`w-full`}>
-                        <View style={tw`bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4 flex-row items-center justify-center focus:border-yellow-400`}>
+                        <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-6 flex-row items-center justify-center focus:border-yellow-400`}>
                             <Lock size={16} color="#9ca3af" style={tw`absolute left-4`} />
                             <TextInput
-                                style={tw`text-xl font-black text-gray-900 h-full tracking-[10px] text-center w-full`} // W-full to center text properly
+                                style={tw`text-xl font-black text-gray-900 h-full tracking-[10px] text-center w-full py-1`} // W-full to center text properly
                                 placeholder="------"
                                 keyboardType="number-pad"
                                 maxLength={6}
@@ -119,6 +120,7 @@ export const LoginScreen = () => {
                                 onChangeText={setVerificationCode}
                                 autoFocus
                                 selectionColor="#ca8a04"
+                                placeholderTextColor="#9ca3af"
                             />
                         </View>
 
@@ -129,14 +131,14 @@ export const LoginScreen = () => {
                         )}
 
                         <TouchableOpacity
-                            style={tw`w-full bg-gray-900 rounded-xl py-3.5 shadow-sm items-center flex-row justify-center gap-2`}
+                            style={tw`w-full bg-yellow-400 rounded-2xl py-4 shadow-sm items-center flex-row justify-center gap-2`}
                             onPress={handleVerifyOTP}
                             disabled={loading}
                         >
-                            {loading ? <ActivityIndicator size="small" color="white" /> : (
+                            {loading ? <ActivityIndicator size="small" color="black" /> : (
                                 <>
-                                    <Text style={tw`text-white font-black text-xs uppercase tracking-widest`}>Verify & Login</Text>
-                                    <ArrowRight size={14} color="white" />
+                                    <Text style={tw`text-black font-black text-xs uppercase tracking-widest`}>Verify & Login</Text>
+                                    <ArrowRight size={16} color="black" />
                                 </>
                             )}
                         </TouchableOpacity>
