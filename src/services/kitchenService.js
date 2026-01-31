@@ -113,15 +113,12 @@ export const createKitchen = async (ownerId, kitchenData) => {
 
         const docRef = await addDoc(collection(db, 'kitchens'), newKitchen);
 
-        // Initialize admin setup completion flag in a separate collection FIRST
-        await setDoc(doc(db, 'admins', ownerId), {
+
+        // Update owner's profile: set currentKitchenId and track setup status
+        await updateDoc(doc(db, 'users', ownerId), {
+            currentKitchenId: docRef.id,
             adminSetupCompleted: false,
             updatedAt: serverTimestamp()
-        });
-
-        // THEN update owner's profile to set currentKitchenId (which triggers navigation)
-        await updateDoc(doc(db, 'users', ownerId), {
-            currentKitchenId: docRef.id
         });
 
         return { id: docRef.id, ...newKitchen, error: null };

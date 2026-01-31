@@ -36,7 +36,13 @@ export const RootNavigator = () => {
                     return;
                 }
 
-                // 2. Fallback to user-specific AsyncStorage
+                // If it's explicitly false in Firestore, it's a new user/need to watch
+                if (userProfile.hasWatchedIntro === false) {
+                    setIntroWatched(false);
+                    return;
+                }
+
+                // 2. Fallback to user-specific AsyncStorage (for legacy users who haven't synced yet)
                 const storageKey = `HAS_WATCHED_INTRO_${userProfile.role.toUpperCase()}_${user.uid}`;
 
                 try {
