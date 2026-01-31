@@ -19,11 +19,6 @@ export const ProfileScreen = () => {
 
     React.useEffect(() => {
         setEditedName(userProfile?.name || '');
-
-        // Mark onboarding as seen if this is the first time landing here
-        if (userProfile && userProfile.hasSeenOnboarding === false) {
-            updateUserProfile(user.uid, { hasSeenOnboarding: true });
-        }
     }, [userProfile]);
 
     const handleSaveProfile = async () => {
@@ -140,7 +135,7 @@ export const ProfileScreen = () => {
                 )}
 
                 {/* Logout Button - Minimalist Understated */}
-                 <Pressable
+                <Pressable
                     onPress={handleLogout}
                     style={({ pressed }) => [
                         tw`bg-red-50 rounded-[24px] p-4 mb-5 flex-row items-center justify-center gap-3 border border-red-100`,

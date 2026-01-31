@@ -35,7 +35,6 @@ export const StudentSetupScreen = () => {
         const result = await createUserProfile(user.uid, {
             name: name.trim(),
             phoneNumber: user.phoneNumber,
-            hasSeenOnboarding: false, // For first-time profile landing
         });
         if (result.error) Alert.alert("Error", result.error);
         setLoading(false);

@@ -12,12 +12,9 @@ import { StudentTabBar } from '../components/StudentTabBar';
 const Tab = createBottomTabNavigator();
 
 export const StudentStack = () => {
-    const { userProfile } = useAuth();
-    const isFirstTime = userProfile && userProfile.hasSeenOnboarding === false;
-
     return (
         <Tab.Navigator
-            initialRouteName={isFirstTime ? "Profile" : "Home"}
+            initialRouteName="Home"
             tabBar={props => <StudentTabBar {...props} />}
             screenOptions={{
                 headerShown: false,

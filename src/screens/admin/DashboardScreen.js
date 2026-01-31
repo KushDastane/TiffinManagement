@@ -23,6 +23,8 @@ export const DashboardScreen = ({ navigation }) => {
         pendingPayments: 0,
         studentsToday: 0
     });
+
+    console.warn('🏠 [DashboardScreen] Home Tab Rendered');
     const [menuData, setMenuData] = useState(null);
     const [orders, setOrders] = useState([]);
     const [refreshing, setRefreshing] = useState(false);

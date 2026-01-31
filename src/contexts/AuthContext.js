@@ -21,19 +21,29 @@ export const AuthProvider = ({ children }) => {
             if (firebaseUser) {
                 setLoading(true);
                 setUserProfile(null);
+
+                // Session flag to distinguish between new users and deleted accounts
+                let profileWasFound = false;
+
                 // Real-time listener for user profile
                 const userRef = doc(db, 'users', firebaseUser.uid);
                 profileUnsubscribe = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
+                        profileWasFound = true;
                         setUserProfile(docSnap.data());
                         setLoading(false);
                     } else {
                         // Profile was deleted or doesn't exist
                         setUserProfile(null);
-                        // If we are "logged in" but have no profile, we should sign out
-                        // to prevent being stuck in a partial auth state.
-                        auth.signOut();
-                        setLoading(false);
+
+                        if (profileWasFound) {
+                            // If it existed before and now it's gone, it was deleted.
+                            // Sign out to force redirect to login screen.
+                            auth.signOut();
+                        } else {
+                            // It's a brand new user, let them complete registration.
+                            setLoading(false);
+                        }
                     }
                 }, (error) => {
                     console.error("Error fetching user profile:", error);

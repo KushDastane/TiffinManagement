@@ -11,6 +11,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CustomTabBar } from '../components/CustomTabBar';
 import { Home, Package, Utensils, IndianRupee, Users, Settings as SettingsIcon } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { LoadingScreen } from '../screens/LoadingScreen';
 
 const Tab = createBottomTabNavigator();
 const StudentStackNav = createNativeStackNavigator();
@@ -46,12 +50,34 @@ const AdminSettingsStack = () => (
 /* ---------------- ADMIN TAB NAV ---------------- */
 
 export const AdminStack = () => {
-    const { userProfile } = useAuth();
-    const isFirstTime = userProfile && userProfile.hasSeenOnboarding === false;
+    const { user } = useAuth();
+    const [setupStatus, setSetupStatus] = useState(null); // 'pending', 'completed', or null for loading
+
+    useEffect(() => {
+        const checkSetup = async () => {
+            try {
+                const adminRef = doc(db, 'admins', user.uid);
+                const snap = await getDoc(adminRef);
+                if (snap.exists() && snap.data().adminSetupCompleted === true) {
+                    setSetupStatus('completed');
+                } else {
+                    setSetupStatus('pending');
+                }
+            } catch (error) {
+                console.error("Error checking admin setup status:", error);
+                setSetupStatus('completed'); // Fallback to Home on error
+            }
+        };
+        checkSetup();
+    }, [user.uid]);
+
+    if (setupStatus === null) {
+        return <LoadingScreen />;
+    }
 
     return (
         <Tab.Navigator
-            initialRouteName={isFirstTime ? "Settings" : "Home"}
+            initialRouteName={setupStatus === 'pending' ? "Settings" : "Home"}
             tabBar={(props) => <CustomTabBar {...props} />}
             screenOptions={{
                 headerShown: false,

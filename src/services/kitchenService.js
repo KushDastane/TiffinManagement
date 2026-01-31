@@ -44,9 +44,9 @@ export const createKitchen = async (ownerId, kitchenData) => {
 
         const SLOT_DEFAULTS = {
             breakfast: { active: false, start: '22:00', end: '07:00', pickupStart: '07:30', pickupEnd: '09:00', deliveryStart: '07:30', deliveryEnd: '09:00' },
-            lunch: { active: true, start: '22:00', end: '14:00', pickupStart: '12:30', pickupEnd: '14:30', deliveryStart: '12:30', deliveryEnd: '14:30' },
+            lunch: { active: false, start: '22:00', end: '14:00', pickupStart: '12:30', pickupEnd: '14:30', deliveryStart: '12:30', deliveryEnd: '14:30' },
             snacks: { active: false, start: '16:00', end: '18:00', pickupStart: '17:00', pickupEnd: '19:00', deliveryStart: '17:00', deliveryEnd: '19:00' },
-            dinner: { active: true, start: '16:00', end: '20:00', pickupStart: '19:30', pickupEnd: '21:30', deliveryStart: '19:30', deliveryEnd: '21:30' }
+            dinner: { active: false, start: '16:00', end: '20:00', pickupStart: '19:30', pickupEnd: '21:30', deliveryStart: '19:30', deliveryEnd: '21:30' }
         };
 
         if (kitchenType === 'DABBA') {
@@ -99,10 +99,16 @@ export const createKitchen = async (ownerId, kitchenData) => {
 
         const docRef = await addDoc(collection(db, 'kitchens'), newKitchen);
 
-        // Update owner's profile to set currentKitchenId and mark for onboarding redirect
+        // Update owner's profile to set currentKitchenId
         await updateDoc(doc(db, 'users', ownerId), {
-            currentKitchenId: docRef.id,
-            hasSeenOnboarding: false // Admins land on Settings first time
+            currentKitchenId: docRef.id
+        });
+
+        // Initialize admin setup completion flag in a separate collection
+        const { setDoc } = await import('firebase/firestore');
+        await setDoc(doc(db, 'admins', ownerId), {
+            adminSetupCompleted: false,
+            updatedAt: serverTimestamp()
         });
 
         return { id: docRef.id, ...newKitchen, error: null };

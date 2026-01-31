@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { getKitchenConfig, updateKitchenConfig, updateKitchen } from '../../services/kitchenService';
 import { logoutUser, updateUserProfile } from '../../services/authService';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin, CreditCard, Info } from 'lucide-react-native';
@@ -88,6 +90,7 @@ export const SettingsScreen = () => {
     useEffect(() => {
         const load = async () => {
             const data = await getKitchenConfig(tenant?.id);
+            console.log('[SettingsScreen] Loaded Config:', data);
             setConfig(data);
             setLoading(false);
         };
@@ -98,7 +101,7 @@ export const SettingsScreen = () => {
     const [picker, setPicker] = useState({ show: false, mode: 'time', field: null, subField: null, value: new Date() });
 
     useEffect(() => {
-        if (userProfile && userProfile.hasSeenOnboarding === false) {
+        if (userProfile && userProfile.hasSeenOnboarding !== true) {
             updateUserProfile(user.uid, { hasSeenOnboarding: true });
         }
     }, [userProfile]);
@@ -193,8 +196,13 @@ export const SettingsScreen = () => {
             whatsapp: localKitchen.whatsapp
         });
         setSavingBasic(false);
-        if (result.success) Alert.alert("Success", "Kitchen details updated");
-        else Alert.alert("Error", result.error);
+        if (result.success) {
+            Alert.alert("Success", "Kitchen details updated");
+            // Mark setup as completed
+            await setDoc(doc(db, 'admins', user.uid), { adminSetupCompleted: true }, { merge: true });
+        } else {
+            Alert.alert("Error", result.error);
+        }
     };
 
     const handleSavePartner = async () => {
@@ -225,8 +233,13 @@ export const SettingsScreen = () => {
         setSavingConfig(true);
         const result = await updateKitchenConfig(tenant.id, config);
         setSavingConfig(false);
-        if (result.success) Alert.alert("Success", "Meal settings updated");
-        else Alert.alert("Error", result.error);
+        if (result.success) {
+            Alert.alert("Success", "Meal settings updated");
+            // Mark setup as completed
+            await setDoc(doc(db, 'admins', user.uid), { adminSetupCompleted: true }, { merge: true });
+        } else {
+            Alert.alert("Error", result.error);
+        }
     };
 
     const handleCopyCode = async () => {
