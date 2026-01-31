@@ -7,7 +7,8 @@ import {
     ActivityIndicator,
     ImageBackground,
     RefreshControl,
-    Alert
+    Alert,
+    Modal
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTenant } from "../../contexts/TenantContext";
@@ -47,47 +48,101 @@ const KitchenSelector = ({ joinedKitchens, currentKitchen, onSwitch }) => {
     if (joinedKitchens.length <= 1) return null;
 
     return (
-        <View style={tw`z-50`}>
+        <>
             <Pressable
-                onPress={() => setShowOptions(!showOptions)}
-                style={tw`flex-row items-center bg-white/40 px-3 py-1.5 rounded-full border border-white/20`}
+                onPress={() => setShowOptions(true)}
+                style={({ pressed }) => [
+                    tw`flex-row items-center bg-white border border-gray-200 rounded-full px-2 py-1.5 shadow-sm`,
+                    pressed && tw`bg-gray-50`
+                ]}
             >
-                <ChefHat size={14} color="#ca8a04" style={tw`mr-2`} />
-                <Text style={tw`text-[10px] font-black text-gray-700 uppercase tracking-widest mr-1`}>
+                <ChefHat size={11} color="#ca8a04" style={tw`mr-1.5`} />
+                <Text
+                    style={tw`text-[9px] font-black text-gray-800 uppercase tracking-widest mr-1.5 max-w-[70px]`}
+                    numberOfLines={1}
+                >
                     {currentKitchen?.name || 'Kitchen'}
                 </Text>
-                <ChevronDown size={12} color="#ca8a04" />
+                <ChevronDown size={10} color="#9ca3af" />
             </Pressable>
 
-            {showOptions && (
-                <View style={tw`absolute top-10 right-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 w-48`}>
-                    <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2 mt-1`}>
-                        Switch Kitchen
-                    </Text>
-                    {joinedKitchens.map((k) => (
-                        <Pressable
-                            key={k.id}
-                            onPress={() => {
-                                onSwitch(k.id);
-                                setShowOptions(false);
-                            }}
-                            style={[
-                                tw`p-3 rounded-xl mb-1 flex-row items-center justify-between`,
-                                k.id === currentKitchen?.id ? tw`bg-yellow-50` : tw`bg-transparent`
-                            ]}
+            {/* Modal for Dropdown to prevent clipping */}
+            <Modal
+                transparent={true}
+                visible={showOptions}
+                animationType="fade"
+                onRequestClose={() => setShowOptions(false)}
+            >
+                <View style={tw`flex-1 bg-black/60 justify-center items-center p-6`}>
+                    <Pressable style={tw`absolute inset-0`} onPress={() => setShowOptions(false)} />
+
+                    <View style={tw`bg-white w-full max-w-xs rounded-3xl overflow-hidden shadow-2xl`}>
+                        {/* Header */}
+                        <LinearGradient
+                            colors={['#fefce8', '#ffffff']}
+                            style={tw`px-6 py-5 border-b border-gray-100`}
                         >
-                            <Text style={[
-                                tw`text-xs font-bold`,
-                                k.id === currentKitchen?.id ? tw`text-yellow-700` : tw`text-gray-600`
-                            ]}>
-                                {k.name}
-                            </Text>
-                            {k.id === currentKitchen?.id && <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />}
+                            <Text style={tw`text-lg font-black text-gray-900 mb-1`}>Switch Kitchen</Text>
+                            <Text style={tw`text-xs text-gray-500 font-medium`}>Select a workspace to view</Text>
+                        </LinearGradient>
+
+                        <View style={tw`p-4`}>
+                            {joinedKitchens.map((k) => {
+                                const isActive = k.id === currentKitchen?.id;
+                                return (
+                                    <Pressable
+                                        key={k.id}
+                                        onPress={() => {
+                                            onSwitch(k.id);
+                                            setShowOptions(false);
+                                        }}
+                                        style={({ pressed }) => [
+                                            tw`p-4 rounded-2xl mb-2 flex-row items-center gap-4`,
+                                            isActive ? tw`bg-yellow-50 border border-yellow-200` : (pressed ? tw`bg-gray-50 border border-transparent` : tw`border border-transparent`)
+                                        ]}
+                                    >
+                                        <View style={[
+                                            tw`w-10 h-10 rounded-full items-center justify-center shadow-sm`,
+                                            isActive ? tw`bg-white` : tw`bg-gray-100`
+                                        ]}>
+                                            <ChefHat size={18} color={isActive ? "#ca8a04" : "#9ca3af"} />
+                                        </View>
+
+                                        <View style={tw`flex-1`}>
+                                            <Text style={[
+                                                tw`text-sm font-black mb-0.5`,
+                                                isActive ? tw`text-gray-900` : tw`text-gray-600`
+                                            ]} numberOfLines={1}>
+                                                {k.name}
+                                            </Text>
+                                            <Text style={[
+                                                tw`text-[10px] font-bold uppercase tracking-wider`,
+                                                isActive ? tw`text-yellow-600` : tw`text-gray-400`
+                                            ]}>
+                                                {isActive ? 'Current Workspace' : 'Switch to this'}
+                                            </Text>
+                                        </View>
+
+                                        {isActive && (
+                                            <View style={tw`bg-yellow-400 p-1.5 rounded-full`}>
+                                                <CheckCircle size={12} color="white" />
+                                            </View>
+                                        )}
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+
+                        <Pressable
+                            onPress={() => setShowOptions(false)}
+                            style={tw`py-4 bg-gray-50 items-center border-t border-gray-100 active:bg-gray-100`}
+                        >
+                            <Text style={tw`text-sm font-black text-gray-500 uppercase tracking-widest`}>Cancel</Text>
                         </Pressable>
-                    ))}
+                    </View>
                 </View>
-            )}
-        </View>
+            </Modal>
+        </>
     );
 };
 
@@ -410,13 +465,19 @@ export const HomeScreen = () => {
         <View style={tw`flex-1  bg-[#faf9f6]`}>
             {/* Absolute Creative Header - Premium Hook */}
             <View style={tw`absolute top-0 left-0 right-0 z-10`}>
-                <LinearGradient
-                    colors={['#fef9c3', '#faf9f6']}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={tw`pt-14 pb-12 mb-2 px-6 rounded-b-[45px] shadow-sm`}
-                >
-                    <View style={tw`flex-row  justify-between items-start`}>
+                {/* Background Layer with Rounded Corners & Clipping */}
+                <View style={[tw`absolute inset-0 rounded-b-[45px] overflow-hidden`, { borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }]}>
+                    <LinearGradient
+                        colors={['#fef9c3', '#faf9f6']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={tw`flex-1`}
+                    />
+                </View>
+
+                {/* Content Layer - No Clipping (Allows Dropdown to Overflow) */}
+                <View style={tw`pt-14 pb-12 mb-2 px-6`}>
+                    <View style={tw`flex-row justify-between items-start`}>
                         <View>
                             <View style={tw`flex-row items-center gap-2 mb-2`}>
                                 <View style={tw`w-2 h-2 rounded-full bg-yellow-400`} />
@@ -430,7 +491,7 @@ export const HomeScreen = () => {
                             </Text>
                         </View>
 
-                        <View style={tw`items-end gap-3`}>
+                        <View style={tw`items-end gap-3 z-50`}>
                             <KitchenSelector
                                 joinedKitchens={joinedKitchens}
                                 currentKitchen={tenant}
@@ -448,7 +509,7 @@ export const HomeScreen = () => {
                             </View>
                         </View>
                     </View>
-                </LinearGradient>
+                </View>
             </View>
 
             <ScrollView
