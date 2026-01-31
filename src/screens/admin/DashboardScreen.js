@@ -190,13 +190,16 @@ export const DashboardScreen = ({ navigation }) => {
     }
     return (
         <View style={tw`flex-1 bg-[#faf9f6]`}>
-            {/* 1. Creative Absolute Header - Fixed & Sticky */}
-            <View style={tw`absolute pb-3 top-0 left-0 right-0 z-10`}>
+            {/* 1. Premium Glow Header - Admin Redesign */}
+            <View style={tw`absolute top-0 pb-10 left-0 right-0 z-20`}>
                 <LinearGradient
                     colors={['#fffbeb', '#fef9c3', '#faf9f6']}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
-                    style={tw`pt-16 pb-14 px-6 rounded-b-[50px] shadow-sm`}
+                    style={[
+                        tw`pt-16 pb-14 px-6 rounded-b-[60px]`,
+                        { elevation: 15, shadowColor: '#ca8a04', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 }
+                    ]}
                 >
                     <View style={tw`flex-row justify-between items-start mb-8`}>
                         <View>

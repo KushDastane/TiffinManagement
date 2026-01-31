@@ -463,20 +463,19 @@ export const HomeScreen = () => {
 
     return (
         <View style={tw`flex-1  bg-[#faf9f6]`}>
-            {/* Absolute Creative Header - Premium Hook */}
-            <View style={tw`absolute top-0 left-0 right-0 z-10`}>
-                {/* Background Layer with Rounded Corners & Clipping */}
-                <View style={[tw`absolute inset-0 rounded-b-[45px] overflow-hidden`, { borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }]}>
-                    <LinearGradient
-                        colors={['#fef9c3', '#faf9f6']}
-                        start={{ x: 0.5, y: 0 }}
-                        end={{ x: 0.5, y: 1 }}
-                        style={tw`flex-1`}
-                    />
-                </View>
-
-                {/* Content Layer - No Clipping (Allows Dropdown to Overflow) */}
-                <View style={tw`pt-14 pb-12 mb-2 px-6`}>
+            {/* Premium Admin-Style Header - Full Width with Deep Curve */}
+            <View style={tw`absolute top-0 pb-10 left-0 right-0 z-10`}>
+                {/* Background Gradient Layer */}
+                <LinearGradient
+                    colors={['#fffbeb', '#fef9c3', '#faf9f6']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={[
+                        tw`pt-16 pb-16 px-6 rounded-b-[60px]`,
+                        { elevation: 15, shadowColor: '#ca8a04', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 }
+                    ]}
+                >
+                    {/* Content Layer */}
                     <View style={tw`flex-row justify-between items-start`}>
                         <View>
                             <View style={tw`flex-row items-center gap-2 mb-2`}>
@@ -489,6 +488,49 @@ export const HomeScreen = () => {
                                 {getGreeting()},{"\n"}
                                 <Text style={tw`text-yellow-600 font-black`}>{userProfile?.name?.split(' ')[0] || 'User'}</Text>
                             </Text>
+
+                            <Pressable
+                                onPress={() => navigation.navigate('Khata')}
+                                style={({ pressed }) => [
+                                    tw`mt-4 self-start overflow-hidden rounded-[24px] border border-white/10`,
+                                    { elevation: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 10 },
+                                    pressed && tw`opacity-90 scale-[0.98]`
+                                ]}
+                            >
+                                <LinearGradient
+                                    colors={['#0f172a', '#1e293b', '#020617']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={tw`px-5 py-3.5 flex-row items-center justify-between gap-6`}
+                                >
+                                    <View>
+                                        <Text style={tw`text-[8px] font-black text-white/40 uppercase tracking-[0.2px] mb-0.5`}>
+                                            Wallet Balance
+                                        </Text>
+                                        <View style={tw`flex-row items-baseline gap-1`}>
+                                            <Text style={[
+                                                tw`text-xl font-black tracking-tight`,
+                                                balance < 0 ? tw`text-red-400` : tw`text-white`
+                                            ]}>
+                                                ₹{balance?.toFixed(0) || 0}
+                                            </Text>
+                                            <Text style={tw`text-[10px] font-black text-white/30`}>.00</Text>
+                                        </View>
+                                        <Text style={[
+                                            tw`text-[7px] font-bold uppercase tracking-wider mt-1`,
+                                            balance <= 0 ? tw`text-red-400` : tw`text-emerald-400/60`
+                                        ]}>
+                                            {balance <= 0
+                                                ? `Fill Fast • Limit ₹${tenant?.maxDueLimit || 0}`
+                                                : 'Sufficient Balance'}
+                                        </Text>
+                                    </View>
+
+                                    <View style={tw`w-10 h-10 rounded-2xl bg-white/10 items-center justify-center border border-white/5`}>
+                                        <Plus size={18} color="#facc15" strokeWidth={4} />
+                                    </View>
+                                </LinearGradient>
+                            </Pressable>
                         </View>
 
                         <View style={tw`items-end gap-3 z-50`}>
@@ -509,23 +551,28 @@ export const HomeScreen = () => {
                             </View>
                         </View>
                     </View>
-                </View>
+                </LinearGradient>
             </View>
 
             <ScrollView
                 style={tw`flex-1`}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                contentContainerStyle={tw`p-6 pt-56 pb-32`}
+                contentContainerStyle={tw`px-6 pt-84 pb-32`}
+
             >
-                {/* Dynamic Status Card */}
-                <View style={[tw`rounded-[32px] mb-6 mt-7 shadow-xl shadow-gray-200/50`, { backgroundColor: 'white' }]}>
+                {/* Dynamic Status Card - Fully Rounded Admin Aesthetic */}
+                <View style={[tw`rounded-[45px] mb-6 shadow-xl shadow-gray-200/50`, { backgroundColor: 'white' }]}>
                     <LinearGradient
                         colors={config.gradient}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
-                        style={[tw`p-7 rounded-[32px] overflow-hidden border`, tw`${config.border}`]}
+                        style={[
+                            tw`p-8 rounded-[45px] overflow-hidden border`,
+                            { borderColor: 'rgba(0,0,0,0.02)' }
+                        ]}
                     >
+
                         {/* Creative Background Decor */}
                         <View style={[tw`absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-20`, { backgroundColor: config.accentColor }]} />
                         <View style={[tw`absolute top-10 -right-4 w-12 h-12 rounded-full opacity-10`, { backgroundColor: config.accentColor }]} />
@@ -618,10 +665,9 @@ export const HomeScreen = () => {
                 {/* Weekly Summary */}
                 <WeekSummary orders={myOrders} />
 
-                {/* Wallet Balance */}
-                <WalletCard balance={balance} loading={balanceLoading} />
+
 
             </ScrollView>
-        </View>
+        </View >
     );
 };
