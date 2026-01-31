@@ -16,8 +16,8 @@ import { getTodayKey } from './menuService';
  * @param {string} slot - "lunch" | "dinner"
  * @param {function} callback 
  */
-export const listenToAdminStats = (kitchenId, slot, callback) => {
-    const today = getTodayKey();
+export const listenToAdminStats = (kitchenId, slot, callback, dateId) => {
+    const today = dateId || getTodayKey();
 
     // Stats to track
     let stats = {

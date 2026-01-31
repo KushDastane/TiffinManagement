@@ -225,6 +225,7 @@ export const OrderScreen = ({ navigation }) => {
             phoneNumber: userProfile?.phoneNumber,
             mealType: selectedSlot.toUpperCase(),
             slot: selectedSlot,
+            dateId: getSlotDateKey(selectedSlot, tenant),
             isPriority: selectedSlot === 'lunch' ? isPriority : false,
             serviceMode: orderMode,
             deliveryAddress: orderMode === 'DELIVERY' ? deliveryAddress : null,

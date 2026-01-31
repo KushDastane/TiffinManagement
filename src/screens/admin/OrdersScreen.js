@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert,
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { subscribeToOrders, updateOrder, placeManualOrder } from '../../services/orderService';
-import { getTodayKey, subscribeToMenu, getEffectiveMealSlot } from '../../services/menuService';
+import { getTodayKey, subscribeToMenu, getEffectiveMealSlot, getSlotDateKey } from '../../services/menuService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Search, Clock, Check, ChevronRight, User, Package, Filter, Plus, ChevronLeft, Phone, Info, UserPlus, X, Wallet } from 'lucide-react-native';
@@ -102,13 +102,15 @@ export const OrdersScreen = () => {
     useEffect(() => {
         if (!tenant?.id) return;
         setLoading(true);
-        const unsub = subscribeToOrders(tenant.id, today, (list) => {
+
+        const currentSlotDate = getSlotDateKey(activeSlot, tenant);
+        const unsub = subscribeToOrders(tenant.id, currentSlotDate, (list) => {
             setOrders(list);
             setLoading(false);
             setRefreshing(false);
         });
         return unsub;
-    }, [tenant?.id, today]);
+    }, [tenant?.id, activeSlot]);
 
     const filteredOrders = useMemo(() => {
         return orders.filter(o => {

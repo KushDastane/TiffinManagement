@@ -120,21 +120,19 @@ export const isAfterResetTime = (kitchenConfig) => {
     return compareTimes(currentTime, lastSlot.end || "00:00") > 0;
 };
 
-/**
- * Gets all currently available meal slots for a student to order.
- */
 export const getAvailableSlots = (kitchenConfig) => {
     if (!kitchenConfig?.mealSlots) return [];
 
     const now = new Date();
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const preorderTime = isAfterResetTime(kitchenConfig);
 
     // Return only slots that are active AND not yet ended for the current/approaching window.
     // This keeps "Place Order" visible for pre-orders but cleans up the tag list.
     return Object.entries(kitchenConfig.mealSlots)
         .filter(([id, slot]) => slot && slot.active)
         .map(([id, slot]) => ({ id, ...slot }))
-        .filter(slot => getSlotStatus(slot, currentTime) !== 'ENDED')
+        .filter(slot => preorderTime || getSlotStatus(slot, currentTime) !== 'ENDED')
         .sort((a, b) => compareTimes(a.start || "00:00", b.start || "00:00"));
 };
 

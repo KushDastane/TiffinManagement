@@ -19,6 +19,8 @@ import {
     getAvailableSlots,
     getBusinessDate,
     getSlotDateKey,
+    getSlotStatus,
+    getTodayKey,
 } from "../../services/menuService";
 import {
     subscribeToMyOrders,
@@ -39,7 +41,8 @@ import {
     UtensilsCrossed,
     Moon,
     ChevronDown,
-    ChefHat
+    ChefHat,
+    Timer
 } from 'lucide-react-native';
 import { switchKitchen } from "../../services/kitchenService";
 
@@ -315,8 +318,23 @@ export const HomeScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const activeSlot = useMemo(() => getEffectiveMealSlot(tenant), [tenant]);
-    const dateId = useMemo(() => getSlotDateKey(activeSlot, tenant), [tenant, activeSlot]);
+    // Auto-refresh timer to keep meal statuses and keys up to date (every minute)
+    const [tick, setTick] = useState(0);
+    useEffect(() => {
+        const timer = setInterval(() => setTick(prev => prev + 1), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const activeSlot = useMemo(() => getEffectiveMealSlot(tenant), [tenant, tick]);
+    const activeSlotStatus = useMemo(() => {
+        if (!tenant?.mealSlots?.[activeSlot]) return 'ENDED';
+        const now = new Date();
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        return getSlotStatus(tenant.mealSlots[activeSlot], currentTime);
+    }, [tenant, activeSlot, tick]);
+
+    const dateId = useMemo(() => getSlotDateKey(activeSlot, tenant), [tenant, activeSlot, tick]);
+    const todayBusinessId = useMemo(() => getTodayKey(), [tick]);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -346,21 +364,33 @@ export const HomeScreen = () => {
 
         const unsubOrders = subscribeToMyOrders(tenant.id, user.uid, userProfile?.phoneNumber, (data) => {
             setMyOrders(data);
-            // 1. Try to find order for the SPECIFIC active slot
-            let today = data.find(o => o.dateId === dateId && o.slot === activeSlot);
 
-            // 2. Fallback: If no order for active slot, check for any COMPLETED order from today
-            // (This handles case where Lunch slot ends but student hasn't collected Lunch yet)
-            if (!today) {
-                today = data.find(o => o.dateId === dateId && o.status === 'COMPLETED');
+            // 1. Get all actionable orders for the current business cycle
+            const activeOrders = data.filter(o =>
+                (o.dateId === dateId || o.dateId === todayBusinessId) &&
+                ['PENDING', 'CONFIRMED', 'PLACED', 'placed', 'pending'].includes(o.status?.toUpperCase() || o.status)
+            ).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            // 2. Get all completed orders for current business day
+            const completedToday = data.filter(o =>
+                o.dateId === todayBusinessId &&
+                o.status?.toUpperCase() === 'COMPLETED'
+            ).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            // 3. Selection Priority: Latest Active > Latest Completed
+            let bestMatch = activeOrders[0] || completedToday[0];
+
+            // 4. Global Fallback: Most recent active order ever
+            if (!bestMatch) {
+                bestMatch = data.find(o => ['PENDING', 'CONFIRMED', 'PLACED', 'placed', 'pending'].includes(o.status?.toUpperCase() || o.status));
             }
 
-            setTodaysOrder(today);
+            setTodaysOrder(bestMatch);
         });
 
         setLoading(false);
         return () => unsubOrders();
-    }, [tenant?.id, user?.uid, dateId, activeSlot]);
+    }, [tenant?.id, user?.uid, dateId, todayBusinessId, activeSlot]);
 
 
     const onRefresh = async () => {
@@ -370,7 +400,7 @@ export const HomeScreen = () => {
     };
 
     // Kitchen is considered open if not on holiday and has active slots
-    const availableSlots = useMemo(() => getAvailableSlots(tenant), [tenant]);
+    const availableSlots = useMemo(() => getAvailableSlots(tenant), [tenant, tick]);
     const kitchenOpen = useMemo(() => {
         if (tenant?.holiday?.active) return false;
         return availableSlots.length > 0;
@@ -388,12 +418,27 @@ export const HomeScreen = () => {
     }, [tenant?.id, dateId]);
 
     // Derived Status for UI
-    const orderStatus = todaysOrder ? todaysOrder.status : 'NO_ORDER';
+    const orderStatus = todaysOrder ? todaysOrder.status?.toUpperCase() : 'NO_ORDER';
     // Statuses: NO_ORDER, PENDING, CONFIRMED, COMPLETED
 
     const getStatusConfig = () => {
+        if (tenant?.holiday?.active) {
+            return {
+                gradient: ['#fff7ed', '#fff'],
+                border: 'border-orange-100',
+                iconBg: tw`bg-orange-100`,
+                icon: <Coffee size={24} color="#ea580c" />,
+                title: 'Holiday Mode',
+                subtitle: tenant.holiday.message || 'The kitchen is taking a break today.',
+                titleColor: tw`text-gray-900`,
+                subtitleColor: tw`text-gray-500`,
+                accentColor: '#fdba74'
+            };
+        }
+
         switch (orderStatus) {
             case 'PENDING':
+            case 'PLACED':
                 return {
                     // Creative: Subtle Red/Orange Gradient
                     gradient: ['#fff1f2', '#fff'],
@@ -433,6 +478,34 @@ export const HomeScreen = () => {
                     accentColor: '#6ee7b7'
                 };
             default: // NO_ORDER
+                if (activeSlotStatus === 'UPCOMING') {
+                    return {
+                        gradient: ['#eff6ff', '#fff'],
+                        border: 'border-blue-100',
+                        iconBg: tw`bg-blue-100`,
+                        icon: <Timer size={24} color="#2563eb" />,
+                        title: 'Pre-ordering Open',
+                        subtitle: `Start placing orders for ${dateId === getTodayKey() ? 'the next meal' : 'tomorrow'}!`,
+                        titleColor: tw`text-gray-900`,
+                        subtitleColor: tw`text-gray-500`,
+                        accentColor: '#93c5fd'
+                    };
+                }
+
+                if (!kitchenOpen) {
+                    return {
+                        gradient: ['#f8fafc', '#fff'],
+                        border: 'border-gray-100',
+                        iconBg: tw`bg-gray-50`,
+                        icon: <Moon size={24} color="#94a3b8" />,
+                        title: 'Kitchen Closed',
+                        subtitle: 'No active slots at the moment.',
+                        titleColor: tw`text-gray-900`,
+                        subtitleColor: tw`text-gray-500`,
+                        accentColor: '#cbd5e1'
+                    };
+                }
+
                 return {
                     // Creative: Clean Gray/Slate Gradient
                     gradient: ['#ffffff', '#f8fafc'],

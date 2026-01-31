@@ -26,27 +26,43 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
     const translateX = useSharedValue(state.index * tabWidth);
 
     const [pendingCount, setPendingCount] = React.useState(0);
+    const [paymentPendingCount, setPaymentPendingCount] = React.useState(0);
     const { user } = useAuth();
     const { tenant } = useTenant();
 
     useEffect(() => {
         if (!tenant?.id) return;
 
-        const dateId = new Date().toISOString().split('T')[0];
+        // 1. Listen for ALL Pending Orders (Any date)
         const ordersRef = collection(db, 'kitchens', tenant.id, 'orders');
-        const q = query(
+        const qOrders = query(
             ordersRef,
-            where('dateId', '==', dateId),
-            where('status', 'in', ['PENDING', 'placed'])
+            where('status', 'in', ['PENDING', 'placed', 'pending', 'PLACED'])
         );
 
-        const unsub = onSnapshot(q, (snapshot) => {
+        const unsubOrders = onSnapshot(qOrders, (snapshot) => {
             setPendingCount(snapshot.size);
         }, (error) => {
             console.error("CustomTabBar: Error listening to orders:", error);
         });
 
-        return () => unsub();
+        // 2. Listen for Pending Payments
+        const paymentsRef = collection(db, 'kitchens', tenant.id, 'payments');
+        const qPayments = query(
+            paymentsRef,
+            where('status', '==', 'pending')
+        );
+
+        const unsubPayments = onSnapshot(qPayments, (snapshot) => {
+            setPaymentPendingCount(snapshot.size);
+        }, (error) => {
+            console.error("CustomTabBar: Error listening to payments:", error);
+        });
+
+        return () => {
+            unsubOrders();
+            unsubPayments();
+        };
     }, [tenant?.id]);
 
     useEffect(() => {
@@ -59,6 +75,17 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
     const slidingIndicatorStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }],
     }));
+
+    const renderBadge = (count) => {
+        if (count <= 0) return null;
+        return (
+            <View style={tw`absolute -top-1 -right-1 bg-red-600 min-w-[16px] h-4 rounded-full px-1 items-center justify-center border-2 border-white`}>
+                <Text style={tw`text-[8px] font-black text-white`}>
+                    {count > 9 ? '9+' : count}
+                </Text>
+            </View>
+        );
+    };
 
     return (
         <View style={[
@@ -110,14 +137,9 @@ export const CustomTabBar = ({ state, descriptors, navigation }) => {
                                 <Text style={tw`${isFocused ? 'text-black font-black' : 'text-gray-400'}`}>•</Text>
                             )}
 
-                            {/* Global Pending Signal (on Orders) */}
-                            {route.name === 'Orders' && pendingCount > 0 && (
-                                <View style={tw`absolute -top-1 -right-1 bg-red-600 min-w-[16px] h-4 rounded-full px-1 items-center justify-center border-2 border-white`}>
-                                    <Text style={tw`text-[8px] font-black text-white`}>
-                                        {pendingCount > 9 ? '9+' : pendingCount}
-                                    </Text>
-                                </View>
-                            )}
+                            {/* Signal Badges */}
+                            {route.name === 'Orders' && renderBadge(pendingCount)}
+                            {route.name === 'Payments' && renderBadge(paymentPendingCount)}
                         </View>
 
                         <View style={tw`h-3 justify-center`}>

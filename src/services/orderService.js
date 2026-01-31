@@ -15,6 +15,7 @@ import {
 import { db } from '../config/firebase';
 import { getKitchenConfig } from './kitchenService';
 import { getStudentBalance } from './paymentService';
+import { getTodayKey } from './menuService';
 
 // Helper to normalize phone numbers (standardize to last 10 digits for Indian numbers)
 export const normalizePhone = (phone) => {
@@ -57,7 +58,7 @@ export const placeOrder = async (kitchenId, orderData) => {
         }
 
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
-        const dateId = new Date().toISOString().split('T')[0];
+        const dateId = orderData.dateId || getTodayKey();
 
         await addDoc(ordersRef, {
             ...orderData,
@@ -203,7 +204,7 @@ export const placeManualOrder = async (kitchenId, orderData, adminId) => {
 
         // 2. Place Order
         const ordersRef = collection(db, 'kitchens', kitchenId, 'orders');
-        const dateId = new Date().toISOString().split('T')[0];
+        const dateId = getTodayKey();
 
         await addDoc(ordersRef, {
             ...rest,
@@ -247,12 +248,13 @@ export const getLastOrderForUser = async (kitchenId, userId) => {
 };
 
 export const placeStudentOrder = async (kitchenId, orderData) => {
-    const { studentId, phoneNumber, mealType, items } = orderData;
+    const { studentId, phoneNumber, mealType, items, dateId } = orderData;
 
     // Map simplified structure to our existing placeOrder schema
     const legacyPayload = {
         userId: studentId,
         phoneNumber: phoneNumber,
+        dateId: dateId,
         slot: mealType.toLowerCase(),
         isPriority: orderData.isPriority || false,
         type: items.itemType || 'ROTI_SABZI',

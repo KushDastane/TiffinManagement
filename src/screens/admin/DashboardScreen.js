@@ -45,7 +45,7 @@ export const DashboardScreen = ({ navigation }) => {
     const slot = manualSlot || initialSlot;
 
     // Stats stick to the current Business Day until 4 AM
-    const dateKey = useMemo(() => getTodayKey(), []);
+    const dateKey = useMemo(() => getTodayKey(), [currentTime]);
     // Menu looks at the specific date/cycle for the current slot
     const menuDateKey = useMemo(() => getSlotDateKey(slot, tenant), [tenant, slot]);
 
@@ -63,9 +63,9 @@ export const DashboardScreen = ({ navigation }) => {
     useEffect(() => {
         if (!tenant?.id) return;
 
-        const unsubStats = listenToAdminStats(tenant.id, slot, setStats);
+        const unsubStats = listenToAdminStats(tenant.id, slot, setStats, menuDateKey);
         const unsubMenu = subscribeToMenu(tenant.id, menuDateKey, setMenuData);
-        const unsubOrders = subscribeToOrders(tenant.id, dateKey, (newOrders) => {
+        const unsubOrders = subscribeToOrders(tenant.id, menuDateKey, (newOrders) => {
             console.log("Admin Dashboard: Received orders count:", newOrders.length);
             setOrders(newOrders);
         });
@@ -75,7 +75,7 @@ export const DashboardScreen = ({ navigation }) => {
             unsubMenu();
             unsubOrders();
         };
-    }, [tenant?.id, slot, dateKey]);
+    }, [tenant?.id, slot, menuDateKey]); // Subscribe based on the slot's date
 
     const cookingSummary = useMemo(() => {
         const activeOrders = orders.filter(o => o.slot === slot);
