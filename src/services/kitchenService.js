@@ -8,9 +8,22 @@ import {
     where,
     getDocs,
     arrayUnion,
-    serverTimestamp
+    serverTimestamp,
+    setDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+
+// Helper to calculate service area range (+/- 1 pincode)
+const calculateServicePincodes = (pincode) => {
+    if (!pincode) return [];
+    const pin = Number(pincode);
+    if (isNaN(pin)) return [String(pincode)];
+    return [
+        String(pin - 1),
+        String(pin),
+        String(pin + 1)
+    ];
+};
 
 // Helper to generate a unique random code (AAA-1234)
 const generateJoinCode = async () => {
@@ -94,21 +107,21 @@ export const createKitchen = async (ownerId, kitchenData) => {
             kitchenType,
             serviceMode: 'DELIVERY', // Default
             maxDueLimit: 300, // Default limit
+            servicePincodes: calculateServicePincodes(rest.address?.pinCode),
             ...rest
         };
 
         const docRef = await addDoc(collection(db, 'kitchens'), newKitchen);
 
-        // Update owner's profile to set currentKitchenId
-        await updateDoc(doc(db, 'users', ownerId), {
-            currentKitchenId: docRef.id
-        });
-
-        // Initialize admin setup completion flag in a separate collection
-        const { setDoc } = await import('firebase/firestore');
+        // Initialize admin setup completion flag in a separate collection FIRST
         await setDoc(doc(db, 'admins', ownerId), {
             adminSetupCompleted: false,
             updatedAt: serverTimestamp()
+        });
+
+        // THEN update owner's profile to set currentKitchenId (which triggers navigation)
+        await updateDoc(doc(db, 'users', ownerId), {
+            currentKitchenId: docRef.id
         });
 
         return { id: docRef.id, ...newKitchen, error: null };
@@ -179,12 +192,15 @@ export const getAllKitchens = async (filter = '', locationFilter = null) => {
         const querySnapshot = await getDocs(q);
         let kitchens = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Strict Location Filtering if provided
+        // Smart Location Filtering (Same City + Pincode +/- 1)
         if (locationFilter) {
-            kitchens = kitchens.filter(k =>
-                k.address?.city?.toLowerCase() === locationFilter.city?.toLowerCase() ||
-                k.address?.pinCode === locationFilter.pincode
-            );
+            kitchens = kitchens.filter(k => {
+                const sameCity = k.address?.city?.toLowerCase() === locationFilter.city?.toLowerCase();
+                const studentPin = locationFilter.pincode;
+                // Check if student pin is in kitchen's service area
+                const inRange = k.servicePincodes?.includes(studentPin) || k.address?.pinCode === studentPin;
+                return sameCity && inRange;
+            });
         }
 
         if (filter) {
@@ -210,6 +226,12 @@ export const getAllKitchens = async (filter = '', locationFilter = null) => {
 export const updateKitchen = async (kitchenId, updates) => {
     try {
         const kitchenRef = doc(db, 'kitchens', kitchenId);
+
+        // Recalculate service area if pincode changes
+        if (updates.address?.pinCode) {
+            updates.servicePincodes = calculateServicePincodes(updates.address.pinCode);
+        }
+
         await updateDoc(kitchenRef, {
             ...updates,
             updatedAt: serverTimestamp()

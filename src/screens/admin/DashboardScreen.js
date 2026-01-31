@@ -139,10 +139,10 @@ export const DashboardScreen = ({ navigation }) => {
         if (!tenant || !tenant.mealSlots) return { label: "No Config", color: "gray", subLabel: "Check settings" };
 
         const activeSlots = Object.entries(tenant.mealSlots).filter(([_, s]) => s.active);
-        if (activeSlots.length === 0) return { label: "No Slots", color: "gray", subLabel: "Enable in settings" };
+        if (activeSlots.length === 0) return { label: "Enable in settings", color: "gray" };
 
         const currentSlotObj = tenant.mealSlots[slot];
-        if (!currentSlotObj) return { label: "Off Hours", color: "gray", subLabel: "Kitchen is resting" };
+        if (!currentSlotObj) return { label: "Off Hours", color: "gray" };
 
         const status = getSlotStatus(currentSlotObj, currentTime);
         const slotData = menuData?.[slot];
@@ -225,7 +225,7 @@ export const DashboardScreen = ({ navigation }) => {
                     </View>
 
                     {/* Live Status Card - Dashboard Redesign */}
-                    <Pressable onPress={() => navigation.navigate('Menu')}>
+                    <Pressable onPress={() => enabledSlots.length === 0 ? navigation.navigate('Settings') : navigation.navigate('Menu')}>
                         <LinearGradient
                             colors={
                                 menuStatus.color === 'red' ? ['#450a0a', '#7f1d1d'] :
@@ -241,7 +241,7 @@ export const DashboardScreen = ({ navigation }) => {
                                     <SlotIcon size={22} color="#fbbf24" fill={slot === 'dinner' || slot === 'snacks' ? "#fbbf24" : "transparent"} />
                                 </View>
                                 <View style={tw`flex-1`}>
-                                    <Text style={tw`text-2xl font-black text-white capitalize`}>{slot || 'Resting'}</Text>
+                                    <Text style={tw`text-2xl font-black text-white capitalize`}>{slot || 'No Slots'}</Text>
                                     <View style={tw`flex-row items-center gap-1.5 mt-0.5`}>
                                         <View style={tw`w-2 h-2 rounded-full ${menuStatus.color === 'red' ? 'bg-red-500' : (menuStatus.color === 'green' ? 'bg-emerald-500' : 'bg-amber-400')}`} />
                                         <Text style={tw`text-[10px] text-white/90 font-black uppercase tracking-widest`}>
@@ -278,11 +278,7 @@ export const DashboardScreen = ({ navigation }) => {
                                     </>
                                 ) : (
                                     <>
-                                        <View style={tw`flex-row items-center gap-1.5 mb-0.5`}>
-                                            <Clock size={14} color="#cbd5e1" />
-                                            <Text style={tw`text-xs font-bold text-slate-100`}>Slot Over</Text>
-                                        </View>
-                                        <Text style={tw`text-[9px] text-white/40 uppercase tracking-tighter`}>{menuStatus.subLabel}</Text>
+
                                     </>
                                 )}
                             </View>

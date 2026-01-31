@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, Switch, Platform, TouchableOpacity } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
@@ -9,7 +9,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin, CreditCard, Info } from 'lucide-react-native';
+import { ChefHat, CheckCircle, Clock, IndianRupee, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin, CreditCard, Info, Phone } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
 const SLOT_DEFAULTS = {
@@ -63,6 +63,11 @@ export const SettingsScreen = () => {
     const [savingBasic, setSavingBasic] = useState(false);
     const [savingPartner, setSavingPartner] = useState(false);
     const [savingConfig, setSavingConfig] = useState(false);
+    const [isEditingBasic, setIsEditingBasic] = useState(false);
+    const [isEditingDueLimit, setIsEditingDueLimit] = useState(false);
+    const [isEditingService, setIsEditingService] = useState(false);
+    const [activeEditingSlot, setActiveEditingSlot] = useState(null);
+    const [isEditingHoliday, setIsEditingHoliday] = useState(false);
 
     // Local Edit State
     const [localKitchen, setLocalKitchen] = useState({
@@ -197,10 +202,11 @@ export const SettingsScreen = () => {
         });
         setSavingBasic(false);
         if (result.success) {
+            setSavingBasic(false);
+            setIsEditingBasic(false); // Return to card view
             Alert.alert("Success", "Kitchen details updated");
-            // Mark setup as completed
-            await setDoc(doc(db, 'admins', user.uid), { adminSetupCompleted: true }, { merge: true });
         } else {
+            setSavingBasic(false);
             Alert.alert("Error", result.error);
         }
     };
@@ -218,8 +224,10 @@ export const SettingsScreen = () => {
             deliveryBoyPhone: localKitchen.deliveryBoyPhone
         });
         setSavingPartner(false);
-        if (result.success) Alert.alert("Success", "Delivery partner details updated");
-        else Alert.alert("Error", result.error);
+        if (result.success) {
+            setIsEditingService(false);
+            Alert.alert("Success", "Delivery partner details updated");
+        } else Alert.alert("Error", result.error);
     };
 
     const handleSave = async () => {
@@ -234,10 +242,10 @@ export const SettingsScreen = () => {
         const result = await updateKitchenConfig(tenant.id, config);
         setSavingConfig(false);
         if (result.success) {
+            setIsEditingDueLimit(false);
             Alert.alert("Success", "Meal settings updated");
-            // Mark setup as completed
-            await setDoc(doc(db, 'admins', user.uid), { adminSetupCompleted: true }, { merge: true });
         } else {
+            setSavingConfig(false);
             Alert.alert("Error", result.error);
         }
     };
@@ -289,167 +297,280 @@ export const SettingsScreen = () => {
             >
                 {/* Kitchen Detail & Address */}
                 <View style={tw`bg-white rounded-[30px] p-6 shadow-sm border border-gray-100 mb-5`}>
-                    <View style={tw`flex-row items-center gap-2 mb-6`}>
-                        <MapPin size={16} color="#ca8a04" />
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Kitchen Details & Address</Text>
-                    </View>
+                    {!isEditingBasic ? (
+                        /* Symmetrical & Organized ID Card View */
+                        <View style={tw`items-center`}>
+                            {/* Central Badge Section with Integrated Edit */}
+                            <View style={tw`flex-row items-center w-full gap-5`}>
+                                <View style={tw`items-center justify-center`}>
+                                    <LinearGradient
+                                        colors={['#fffbeb', '#fef08a']}
+                                        style={tw`w-20 h-20 rounded-full items-center justify-center border-4 border-white shadow-md`}
+                                    >
+                                        <ChefHat size={32} color="#ca8a04" />
+                                    </LinearGradient>
+                                    <View style={tw`absolute -bottom-1 bg-yellow-600 px-2.5 py-0.5 rounded-full border-2 border-white`}>
+                                        <Text style={tw`text-[7px] font-black text-white uppercase tracking-tighter`}>Verified Kitchen</Text>
+                                    </View>
+                                </View>
 
-                    <View style={tw`gap-4`}>
-                        <View>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Shop / Kitchen Name</Text>
-                            <TextInput
-                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
-                                value={localKitchen.name}
-                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, name: v })}
-                                placeholder="e.g. Grandma's Kitchen"
-                            />
-                        </View>
+                                <View style={tw`flex-1`}>
+                                    <View style={tw`flex-row items-center justify-between`}>
+                                        <View>
+                                            <Text style={tw`text-xl font-black text-slate-900 mb-1`}>{tenant.name}</Text>
+                                            <View style={tw`flex-row items-center gap-2`}>
 
-                        <View style={tw`flex-row gap-3`}>
-                            <View style={tw`flex-1`}>
-                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Flat / Shop / Building</Text>
-                                <TextInput
-                                    style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
-                                    value={localKitchen.address.building}
-                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, building: v } })}
-                                    placeholder="Shop No. 5"
-                                />
+                                                <Text style={tw`text-[10px] font-black text-yellow-700 uppercase tracking-widest`}>Join ID: {tenant.joinCode}</Text>
+                                            </View>
+                                        </View>
+                                        <TouchableOpacity
+                                            onPress={() => setIsEditingBasic(true)}
+                                            style={tw`p-2.5 bg-gray-50 rounded-xl border border-gray-100`}
+                                        >
+                                            <Edit2 size={16} color="#ca8a04" />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Info Grid - Symmetrical Layout */}
+                            <View style={tw`w-full mt-6 pt-5 border-t border-slate-50 flex-row justify-between items-center`}>
+                                <View style={tw`flex-1 items-center border-r border-slate-50`}>
+                                    <View style={tw`w-8 h-8 rounded-xl bg-emerald-50 items-center justify-center mb-1.5`}>
+                                        <Phone size={14} color="#059669" />
+                                    </View>
+                                    <Text style={tw`text-[10px] font-black text-slate-900`}>{tenant.phone}</Text>
+                                    <Text style={tw`text-[8px] text-slate-400 font-bold uppercase`}>WhatsApp</Text>
+                                </View>
+
+                                <View style={tw`flex-1 items-center border-r border-slate-50`}>
+                                    <View style={tw`w-8 h-8 rounded-xl bg-blue-50 items-center justify-center mb-1.5`}>
+                                        <MapPin size={14} color="#2563eb" />
+                                    </View>
+                                    <Text style={tw`text-[10px] font-black text-slate-900`} numberOfLines={1}>{tenant.address?.locality}</Text>
+                                    <Text style={tw`text-[8px] text-slate-400 font-bold uppercase`}>Location</Text>
+                                </View>
+
+                                <View style={tw`flex-1 items-center`}>
+                                    <View style={tw`w-8 h-8 rounded-xl bg-orange-50 items-center justify-center mb-1.5`}>
+                                        <ShieldCheck size={14} color="#ea580c" />
+                                    </View>
+                                    <Text style={tw`text-[10px] font-black text-slate-900`}>{tenant.address?.city}</Text>
+                                    <Text style={tw`text-[8px] text-slate-400 font-bold uppercase`}>City</Text>
+                                </View>
                             </View>
                         </View>
-
-                        <View>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Area / Locality</Text>
-                            <TextInput
-                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
-                                value={localKitchen.address.locality}
-                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, locality: v } })}
-                                placeholder="Sector 12, HSR Layout"
-                            />
-                        </View>
-
-                        <View style={tw`flex-row gap-3`}>
-                            <View style={tw`flex-1`}>
-                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>City</Text>
+                    ) : (
+                        /* Full Edit Form */
+                        <View style={tw`gap-4`}>
+                            <View>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Shop / Kitchen Name</Text>
                                 <TextInput
                                     style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
-                                    value={localKitchen.address.city}
-                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, city: v } })}
-                                    placeholder="Mumbai"
+                                    value={localKitchen.name}
+                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, name: v })}
+                                    placeholder="e.g. Grandma's Kitchen"
                                 />
                             </View>
-                            <View style={tw`flex-1`}>
-                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Pincode</Text>
+
+                            <View style={tw`flex-row gap-3`}>
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Flat / Shop / Building</Text>
+                                    <TextInput
+                                        style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                        value={localKitchen.address.building}
+                                        onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, building: v } })}
+                                        placeholder="Shop No. 5"
+                                    />
+                                </View>
+                            </View>
+
+                            <View>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Area / Locality</Text>
                                 <TextInput
                                     style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
-                                    value={localKitchen.address.pinCode}
-                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, pinCode: v } })}
-                                    placeholder="400001"
-                                    keyboardType="numeric"
-                                    maxLength={6}
+                                    value={localKitchen.address.locality}
+                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, locality: v } })}
+                                    placeholder="Sector 12, HSR Layout"
                                 />
                             </View>
-                        </View>
 
-                        <View>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Contact Number (WhatsApp)</Text>
-                            <TextInput
-                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
-                                value={localKitchen.phone}
-                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, phone: v, whatsapp: v })}
-                                placeholder="9876543210"
-                                keyboardType="phone-pad"
-                            />
-                        </View>
+                            <View style={tw`flex-row gap-3`}>
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>City</Text>
+                                    <TextInput
+                                        style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                        value={localKitchen.address.city}
+                                        onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, city: v } })}
+                                        placeholder="Mumbai"
+                                    />
+                                </View>
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Pincode</Text>
+                                    <TextInput
+                                        style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                        value={localKitchen.address.pinCode}
+                                        onChangeText={(v) => setLocalKitchen({ ...localKitchen, address: { ...localKitchen.address, pinCode: v } })}
+                                        placeholder="400001"
+                                        keyboardType="numeric"
+                                        maxLength={6}
+                                    />
+                                </View>
+                            </View>
 
-                        <Pressable
-                            onPress={handleSaveBasic}
-                            disabled={savingBasic}
-                            style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2 mt-2`}
-                        >
-                            {savingBasic ? <ActivityIndicator color="white" /> : (
-                                <>
-                                    <Save size={14} color="white" />
-                                    <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Kitchen Details</Text>
-                                </>
-                            )}
-                        </Pressable>
-                    </View>
+                            <View>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Contact Number (WhatsApp)</Text>
+                                <TextInput
+                                    style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                    value={localKitchen.phone}
+                                    onChangeText={(v) => setLocalKitchen({ ...localKitchen, phone: v, whatsapp: v })}
+                                    placeholder="9876543210"
+                                    keyboardType="phone-pad"
+                                />
+                            </View>
+
+                            <View style={tw`flex-row gap-3 mt-2`}>
+                                <TouchableOpacity
+                                    onPress={() => setIsEditingBasic(false)}
+                                    style={tw`flex-1 bg-gray-100 rounded-2xl py-3 items-center justify-center`}
+                                >
+                                    <Text style={tw`text-gray-500 font-black text-[10px] uppercase tracking-widest`}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleSaveBasic}
+                                    disabled={savingBasic}
+                                    style={tw`flex-2 bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
+                                >
+                                    {savingBasic ? <ActivityIndicator color="white" /> : (
+                                        <>
+                                            <Save size={14} color="white" />
+                                            <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Save Changes</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {/* Service Mode */}
                 <View style={tw`bg-white rounded-[30px] p-6 shadow-sm border border-gray-100 mb-5`}>
-                    <View style={tw`flex-row items-center gap-2 mb-6`}>
-                        <ShieldCheck size={16} color="#ca8a04" />
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Service Mode</Text>
-                    </View>
-
-                    <View style={tw`flex-row gap-2 mb-6`}>
-                        {[
-                            { id: 'DELIVERY', label: 'Delivery' },
-                            { id: 'PICKUP', label: 'Pickup Only' },
-                            { id: 'BOTH', label: 'Both' }
-                        ].map((m) => (
-                            <Pressable
-                                key={m.id}
-                                onPress={() => updateKitchen(tenant.id, { serviceMode: m.id })}
-                                style={[
-                                    tw`flex-1 py-3 rounded-2xl border items-center justify-center`,
-                                    tenant?.serviceMode === m.id ? tw`bg-gray-900 border-gray-900` : tw`bg-gray-50 border-gray-100`
-                                ]}
-                            >
-                                <Text style={[
-                                    tw`text-[10px] font-black uppercase tracking-widest`,
-                                    tenant?.serviceMode === m.id ? tw`text-white` : tw`text-gray-400`
-                                ]}>{m.label}</Text>
-                            </Pressable>
-                        ))}
-                    </View>
-
-                    {/* Delivery Partner Details */}
-                    {(tenant?.serviceMode === 'DELIVERY' || tenant?.serviceMode === 'BOTH') && (
-                        <View style={tw`pt-4 border-t border-gray-50 gap-4 items-center`}>
-                            <Text style={tw`text-[9px] font-black text-yellow-600 uppercase tracking-widest mb-1 text-center`}>Delivery Partner Information</Text>
-                            <View style={tw`flex-row gap-3`}>
-                                <View style={tw`flex-1`}>
-                                    <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center`}>Name</Text>
-                                    <TextInput
-                                        style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-black text-sm text-gray-900 text-center`}
-                                        value={localKitchen.deliveryBoyName}
-                                        onChangeText={(v) => setLocalKitchen({ ...localKitchen, deliveryBoyName: v })}
-                                        placeholder="Name"
-                                        placeholderTextColor="#9ca3af"
-                                    />
+                    {!isEditingService ? (
+                        /* Compact Display Card with Integrated Edit */
+                        <View style={tw`gap-4`}>
+                            <View style={tw`flex-row items-center justify-between bg-gray-50/50 p-4 rounded-3xl border border-gray-100`}>
+                                <View style={tw`flex-row items-center gap-4`}>
+                                    <View style={tw`w-10 h-10 rounded-xl bg-orange-50 items-center justify-center`}>
+                                        <UtensilsCrossed size={18} color="#ea580c" />
+                                    </View>
+                                    <View>
+                                        <Text style={tw`text-lg font-black text-slate-900`}>
+                                            {tenant?.serviceMode === 'DELIVERY' ? 'Delivery Only' : 'Pickup Only'}
+                                        </Text>
+                                        <Text style={tw`text-[9px] font-black text-orange-600 uppercase tracking-tighter`}>Service Mode</Text>
+                                    </View>
                                 </View>
-                                <View style={tw`flex-1`}>
-                                    <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center`}>Phone</Text>
-                                    <TextInput
-                                        style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-black text-sm text-gray-900 text-center`}
-                                        value={localKitchen.deliveryBoyPhone}
-                                        onChangeText={(v) => setLocalKitchen({ ...localKitchen, deliveryBoyPhone: v })}
-                                        placeholder="Phone"
-                                        placeholderTextColor="#9ca3af"
-                                        keyboardType="phone-pad"
-                                    />
-                                </View>
+                                <TouchableOpacity
+                                    onPress={() => setIsEditingService(true)}
+                                    style={tw`p-2.5 bg-gray-50 rounded-xl border border-gray-100`}
+                                >
+                                    <Edit2 size={16} color="#ca8a04" />
+                                </TouchableOpacity>
                             </View>
-                            <Pressable
-                                onPress={handleSavePartner}
-                                disabled={savingPartner}
-                                style={tw`bg-gray-900 rounded-2xl py-3 px-8 items-center justify-center flex-row gap-2 mt-2 w-full`}
-                            >
-                                {savingPartner ? <ActivityIndicator color="white" /> : (
-                                    <>
-                                        <Save size={14} color="white" />
-                                        <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Partner Details</Text>
-                                    </>
-                                )}
-                            </Pressable>
+
+                            {tenant?.serviceMode === 'DELIVERY' && (tenant.deliveryBoyName || tenant.deliveryBoyPhone) && (
+                                <View style={tw`flex-row items-center gap-3 mt-1`}>
+                                    <View style={tw`flex-1 bg-gray-50 p-3 rounded-2xl border border-gray-100 items-center`}>
+                                        <Text style={tw`text-[10px] font-black text-slate-900`}>{tenant.deliveryBoyName || 'N/A'}</Text>
+                                        <Text style={tw`text-[8px] text-slate-400 font-bold uppercase`}>Partner</Text>
+                                    </View>
+                                    <View style={tw`flex-1 bg-gray-50 p-3 rounded-2xl border border-gray-100 items-center`}>
+                                        <Text style={tw`text-[10px] font-black text-slate-900`}>{tenant.deliveryBoyPhone || 'N/A'}</Text>
+                                        <Text style={tw`text-[8px] text-slate-400 font-bold uppercase`}>Phone</Text>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    ) : (
+                        /* Edit Form */
+                        <View style={tw`gap-4`}>
+                            <View style={tw`flex-row gap-2 mb-2`}>
+                                {[
+                                    { id: 'DELIVERY', label: 'Delivery' },
+                                    { id: 'PICKUP', label: 'Pickup Only' }
+                                ].map((m) => (
+                                    <Pressable
+                                        key={m.id}
+                                        onPress={() => updateKitchen(tenant.id, { serviceMode: m.id })}
+                                        style={[
+                                            tw`flex-1 py-3 rounded-2xl border items-center justify-center`,
+                                            tenant?.serviceMode === m.id ? tw`bg-gray-900 border-gray-900` : tw`bg-gray-50 border-gray-100`
+                                        ]}
+                                    >
+                                        <Text style={[
+                                            tw`text-[10px] font-black uppercase tracking-widest`,
+                                            tenant?.serviceMode === m.id ? tw`text-white` : tw`text-gray-400`
+                                        ]}>{m.label}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+
+                            {tenant?.serviceMode === 'DELIVERY' && (
+                                <View style={tw`pt-4 border-t border-gray-50 gap-4 items-center`}>
+                                    <Text style={tw`text-[9px] font-black text-yellow-600 uppercase tracking-widest mb-1 text-center`}>Delivery Partner Information</Text>
+                                    <View style={tw`flex-row gap-3`}>
+                                        <View style={tw`flex-1`}>
+                                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center`}>Name</Text>
+                                            <TextInput
+                                                style={tw`bg-gray-50 rounded-2xl px-5 h-12 border border-gray-100 font-black text-sm text-gray-900 text-center`}
+                                                value={localKitchen.deliveryBoyName}
+                                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, deliveryBoyName: v })}
+                                                placeholder="Name"
+                                                placeholderTextColor="#9ca3af"
+                                            />
+                                        </View>
+                                        <View style={tw`flex-1`}>
+                                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center`}>Phone</Text>
+                                            <TextInput
+                                                style={tw`bg-gray-50 rounded-2xl px-5 h-12 border border-gray-100 font-black text-sm text-gray-900 text-center`}
+                                                value={localKitchen.deliveryBoyPhone}
+                                                onChangeText={(v) => setLocalKitchen({ ...localKitchen, deliveryBoyPhone: v })}
+                                                placeholder="Phone"
+                                                placeholderTextColor="#9ca3af"
+                                                keyboardType="phone-pad"
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+
+                            <View style={tw`flex-row gap-3 mt-2`}>
+                                <TouchableOpacity
+                                    onPress={() => setIsEditingService(false)}
+                                    style={tw`flex-1 bg-gray-100 rounded-2xl py-3 items-center justify-center`}
+                                >
+                                    <Text style={tw`text-gray-500 font-black text-[10px] uppercase tracking-widest`}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleSavePartner}
+                                    disabled={savingPartner}
+                                    style={tw`flex-2 bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
+                                >
+                                    {savingPartner ? <ActivityIndicator color="white" /> : (
+                                        <>
+                                            <Save size={14} color="white" />
+                                            <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Service</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     )}
                 </View>
 
                 {/* Meal Slots */}
-                <View style={tw`bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-5`}>
+                <View style={tw`bg-white rounded-[30px] p-6 shadow-sm border border-gray-100 mb-5`}>
+                    {/* Header - No Edit Icon */}
                     <View style={tw`flex-row items-center gap-2 mb-6`}>
                         <Clock size={16} color="#ca8a04" />
                         <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Meal Timings & Windows</Text>
@@ -466,7 +587,8 @@ export const SettingsScreen = () => {
 
                         return (
                             <View key={m.id} style={tw`mb-8 last:mb-0`}>
-                                <View style={tw`flex-row items-center justify-between mb-4`}>
+                                {/* Outer Row - Always Visible Toggle */}
+                                <View style={tw`flex-row items-center justify-between mb-3`}>
                                     <View style={tw`flex-row items-center gap-3`}>
                                         <View style={tw`w-8 h-8 rounded-lg ${slot.active ? 'bg-yellow-50' : 'bg-gray-50'} items-center justify-center`}>
                                             <Icon size={16} color={slot.active ? "#ca8a04" : "#9ca3af"} />
@@ -489,59 +611,98 @@ export const SettingsScreen = () => {
                                 </View>
 
                                 {slot.active && (
-                                    <View style={tw`mt-2 gap-4 items-center`}>
-                                        <View style={tw`flex-row gap-4 w-full px-4`}>
-                                            <InputTrigger
-                                                label="Ordering Start"
-                                                value={slot.start}
-                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.start`, slot.start)}
-                                                placeholder="00:00"
-                                            />
-                                            <InputTrigger
-                                                label="Ordering End"
-                                                value={slot.end}
-                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.end`, slot.end)}
-                                                placeholder="00:00"
-                                            />
-                                        </View>
-
-                                        {(tenant?.serviceMode === 'PICKUP' || tenant?.serviceMode === 'BOTH') && (
-                                            <View style={tw`bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full items-center`}>
-                                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center`}>Pickup Window</Text>
-                                                <View style={tw`flex-row gap-4 w-full`}>
-                                                    <InputTrigger
-                                                        label="From"
-                                                        value={slot.pickupStart || slot.start}
-                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.pickupStart`, slot.pickupStart || slot.start)}
-                                                        placeholder="00:00"
-                                                    />
-                                                    <InputTrigger
-                                                        label="To"
-                                                        value={slot.pickupEnd || slot.end}
-                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.pickupEnd`, slot.pickupEnd || slot.end)}
-                                                        placeholder="00:00"
-                                                    />
+                                    <View style={tw`px-1`}>
+                                        {activeEditingSlot !== m.id ? (
+                                            /* Professional Text Summary with Edit Icon */
+                                            <View style={tw`flex-row items-center justify-between`}>
+                                                <View style={tw`gap-1`}>
+                                                    <View style={tw`flex-row items-center gap-2`}>
+                                                        <View style={tw`w-1.5 h-1.5 rounded-full bg-emerald-400`} />
+                                                        <Text style={tw`text-[11px] font-black text-slate-500 uppercase tracking-tighter`}>
+                                                            Ordering: <Text style={tw`text-slate-900`}>{formatTime12h(slot.start)} - {formatTime12h(slot.end)}</Text>
+                                                        </Text>
+                                                    </View>
+                                                    {(slot.deliveryStart || slot.pickupStart) && (
+                                                        <View style={tw`flex-row items-center gap-2`}>
+                                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-amber-400`} />
+                                                            <Text style={tw`text-[11px] font-black text-slate-500 uppercase tracking-tighter`}>
+                                                                {tenant?.serviceMode === 'DELIVERY' ? 'Delivery' : 'Pickup'}: <Text style={tw`text-slate-900`}>{tenant?.serviceMode === 'DELIVERY' ? formatTime12h(slot.deliveryStart || slot.start) : formatTime12h(slot.pickupStart || slot.start)} - {tenant?.serviceMode === 'DELIVERY' ? formatTime12h(slot.deliveryEnd || slot.end) : formatTime12h(slot.pickupEnd || slot.end)}</Text>
+                                                            </Text>
+                                                        </View>
+                                                    )}
                                                 </View>
+                                                <TouchableOpacity
+                                                    onPress={() => setActiveEditingSlot(m.id)}
+                                                    style={tw`p-2 bg-gray-50 rounded-lg border border-gray-100/50`}
+                                                >
+                                                    <Edit2 size={12} color="#ca8a04" />
+                                                </TouchableOpacity>
                                             </View>
-                                        )}
-
-                                        {(tenant?.serviceMode === 'DELIVERY' || tenant?.serviceMode === 'BOTH') && (
-                                            <View style={tw`bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full items-center`}>
-                                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center`}>Delivery Window</Text>
-                                                <View style={tw`flex-row gap-4 w-full`}>
+                                        ) : (
+                                            /* Active Editor Inputs */
+                                            <View style={tw`mt-2 gap-4 items-center`}>
+                                                <View style={tw`flex-row gap-4 w-full px-4`}>
                                                     <InputTrigger
-                                                        label="From"
-                                                        value={slot.deliveryStart || slot.start}
-                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.deliveryStart`, slot.deliveryStart || slot.start)}
+                                                        label="Ordering Start"
+                                                        value={slot.start}
+                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.start`, slot.start)}
                                                         placeholder="00:00"
                                                     />
                                                     <InputTrigger
-                                                        label="To"
-                                                        value={slot.deliveryEnd || slot.end}
-                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.deliveryEnd`, slot.deliveryEnd || slot.end)}
+                                                        label="Ordering End"
+                                                        value={slot.end}
+                                                        onPress={() => openPicker('time', 'mealSlots', `${m.id}.end`, slot.end)}
                                                         placeholder="00:00"
                                                     />
                                                 </View>
+
+                                                {tenant?.serviceMode === 'PICKUP' && (
+                                                    <View style={tw`bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full items-center`}>
+                                                        <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center`}>Pickup Window</Text>
+                                                        <View style={tw`flex-row gap-4 w-full`}>
+                                                            <InputTrigger
+                                                                label="From"
+                                                                value={slot.pickupStart || slot.start}
+                                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.pickupStart`, slot.pickupStart || slot.start)}
+                                                                placeholder="00:00"
+                                                            />
+                                                            <InputTrigger
+                                                                label="To"
+                                                                value={slot.pickupEnd || slot.end}
+                                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.pickupEnd`, slot.pickupEnd || slot.end)}
+                                                                placeholder="00:00"
+                                                            />
+                                                        </View>
+                                                    </View>
+                                                )}
+
+                                                {tenant?.serviceMode === 'DELIVERY' && (
+                                                    <View style={tw`bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full items-center`}>
+                                                        <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4 text-center`}>Delivery Window</Text>
+                                                        <View style={tw`flex-row gap-4 w-full`}>
+                                                            <InputTrigger
+                                                                label="From"
+                                                                value={slot.deliveryStart || slot.start}
+                                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.deliveryStart`, slot.deliveryStart || slot.start)}
+                                                                placeholder="00:00"
+                                                            />
+                                                            <InputTrigger
+                                                                label="To"
+                                                                value={slot.deliveryEnd || slot.end}
+                                                                onPress={() => openPicker('time', 'mealSlots', `${m.id}.deliveryEnd`, slot.deliveryEnd || slot.end)}
+                                                                placeholder="00:00"
+                                                            />
+                                                        </View>
+                                                    </View>
+                                                )}
+
+                                                {/* Inline Save for the slot */}
+                                                <TouchableOpacity
+                                                    onPress={() => setActiveEditingSlot(null)}
+                                                    style={tw`w-full py-3 bg-gray-900 rounded-2xl items-center justify-center mt-2 shadow-sm`}
+                                                >
+                                                    <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Save {m.label} Timing</Text>
+                                                </TouchableOpacity>
                                             </View>
                                         )}
                                     </View>
@@ -549,10 +710,11 @@ export const SettingsScreen = () => {
                             </View>
                         );
                     })}
+
                 </View>
 
                 {/* Holiday */}
-                <View style={tw`bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-5`}>
+                <View style={tw`bg-white rounded-[30px] p-6 shadow-sm border border-gray-100 mb-5`}>
                     <View style={tw`flex-row items-center justify-between mb-4`}>
                         <View style={tw`flex-row items-center gap-2`}>
                             <Calendar size={16} color="#ca8a04" />
@@ -560,89 +722,156 @@ export const SettingsScreen = () => {
                         </View>
                         <Switch
                             value={holiday.active}
-                            onValueChange={(v) => setConfig({ ...config, holiday: { ...holiday, active: v } })}
+                            onValueChange={(v) => {
+                                const updatedHoliday = { ...holiday, active: v };
+                                setConfig({ ...config, holiday: updatedHoliday });
+                                // Keep real-time update for the switch itself
+                                updateKitchenConfig(tenant.id, { ...config, holiday: updatedHoliday });
+                            }}
                             trackColor={{ false: "#e5e7eb", true: "#fde68a" }}
                             thumbColor={holiday.active ? "#ca8a04" : "#f4f3f4"}
                         />
                     </View>
 
                     {holiday.active && (
-                        <View style={tw`gap-4 mt-2`}>
-                            <View style={tw`flex-row gap-4`}>
-                                <InputTrigger
-                                    label="From"
-                                    value={holiday.from}
-                                    onPress={() => openPicker('date', 'holiday', 'from', holiday.from)}
-                                    placeholder="YYYY-MM-DD"
-                                />
-                                <InputTrigger
-                                    label="To"
-                                    value={holiday.to}
-                                    onPress={() => openPicker('date', 'holiday', 'to', holiday.to)}
-                                    placeholder="YYYY-MM-DD"
-                                />
-                            </View>
-                            <TextInput
-                                style={tw`bg-gray-50 rounded-2xl px-6 py-4 border border-gray-100 font-bold text-gray-900`}
-                                value={holiday.reason}
-                                onChangeText={(v) => setConfig({ ...config, holiday: { ...holiday, reason: v } })}
-                                placeholder="Reason (e.g. Festival / Break)"
-                            />
-                            <Pressable
-                                onPress={handleSave}
-                                disabled={savingConfig}
-                                style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
-                            >
-                                {savingConfig ? <ActivityIndicator color="white" /> : (
-                                    <>
-                                        <Save size={14} color="white" />
-                                        <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Holiday Settings</Text>
-                                    </>
-                                )}
-                            </Pressable>
+                        <View style={tw`px-1`}>
+                            {!isEditingHoliday ? (
+                                /* Professional Text Summary with Edit Icon */
+                                <View style={tw`flex-row items-center justify-between`}>
+                                    <View style={tw`gap-1`}>
+                                        <View style={tw`flex-row items-center gap-2`}>
+                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-emerald-400`} />
+                                            <Text style={tw`text-[11px] font-black text-slate-500 uppercase tracking-tighter`}>
+                                                From: <Text style={tw`text-slate-900`}>{holiday.from || 'Not Set'}</Text>
+                                            </Text>
+                                        </View>
+                                        <View style={tw`flex-row items-center gap-2`}>
+                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-amber-400`} />
+                                            <Text style={tw`text-[11px] font-black text-slate-500 uppercase tracking-tighter`}>
+                                                To: <Text style={tw`text-slate-900`}>{holiday.to || 'Not Set'}</Text>
+                                            </Text>
+                                        </View>
+                                        {holiday.reason && (
+                                            <Text style={tw`text-[10px] font-bold text-gray-400 mt-1 italic`}>"{holiday.reason}"</Text>
+                                        )}
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => setIsEditingHoliday(true)}
+                                        style={tw`p-2 bg-gray-50 rounded-lg border border-gray-100/50`}
+                                    >
+                                        <Edit2 size={12} color="#ca8a04" />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                /* Active Editor View */
+                                <View style={tw`gap-4 mt-2`}>
+                                    <View style={tw`flex-row gap-4`}>
+                                        <InputTrigger
+                                            label="From"
+                                            value={holiday.from}
+                                            onPress={() => openPicker('date', 'holiday', 'from', holiday.from)}
+                                            placeholder="YYYY-MM-DD"
+                                        />
+                                        <InputTrigger
+                                            label="To"
+                                            value={holiday.to}
+                                            onPress={() => openPicker('date', 'holiday', 'to', holiday.to)}
+                                            placeholder="YYYY-MM-DD"
+                                        />
+                                    </View>
+                                    <TextInput
+                                        style={tw`bg-gray-50 rounded-2xl px-6 py-4 border border-gray-100 font-bold text-gray-900`}
+                                        value={holiday.reason}
+                                        onChangeText={(v) => setConfig({ ...config, holiday: { ...holiday, reason: v } })}
+                                        placeholder="Reason (e.g. Festival / Break)"
+                                    />
+                                    <TouchableOpacity
+                                        onPress={async () => {
+                                            setSavingConfig(true);
+                                            await handleSave();
+                                            setIsEditingHoliday(false);
+                                            setSavingConfig(false);
+                                        }}
+                                        disabled={savingConfig}
+                                        style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2 shadow-sm`}
+                                    >
+                                        {savingConfig ? <ActivityIndicator size="small" color="white" /> : (
+                                            <>
+                                                <CheckCircle size={14} color="white" />
+                                                <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Save Holiday Details</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                         </View>
                     )}
                 </View>
 
                 {/* Payments & Credit Control */}
                 <View style={tw`bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-5`}>
-                    <View style={tw`flex-row items-center gap-2 mb-6`}>
-                        <CreditCard size={16} color="#ca8a04" />
-                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest`}>Payments & Credit Control</Text>
-                    </View>
-
-                    <View style={tw`gap-4`}>
-                        <View>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Maximum Due Limit per Student (₹)</Text>
-                            <TextInput
-                                style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
-                                value={config?.maxDueLimit?.toString()}
-                                onChangeText={(v) => setConfig({ ...config, maxDueLimit: parseInt(v) || 0 })}
-                                placeholder="e.g. 300"
-                                keyboardType="numeric"
-                            />
+                    {!isEditingDueLimit ? (
+                        /* Compact Display Card with Integrated Edit */
+                        <View style={tw`flex-row items-center justify-between bg-gray-50/50 p-4 rounded-3xl border border-gray-100`}>
+                            <View style={tw`flex-row items-center gap-4`}>
+                                <View style={tw`w-12 h-12 rounded-2xl bg-amber-50 items-center justify-center shadow-sm`}>
+                                    <IndianRupee size={20} color="#ca8a04" />
+                                </View>
+                                <View>
+                                    <Text style={tw`text-2xl font-black text-slate-900`}>₹{config?.maxDueLimit || 0}</Text>
+                                    <Text style={tw`text-[9px] font-black text-amber-600 uppercase tracking-tighter`}>Max Due Limit</Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => setIsEditingDueLimit(true)}
+                                style={tw`p-2.5 bg-gray-50 rounded-xl border border-gray-100`}
+                            >
+                                <Edit2 size={16} color="#ca8a04" />
+                            </TouchableOpacity>
                         </View>
+                    ) : (
+                        /* Edit Form */
+                        <View style={tw`gap-4`}>
+                            <View>
+                                <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2`}>Maximum Due Limit per Student (₹)</Text>
+                                <TextInput
+                                    style={tw`bg-gray-50 rounded-2xl px-5 py-3 border border-gray-100 font-bold text-gray-900`}
+                                    value={config?.maxDueLimit?.toString()}
+                                    onChangeText={(v) => setConfig({ ...config, maxDueLimit: parseInt(v) || 0 })}
+                                    placeholder="e.g. 300"
+                                    keyboardType="numeric"
+                                />
+                            </View>
 
-                        <View style={tw`bg-amber-50 rounded-2xl p-4 flex-row gap-3 border border-amber-100`}>
-                            <Info size={16} color="#ca8a04" style={tw`mt-0.5`} />
-                            <Text style={tw`flex-1 text-[11px] font-bold text-amber-800 leading-4`}>
-                                Kitchens control how much unpaid balance a student can accumulate before ordering is restricted.
-                            </Text>
+                            <View style={tw`bg-amber-50 rounded-2xl p-4 flex-row gap-3 border border-amber-100`}>
+                                <Info size={16} color="#ca8a04" style={tw`mt-0.5`} />
+                                <Text style={tw`flex-1 text-[11px] font-bold text-amber-800 leading-4`}>
+                                    Kitchens control how much unpaid balance a student can accumulate before ordering is restricted.
+                                </Text>
+                            </View>
+
+                            <View style={tw`flex-row gap-3 mt-2`}>
+                                <TouchableOpacity
+                                    onPress={() => setIsEditingDueLimit(false)}
+                                    style={tw`flex-1 bg-gray-100 rounded-2xl py-3 items-center justify-center`}
+                                >
+                                    <Text style={tw`text-gray-500 font-black text-[10px] uppercase tracking-widest`}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleSave}
+                                    disabled={savingConfig}
+                                    style={tw`flex-2 bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2`}
+                                >
+                                    {savingConfig ? <ActivityIndicator color="white" /> : (
+                                        <>
+                                            <Save size={14} color="white" />
+                                            <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Credit Policy</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                         </View>
-
-                        <Pressable
-                            onPress={handleSave}
-                            disabled={savingConfig}
-                            style={tw`bg-gray-900 rounded-2xl py-3 items-center justify-center flex-row gap-2 mt-2`}
-                        >
-                            {savingConfig ? <ActivityIndicator color="white" /> : (
-                                <>
-                                    <Save size={14} color="white" />
-                                    <Text style={tw`text-white font-black text-[10px] uppercase tracking-widest`}>Update Credit Policy</Text>
-                                </>
-                            )}
-                        </Pressable>
-                    </View>
+                    )}
                 </View>
 
                 {/* Sign Out Button */}

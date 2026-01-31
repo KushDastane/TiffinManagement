@@ -56,17 +56,9 @@ export const DiscoveryScreen = ({ navigation }) => {
                     </View>
                     <View style={tw`flex-col items-end gap-1.5`}>
                         {item.serviceMode && (
-                            <View style={tw`${item.serviceMode === 'DELIVERY' ? 'bg-blue-50' :
-                                item.serviceMode === 'PICKUP' ? 'bg-orange-50' :
-                                    'bg-purple-50'
-                                } px-2.5 py-1 rounded-full`}>
-                                <Text style={tw`${item.serviceMode === 'DELIVERY' ? 'text-blue-600' :
-                                    item.serviceMode === 'PICKUP' ? 'text-orange-600' :
-                                        'text-purple-600'
-                                    } text-[9px] font-black uppercase tracking-wider`}>
-                                    {item.serviceMode === 'BOTH' ? '🚚 + 🏃' :
-                                        item.serviceMode === 'DELIVERY' ? '🚚 Delivery' :
-                                            '🏃 Pickup'}
+                            <View style={tw`${item.serviceMode === 'DELIVERY' ? 'bg-blue-50' : 'bg-orange-50'} px-2.5 py-1 rounded-full`}>
+                                <Text style={tw`${item.serviceMode === 'DELIVERY' ? 'text-blue-600' : 'text-orange-600'} text-[9px] font-black uppercase tracking-wider`}>
+                                    {item.serviceMode === 'DELIVERY' ? '🚚 Delivery' : '🏃 Pickup'}
                                 </Text>
                             </View>
                         )}

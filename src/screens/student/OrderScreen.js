@@ -120,7 +120,7 @@ export const OrderScreen = ({ navigation }) => {
 
     useEffect(() => {
         if (tenant?.serviceMode) {
-            setOrderMode(tenant.serviceMode === 'BOTH' ? 'DELIVERY' : tenant.serviceMode);
+            setOrderMode(tenant.serviceMode);
         }
     }, [tenant?.serviceMode]);
 
@@ -436,32 +436,6 @@ export const OrderScreen = ({ navigation }) => {
                 )}
 
                 {/* Service Mode Selector - Only if kitchen supports BOTH */}
-                {tenant?.serviceMode === 'BOTH' && (
-                    <View style={tw`mt-8`}>
-                        <View style={tw`flex-row items-center gap-2 mb-4`}>
-                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Service Method</Text>
-                            <View style={tw`h-[1px] flex-1 bg-gray-100`} />
-                        </View>
-                        <View style={tw`flex-row gap-3`}>
-                            {[
-                                { id: 'DELIVERY', label: 'Delivery', icon: '🚚' },
-                                { id: 'PICKUP', label: 'Self Pickup', icon: '🏃' }
-                            ].map((mode) => (
-                                <Pressable
-                                    key={mode.id}
-                                    onPress={() => setOrderMode(mode.id)}
-                                    style={[
-                                        tw`flex-1 p-4 rounded-2xl border flex-row items-center justify-center gap-2`,
-                                        orderMode === mode.id ? tw`bg-gray-900 border-gray-900 shadow-lg shadow-gray-200` : tw`bg-white border-gray-100`
-                                    ]}
-                                >
-                                    <Text style={tw`text-sm`}>{mode.icon}</Text>
-                                    <Text style={[tw`text-[10px] font-black uppercase tracking-widest`, orderMode === mode.id ? tw`text-white` : tw`text-gray-400`]}>{mode.label}</Text>
-                                </Pressable>
-                            ))}
-                        </View>
-                    </View>
-                )}
 
                 {/* Delivery Info */}
                 {orderMode === 'DELIVERY' && (

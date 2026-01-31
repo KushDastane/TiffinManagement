@@ -30,8 +30,7 @@ export const CreateKitchenScreen = () => {
 
     const serviceModes = [
         { id: 'DELIVERY', label: 'Delivery', icon: '🚚' },
-        { id: 'PICKUP', label: 'Pickup', icon: '🏃' },
-        { id: 'BOTH', label: 'Both', icon: '🔄' }
+        { id: 'PICKUP', label: 'Pickup', icon: '🏃' }
     ];
 
     const handleBack = async () => {

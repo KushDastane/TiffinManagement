@@ -11,8 +11,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CustomTabBar } from '../components/CustomTabBar';
 import { Home, Package, Utensils, IndianRupee, Users, Settings as SettingsIcon } from 'lucide-react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTenant } from '../contexts/TenantContext';
 import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { LoadingScreen } from '../screens/LoadingScreen';
 
@@ -47,37 +48,16 @@ const AdminSettingsStack = () => (
     </SettingsStackNav.Navigator>
 );
 
-/* ---------------- ADMIN TAB NAV ---------------- */
-
 export const AdminStack = () => {
-    const { user } = useAuth();
-    const [setupStatus, setSetupStatus] = useState(null); // 'pending', 'completed', or null for loading
+    const { tenant, loading: tenantLoading } = useTenant();
 
-    useEffect(() => {
-        const checkSetup = async () => {
-            try {
-                const adminRef = doc(db, 'admins', user.uid);
-                const snap = await getDoc(adminRef);
-                if (snap.exists() && snap.data().adminSetupCompleted === true) {
-                    setSetupStatus('completed');
-                } else {
-                    setSetupStatus('pending');
-                }
-            } catch (error) {
-                console.error("Error checking admin setup status:", error);
-                setSetupStatus('completed'); // Fallback to Home on error
-            }
-        };
-        checkSetup();
-    }, [user.uid]);
-
-    if (setupStatus === null) {
+    if (tenantLoading || !tenant) {
         return <LoadingScreen />;
     }
 
     return (
         <Tab.Navigator
-            initialRouteName={setupStatus === 'pending' ? "Settings" : "Home"}
+            initialRouteName="Home"
             tabBar={(props) => <CustomTabBar {...props} />}
             screenOptions={{
                 headerShown: false,
