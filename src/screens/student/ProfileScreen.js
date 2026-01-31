@@ -3,14 +3,17 @@ import { View, Text, ScrollView, Pressable, Alert, Image, TextInput } from 'reac
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { logoutUser } from '../../services/authService';
+import { switchKitchen } from '../../services/kitchenService';
 import tw from 'twrnc';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Phone, LogOut, ChefHat, Edit2, Check } from 'lucide-react-native';
+import { User, Phone, LogOut, ChefHat, Edit2, Check, Search, ArrowRight } from 'lucide-react-native';
 import { updateUserProfile } from '../../services/authService';
+import { useNavigation } from '@react-navigation/native';
 
 export const ProfileScreen = () => {
     const { user, userProfile } = useAuth();
-    const { tenant } = useTenant();
+    const { tenant, joinedKitchens } = useTenant();
+    const navigation = useNavigation();
 
     // Edit State
     const [isEditing, setIsEditing] = React.useState(false);
@@ -115,24 +118,83 @@ export const ProfileScreen = () => {
                     </View>
                 </View>
 
-                {/* Tenant Info - Glassy Style */}
-                {tenant && (
-                    <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-8`}>
-                        <View style={tw`flex-row items-center gap-2 mb-6`}>
+                {/* My Kitchens - Premium Management Section */}
+                <View style={tw`mb-8`}>
+                    <View style={tw`flex-row items-center justify-between mb-4 px-1`}>
+                        <View style={tw`flex-row items-center gap-2`}>
                             <ChefHat size={14} color="#ca8a04" />
-                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Connected Kitchen</Text>
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>My Kitchens</Text>
                         </View>
+                        <Text style={tw`text-[9px] font-black text-gray-300 uppercase`}>{joinedKitchens.length} Joined</Text>
+                    </View>
 
-                        <Text style={tw`text-3xl font-black text-gray-900 mb-6`}>{tenant.name}</Text>
+                    <View style={tw`gap-3`}>
+                        {joinedKitchens.map((k) => (
+                            <Pressable
+                                key={k.id}
+                                onPress={async () => {
+                                    if (userProfile.activeKitchenId === k.id) return;
+                                    await switchKitchen(user.uid, k.id);
+                                }}
+                                style={({ pressed }) => [
+                                    tw`bg-white rounded-2xl p-4 flex-row items-center justify-between border ${userProfile.activeKitchenId === k.id ? 'border-yellow-400 shadow-sm' : 'border-gray-100'}`,
+                                    pressed && tw`opacity-80`
+                                ]}
+                            >
+                                <View style={tw`flex-row items-center gap-3`}>
+                                    <View style={tw`w-10 h-10 rounded-xl bg-gray-50 items-center justify-center`}>
+                                        <ChefHat size={20} color={userProfile.activeKitchenId === k.id ? "#ca8a04" : "#9ca3af"} />
+                                    </View>
+                                    <View>
+                                        <Text style={tw`text-sm font-black text-gray-900`}>{k.name}</Text>
+                                        {userProfile.activeKitchenId === k.id && (
+                                            <Text style={tw`text-[8px] font-black text-yellow-600 uppercase`}>Active Kitchen</Text>
+                                        )}
+                                    </View>
+                                </View>
+                                {userProfile.activeKitchenId === k.id && (
+                                    <View style={tw`bg-yellow-400 p-1.5 rounded-full`}>
+                                        <Check size={12} color="black" />
+                                    </View>
+                                )}
+                            </Pressable>
+                        ))}
 
-                        <View style={tw`bg-gray-50 p-4 rounded-2xl border border-gray-100 flex-row justify-between items-center`}>
-                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Joining Code</Text>
-                            <View style={tw`bg-yellow-400 px-3 py-1 rounded-lg`}>
-                                <Text style={tw`text-gray-900 text-[10px] font-black uppercase`}>{tenant.joinCode}</Text>
-                            </View>
+                        {/* Join New Kitchen Button */}
+                        <Pressable
+                            onPress={() => {
+                                // Navigate to JoinKitchen - we'll add this to StudentStack
+                                navigation.navigate('JoinKitchen');
+                            }}
+                            style={({ pressed }) => [
+                                tw`bg-gray-50 rounded-2xl p-4 flex-row items-center justify-center gap-2 border border-dashed border-gray-300`,
+                                pressed && tw`bg-gray-100`
+                            ]}
+                        >
+                            <Text style={tw`text-gray-400 font-bold text-xs uppercase tracking-widest`}>+ Join New Kitchen</Text>
+                        </Pressable>
+                    </View>
+                </View>
+
+                {/* Discover More Kitchens Button */}
+                <Pressable
+                    onPress={() => navigation.navigate('Discovery')}
+                    style={({ pressed }) => [
+                        tw`bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-4 mb-8 flex-row items-center justify-between border border-yellow-200`,
+                        pressed && tw`opacity-80`
+                    ]}
+                >
+                    <View style={tw`flex-row items-center gap-3`}>
+                        <View style={tw`w-10 h-10 rounded-xl bg-yellow-400 items-center justify-center`}>
+                            <Search size={20} color="#111827" />
+                        </View>
+                        <View>
+                            <Text style={tw`text-sm font-black text-gray-900`}>Discover More Kitchens</Text>
+                            <Text style={tw`text-[10px] font-bold text-gray-500`}>Find kitchens near you</Text>
                         </View>
                     </View>
-                )}
+                    <ArrowRight size={16} color="#ca8a04" />
+                </Pressable>
 
                 {/* Logout Button - Minimalist Understated */}
                 <Pressable

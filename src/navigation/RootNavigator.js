@@ -88,7 +88,7 @@ export const RootNavigator = () => {
                 </Stack.Screen>
             ) : userProfile.role === 'admin' ? (
                 // 3a. Admin Flow
-                !userProfile.currentKitchenId ? (
+                !userProfile.activeKitchenId ? (
                     <Stack.Screen name="CreateKitchen" component={CreateKitchenScreen} options={{ title: 'Create Your Kitchen' }} />
                 ) : (
                     <Stack.Screen name="AdminRoot" component={AdminStack} />
@@ -98,7 +98,7 @@ export const RootNavigator = () => {
                 !userProfile.locationSet ? (
                     // Unified setup: Name + Location
                     <Stack.Screen name="Setup" component={StudentSetupScreen} />
-                ) : !userProfile.currentKitchenId ? (
+                ) : !userProfile.activeKitchenId ? (
                     <Stack.Screen name="UnjoinedRoot" component={UnjoinedStudentStack} />
                 ) : (
                     <Stack.Screen name="StudentRoot" component={StudentStack} />

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, BackHandler, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, BackHandler, Dimensions, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useAuth } from '../../contexts/AuthContext';
 import { createKitchen } from '../../services/kitchenService';
 import { updateUserProfile } from '../../services/authService';
+import { normalizeLocation } from '../../utils/locationNormalizer';
+import { INDIAN_STATES, CITIES_BY_STATE } from '../../constants/indianLocations';
 import tw from 'twrnc';
-import { ChefHat, ArrowRight, ChevronLeft, Navigation, MapPin, Phone, Info, CheckCircle2 } from 'lucide-react-native';
+import { ChefHat, ArrowRight, ChevronLeft, Navigation, MapPin, Phone, Info, CheckCircle2, ChevronDown, X } from 'lucide-react-native';
 import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft, Layout } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
@@ -18,15 +20,22 @@ export const CreateKitchenScreen = () => {
     const [building, setBuilding] = useState('');
     const [locality, setLocality] = useState('');
     const [city, setCity] = useState('');
+    const [state, setState] = useState('');
     const [pincode, setPincode] = useState('');
     const [phone, setPhone] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
     const [serviceMode, setServiceMode] = useState('DELIVERY');
-    const [kitchenType, setKitchenType] = useState('DABBA'); // Default Type
+    const [kitchenType, setKitchenType] = useState('DABBA');
     const [loading, setLoading] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [detecting, setDetecting] = useState(false);
     const [autoDetected, setAutoDetected] = useState(false);
+
+    // Dropdown states
+    const [stateSearchText, setStateSearchText] = useState('');
+    const [citySearchText, setCitySearchText] = useState('');
+    const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
+    const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
 
     const types = [
         {
@@ -61,6 +70,7 @@ export const CreateKitchenScreen = () => {
         } else if (step === 2) {
             if (!building.trim()) return Alert.alert("Error", "Building/Shop number is required");
             if (!locality.trim()) return Alert.alert("Error", "Locality/Area is required");
+            if (!state.trim()) return Alert.alert("Error", "State is required");
             if (!city.trim()) return Alert.alert("Error", "City is required");
             if (!pincode.trim() || pincode.length !== 6) return Alert.alert("Error", "Valid 6-digit Pincode is required");
             setStep(3);
@@ -107,20 +117,24 @@ export const CreateKitchenScreen = () => {
             if (data && data.address) {
                 const addr = data.address;
                 const detectedCity = addr.city || addr.town || addr.village || addr.suburb || '';
+                const detectedState = addr.state || '';
                 const detectedPin = addr.postcode || '';
                 const detectedLocality = addr.neighbourhood || addr.suburb || addr.road || '';
                 const detectedBuilding = addr.house_number || '';
 
                 setCity(detectedCity);
+                setCitySearchText(detectedCity);
+                setState(detectedState);
+                setStateSearchText(detectedState);
                 setPincode(detectedPin);
                 setLocality(detectedLocality);
                 if (detectedBuilding) setBuilding(detectedBuilding);
                 setAutoDetected(true);
 
-                if (!detectedCity || !detectedPin) {
-                    Alert.alert("Partial Detection", "We found your location but please verify the address details.");
+                if (!detectedCity || !detectedPin || !detectedState) {
+                    Alert.alert("Partial Detection", "We found your location but please verify all address details.");
                 } else {
-                    Alert.alert("Location Detected", "Please verify your Pincode and address are correct.");
+                    Alert.alert("Location Detected", "Please verify your address is correct.");
                 }
             }
         } catch (error) {
@@ -130,6 +144,46 @@ export const CreateKitchenScreen = () => {
             setDetecting(false);
         }
     };
+
+    // Dropdown helper functions
+    const handleStateSelect = (selectedState) => {
+        setState(selectedState);
+        setStateSearchText(selectedState);
+        setStateDropdownOpen(false);
+        // Reset city when state changes
+        setCity('');
+        setCitySearchText('');
+    };
+
+    const handleCitySelect = (selectedCity) => {
+        setCity(selectedCity);
+        setCitySearchText(selectedCity);
+        setCityDropdownOpen(false);
+    };
+
+    const clearStateFilter = () => {
+        setState('');
+        setStateSearchText('');
+        setCity('');
+        setCitySearchText('');
+    };
+
+    const clearCityFilter = () => {
+        setCity('');
+        setCitySearchText('');
+    };
+
+    // Filter states based on search text
+    const filteredStates = INDIAN_STATES.filter(s =>
+        s.toLowerCase().includes(stateSearchText.toLowerCase())
+    ).slice(0, 5);
+
+    // Filter cities based on selected state and search text
+    const filteredCities = state && CITIES_BY_STATE[state]
+        ? CITIES_BY_STATE[state].filter(c =>
+            c.toLowerCase().includes(citySearchText.toLowerCase())
+        ).slice(0, 5)
+        : [];
 
     const handleCreate = async () => {
         if (!phone.trim() || phone.length < 10) {
@@ -143,7 +197,10 @@ export const CreateKitchenScreen = () => {
             address: {
                 building: building.trim(),
                 locality: locality.trim(),
-                city: city.trim(),
+                city: normalizeLocation(city),
+                cityDisplay: city.trim(),
+                state: normalizeLocation(state),
+                stateDisplay: state.trim(),
                 pinCode: pincode.trim()
             },
             phone: phone.trim(),
@@ -279,17 +336,103 @@ export const CreateKitchenScreen = () => {
                                 />
                             </View>
 
-                            <View style={tw`flex-row gap-3`}>
-                                <View style={tw`flex-1 bg-gray-50 rounded-2xl p-4`}>
-                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>City</Text>
-                                    <TextInput
-                                        style={tw`w-full text-base font-bold text-gray-900 py-1`}
-                                        placeholder="Mumbai"
-                                        value={city}
-                                        onChangeText={setCity}
-                                        placeholderTextColor="#9ca3af"
-                                    />
+                            {/* State/City Dropdowns Row */}
+                            <View style={tw`flex-row gap-3 mb-4`}>
+                                {/* State Dropdown */}
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>State *</Text>
+                                    <Pressable
+                                        onPress={() => setStateDropdownOpen(!stateDropdownOpen)}
+                                        style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex-row items-center justify-between`}
+                                    >
+                                        <Text style={tw`text-base font-bold ${state ? 'text-gray-900' : 'text-gray-400'}`} numberOfLines={1}>
+                                            {state || 'Select State'}
+                                        </Text>
+                                        <View style={tw`flex-row items-center gap-1`}>
+                                            {state && (
+                                                <Pressable onPress={clearStateFilter} style={tw`p-0.5`}>
+                                                    <X size={14} color="#9ca3af" />
+                                                </Pressable>
+                                            )}
+                                            <ChevronDown size={16} color="#9ca3af" />
+                                        </View>
+                                    </Pressable>
+
+                                    {/* State Dropdown Menu */}
+                                    {stateDropdownOpen && (
+                                        <View style={tw`absolute top-20 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48`}>
+                                            <TextInput
+                                                style={tw`px-3 py-2 text-sm font-bold text-gray-900 border-b border-gray-100`}
+                                                placeholder="Search states..."
+                                                placeholderTextColor="#9ca3af"
+                                                value={stateSearchText}
+                                                onChangeText={setStateSearchText}
+                                                autoFocus
+                                            />
+                                            <ScrollView style={tw`max-h-40`}>
+                                                {filteredStates.map((s) => (
+                                                    <Pressable
+                                                        key={s}
+                                                        onPress={() => handleStateSelect(s)}
+                                                        style={tw`px-3 py-2.5 border-b border-gray-50`}
+                                                    >
+                                                        <Text style={tw`text-sm font-bold text-gray-900`}>{s}</Text>
+                                                    </Pressable>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
                                 </View>
+
+                                {/* City Dropdown */}
+                                <View style={tw`flex-1`}>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>City *</Text>
+                                    <Pressable
+                                        onPress={() => state && setCityDropdownOpen(!cityDropdownOpen)}
+                                        disabled={!state}
+                                        style={tw`bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex-row items-center justify-between ${!state ? 'opacity-50' : ''}`}
+                                    >
+                                        <Text style={tw`text-base font-bold ${city ? 'text-gray-900' : 'text-gray-400'}`} numberOfLines={1}>
+                                            {city || 'Select City'}
+                                        </Text>
+                                        <View style={tw`flex-row items-center gap-1`}>
+                                            {city && (
+                                                <Pressable onPress={clearCityFilter} style={tw`p-0.5`}>
+                                                    <X size={14} color="#9ca3af" />
+                                                </Pressable>
+                                            )}
+                                            <ChevronDown size={16} color="#9ca3af" />
+                                        </View>
+                                    </Pressable>
+
+                                    {/* City Dropdown Menu */}
+                                    {cityDropdownOpen && state && (
+                                        <View style={tw`absolute top-20 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48`}>
+                                            <TextInput
+                                                style={tw`px-3 py-2 text-sm font-bold text-gray-900 border-b border-gray-100`}
+                                                placeholder="Search cities..."
+                                                placeholderTextColor="#9ca3af"
+                                                value={citySearchText}
+                                                onChangeText={setCitySearchText}
+                                                autoFocus
+                                            />
+                                            <ScrollView style={tw`max-h-40`}>
+                                                {filteredCities.map((c) => (
+                                                    <Pressable
+                                                        key={c}
+                                                        onPress={() => handleCitySelect(c)}
+                                                        style={tw`px-3 py-2.5 border-b border-gray-50`}
+                                                    >
+                                                        <Text style={tw`text-sm font-bold text-gray-900`}>{c}</Text>
+                                                    </Pressable>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+
+                            <View style={tw`flex-row gap-3`}>
                                 <View style={[tw`flex-1 bg-gray-50 rounded-2xl p-4 border border-transparent`, autoDetected && tw`border-yellow-400/30`]}>
                                     <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Pincode</Text>
                                     <TextInput

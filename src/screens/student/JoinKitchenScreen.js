@@ -66,6 +66,8 @@ export const JoinKitchenScreen = () => {
                         value={joinCode}
                         onChangeText={handleTextChange}
                         autoCapitalize="characters"
+                        autoFocus={true}
+                        editable={true}
                         selectionColor="#ca8a04"
                     />
                 </View>

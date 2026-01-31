@@ -18,7 +18,7 @@ export const TenantProvider = ({ children }) => {
 
         const fetchTenant = async () => {
             // If no user or no scoped kitchen, clear tenant
-            if (!user || !userProfile || !userProfile.currentKitchenId) {
+            if (!user || !userProfile || !userProfile.activeKitchenId) {
                 setTenant(null);
                 setJoinedKitchens([]);
                 setLoading(false);
@@ -26,12 +26,12 @@ export const TenantProvider = ({ children }) => {
             }
 
             // ONLY set loading if we don't already have the right tenant loaded
-            if (!tenant || tenant.id !== userProfile.currentKitchenId) {
+            if (!tenant || tenant.id !== userProfile.activeKitchenId) {
                 setLoading(true);
             }
             try {
                 // 1. Fetch current kitchen details
-                const kitchenRef = doc(db, 'kitchens', userProfile.currentKitchenId);
+                const kitchenRef = doc(db, 'kitchens', userProfile.activeKitchenId);
                 unsubscribe = onSnapshot(kitchenRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setTenant({ id: docSnap.id, ...docSnap.data() });
@@ -45,6 +45,7 @@ export const TenantProvider = ({ children }) => {
                 });
 
                 // 2. Fetch all joined kitchens for the selector
+                // We'll keep using joinedKitchens for now as a cache, but we could also query memberships
                 if (userProfile.joinedKitchens && userProfile.joinedKitchens.length > 0) {
                     const kitchensRef = collection(db, 'kitchens');
                     const q = query(kitchensRef, where('__name__', 'in', userProfile.joinedKitchens));

@@ -114,9 +114,9 @@ export const createKitchen = async (ownerId, kitchenData) => {
         const docRef = await addDoc(collection(db, 'kitchens'), newKitchen);
 
 
-        // Update owner's profile: set currentKitchenId and track setup status
+        // Update owner's profile: set activeKitchenId and track setup status
         await updateDoc(doc(db, 'users', ownerId), {
-            currentKitchenId: docRef.id,
+            activeKitchenId: docRef.id,
             adminSetupCompleted: false,
             updatedAt: serverTimestamp()
         });
@@ -141,27 +141,26 @@ export const joinKitchen = async (userId, joinCode) => {
         const kitchenDoc = querySnapshot.docs[0];
         const kitchenId = kitchenDoc.id;
 
-        // 2. Add kitchen to user's joinedKitchens and set as current
-        const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
+        // 2. Create/Check Membership
+        const membershipId = `${userId}_${kitchenId}`;
+        const membershipRef = doc(db, 'memberships', membershipId);
+        const membershipSnap = await getDoc(membershipRef);
 
-        if (userSnap.exists()) {
-            const userData = userSnap.data();
-            const joinedKitchens = userData.joinedKitchens || [];
-
-            // Check if already joined
-            if (joinedKitchens.includes(kitchenId)) {
-                // Just switch to it
-                await updateDoc(userRef, { currentKitchenId: kitchenId });
-                return { success: true, kitchenId, message: "Switched to kitchen" };
-            }
-
-            // Add to list and set as current
-            await updateDoc(userRef, {
-                joinedKitchens: arrayUnion(kitchenId),
-                currentKitchenId: kitchenId
+        if (!membershipSnap.exists()) {
+            await setDoc(membershipRef, {
+                studentId: userId,
+                kitchenId: kitchenId,
+                joinedAt: serverTimestamp(),
+                status: "active"
             });
         }
+
+        // 3. Update user's activeKitchenId and legacy joinedKitchens (optional but good for backwards compatibility)
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+            activeKitchenId: kitchenId,
+            joinedKitchens: arrayUnion(kitchenId) // Keep for legacy if needed, but we'll use memberships now
+        });
 
         return { success: true, kitchenId };
     } catch (error) {
@@ -173,7 +172,7 @@ export const joinKitchen = async (userId, joinCode) => {
 export const switchKitchen = async (userId, kitchenId) => {
     try {
         const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, { currentKitchenId: kitchenId });
+        await updateDoc(userRef, { activeKitchenId: kitchenId });
         return { success: true };
     } catch (error) {
         console.error("Error switching kitchen:", error);

@@ -181,7 +181,7 @@ export const placeManualOrder = async (kitchenId, orderData, adminId) => {
                 role: 'student',
                 isBasic: true, // Marker for manual-entry accounts
                 joinedKitchens: [kitchenId],
-                currentKitchenId: kitchenId,
+                activeKitchenId: kitchenId,
                 createdAt: serverTimestamp()
             });
             userId = newUserDoc.id;

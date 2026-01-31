@@ -4,13 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useAuth } from '../contexts/AuthContext';
 import { createUserProfile, updateUserProfile } from '../services/authService';
+import { normalizeLocation } from '../utils/locationNormalizer';
 import tw from 'twrnc';
 import { User, ArrowRight, ChevronLeft, MapPin, Navigation, Info } from 'lucide-react-native';
 import Animated, { FadeIn, SlideInRight, SlideOutLeft, Layout } from 'react-native-reanimated';
 
-export const StudentSetupScreen = () => {
-    const { user } = useAuth();
-    const [step, setStep] = useState(1);
+export const StudentSetupScreen = ({ route, navigation }) => {
+    const { user, userProfile } = useAuth();
+    const editMode = route?.params?.editMode || false;
+    const [step, setStep] = useState(editMode ? 2 : 1);
     const [name, setName] = useState('');
     const [city, setCity] = useState('');
     const [pincode, setPincode] = useState('');
@@ -20,11 +22,24 @@ export const StudentSetupScreen = () => {
     const [autoDetected, setAutoDetected] = useState(false);
     const [resetting, setResetting] = useState(false);
 
+    // Pre-fill location data in edit mode
+    useEffect(() => {
+        if (editMode && userProfile) {
+            setCity(userProfile.cityDisplay || userProfile.city || '');
+            setPincode(userProfile.pincode || '');
+            setArea(userProfile.area || '');
+            setName(userProfile.name || '');
+        }
+    }, [editMode, userProfile]);
+
     const handleBack = async () => {
         if (step > 1) {
+            // Allow going back to previous step
             setStep(step - 1);
             return;
         }
+
+        // At step 1 - always reset role to go to role selection
         setResetting(true);
         await updateUserProfile(user.uid, { role: null });
         setResetting(false);
@@ -102,16 +117,29 @@ export const StudentSetupScreen = () => {
         }
 
         setLoading(true);
-        const result = await updateUserProfile(user.uid, {
-            name: name.trim(),
-            phoneNumber: user.phoneNumber,
-            city: city.trim(),
+
+        const updateData = {
+            city: normalizeLocation(city),
+            cityDisplay: city.trim(),
             pincode: pincode.trim(),
             area: area.trim(),
-            locationSet: true // Mark location as set
-        });
+            locationSet: true
+        };
 
-        if (result.error) Alert.alert("Error", result.error);
+        // Only update name if not in edit mode
+        if (!editMode) {
+            updateData.name = name.trim();
+            updateData.phoneNumber = user.phoneNumber;
+        }
+
+        const result = await updateUserProfile(user.uid, updateData);
+
+        if (result.error) {
+            Alert.alert("Error", result.error);
+        } else if (editMode) {
+            // In edit mode, navigate back to Discovery
+            navigation.goBack();
+        }
         setLoading(false);
     };
 

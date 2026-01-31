@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { DiscoveryScreen } from '../screens/student/DiscoveryScreen';
 import { TrialOrderScreen } from '../screens/student/TrialOrderScreen';
 import { JoinKitchenScreen } from '../screens/student/JoinKitchenScreen';
+import { StudentSetupScreen } from '../screens/StudentSetupScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,11 @@ export const UnjoinedStudentStack = () => {
             <Stack.Screen
                 name="Discovery"
                 component={DiscoveryScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="EditLocation"
+                component={StudentSetupScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

@@ -86,7 +86,7 @@ export const createUserProfile = async (uid, data) => {
                 // 1. Create new full user with basic data merged
                 await setDoc(userRef, {
                     id: uid,
-                    ...basicData, // Carry over joinedKitchens, currentKitchenId
+                    ...basicData, // Carry over joinedKitchens, activeKitchenId
                     ...data,      // Override with new full registration data
                     isBasic: false,
                     updatedAt: new Date().toISOString()
@@ -112,7 +112,7 @@ export const createUserProfile = async (uid, data) => {
             ...data,
             createdAt: new Date().toISOString(),
             joinedKitchens: data.joinedKitchens || [],
-            currentKitchenId: data.currentKitchenId || null
+            activeKitchenId: data.activeKitchenId || null
         }, { merge: true });
         return { success: true };
     } catch (error) {
