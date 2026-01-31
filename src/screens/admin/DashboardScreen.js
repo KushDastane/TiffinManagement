@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, RefreshControl, Dimensions, Alert, A
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { listenToAdminStats, getCookingSummary } from '../../services/adminService';
-import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot, getAvailableSlots, getSlotStatus, getNextUpcomingSlot } from '../../services/menuService';
+import { subscribeToMenu, getEffectiveMenuDateKey, getEffectiveMealSlot, getAvailableSlots, getSlotStatus, getNextUpcomingSlot, getTodayKey, getSlotDateKey } from '../../services/menuService';
 import { subscribeToOrders, updateOrder } from '../../services/orderService';
 import tw from 'twrnc';
 import { Clock, IndianRupee, Package, ChevronRight, Activity, Check, Sun, Moon, AlertTriangle, CheckCircle, Coffee, UtensilsCrossed, Copy } from 'lucide-react-native';
@@ -43,7 +43,11 @@ export const DashboardScreen = ({ navigation }) => {
     const initialSlot = useMemo(() => getEffectiveMealSlot(tenant), [tenant, currentTime]);
     const [manualSlot, setManualSlot] = useState(null);
     const slot = manualSlot || initialSlot;
-    const dateKey = useMemo(() => getEffectiveMenuDateKey(tenant), [tenant, currentTime]);
+
+    // Stats stick to the current Business Day until 4 AM
+    const dateKey = useMemo(() => getTodayKey(), []);
+    // Menu looks at the specific date/cycle for the current slot
+    const menuDateKey = useMemo(() => getSlotDateKey(slot, tenant), [tenant, slot]);
 
     const enabledSlots = useMemo(() => {
         if (!tenant?.mealSlots) return [];
@@ -60,7 +64,7 @@ export const DashboardScreen = ({ navigation }) => {
         if (!tenant?.id) return;
 
         const unsubStats = listenToAdminStats(tenant.id, slot, setStats);
-        const unsubMenu = subscribeToMenu(tenant.id, dateKey, setMenuData);
+        const unsubMenu = subscribeToMenu(tenant.id, menuDateKey, setMenuData);
         const unsubOrders = subscribeToOrders(tenant.id, dateKey, (newOrders) => {
             console.log("Admin Dashboard: Received orders count:", newOrders.length);
             setOrders(newOrders);
@@ -148,7 +152,7 @@ export const DashboardScreen = ({ navigation }) => {
         const slotData = menuData?.[slot];
 
         if (status === 'ACTIVE') {
-            if (!slotData) return { label: `${slot.toUpperCase()} NOT SET`, color: "red", subText: "Upload menu now" };
+            if (!slotData) return { label: `${slot.toUpperCase()} NOT SET`, color: "red", subLabel: "Upload menu now" };
             const mainItem = slotData.type === 'ROTI_SABZI' ? slotData.rotiSabzi?.sabzi : slotData.other?.name;
             return { label: "Live & Taking Orders", color: "green", subLabel: mainItem };
         }

@@ -18,6 +18,7 @@ import {
     getEffectiveMealSlot,
     getAvailableSlots,
     getBusinessDate,
+    getSlotDateKey,
 } from "../../services/menuService";
 import {
     subscribeToMyOrders,
@@ -314,8 +315,8 @@ export const HomeScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const activeSlot = getEffectiveMealSlot(tenant);
-    const dateId = getEffectiveMenuDateKey(tenant);
+    const activeSlot = useMemo(() => getEffectiveMealSlot(tenant), [tenant]);
+    const dateId = useMemo(() => getSlotDateKey(activeSlot, tenant), [tenant, activeSlot]);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -368,8 +369,12 @@ export const HomeScreen = () => {
         setRefreshing(false);
     };
 
-    // Kitchen is considered open if there is an active slot currently available for ordering
-    const kitchenOpen = getAvailableSlots(tenant).length > 0;
+    // Kitchen is considered open if not on holiday and has active slots
+    const availableSlots = useMemo(() => getAvailableSlots(tenant), [tenant]);
+    const kitchenOpen = useMemo(() => {
+        if (tenant?.holiday?.active) return false;
+        return availableSlots.length > 0;
+    }, [tenant, availableSlots]);
 
     // Menu State
     const [todaysMenu, setTodaysMenu] = useState(null);
@@ -444,7 +449,7 @@ export const HomeScreen = () => {
     };
 
     const config = getStatusConfig();
-    const activeMenu = todaysMenu?.mealSlots?.[activeSlot];
+    const activeMenu = todaysMenu?.[activeSlot];
 
     const handleSwitchKitchen = async (kitchenId) => {
         if (kitchenId === tenant?.id) return;
@@ -542,8 +547,11 @@ export const HomeScreen = () => {
                             <View style={[
                                 tw`px-3 py-1.5 rounded-xl border border-white bg-white/60`,
                             ]}>
-                                <Text style={[tw`text-[9px] font-black uppercase tracking-widest`, kitchenOpen ? tw`text-green-600` : tw`text-gray-400`]}>
-                                    {kitchenOpen ? 'Kitchen Open' : 'Closed'}
+                                <Text style={[
+                                    tw`text-[9px] font-black uppercase tracking-widest`,
+                                    tenant?.holiday?.active ? tw`text-orange-600` : (kitchenOpen ? tw`text-green-600` : tw`text-gray-400`)
+                                ]}>
+                                    {tenant?.holiday?.active ? 'Holiday' : (kitchenOpen ? 'Kitchen Open' : 'Closed')}
                                 </Text>
                             </View>
                             <View style={tw`w-14 h-14 rounded-[20px] bg-white items-center justify-center shadow-lg shadow-yellow-100 border border-white`}>
@@ -587,7 +595,9 @@ export const HomeScreen = () => {
                                 )}
 
                                 <Text style={tw`text-[9px] font-black uppercase tracking-widest mb-1 text-gray-400`}>
-                                    {activeSlot?.toUpperCase() || 'MEAL'}
+                                    {availableSlots.length > 0
+                                        ? availableSlots.map(s => s.id).join(' • ')
+                                        : (activeSlot?.toUpperCase() || 'MEAL')}
                                 </Text>
                                 <Text style={[tw`text-2xl font-black`, config.titleColor]}>
                                     {config.title}
@@ -603,30 +613,7 @@ export const HomeScreen = () => {
                             </View>
                         </View>
 
-                        {/* Menu Preview Section (Only show if NO_ORDER and Kitchen is Open) */}
-                        {orderStatus === 'NO_ORDER' && kitchenOpen && activeMenu && (
-                            <View style={tw`bg-white/60 rounded-2xl p-4 border border-white/50 mb-6`}>
-                                <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3`}>On the Menu Today</Text>
-                                <View style={tw`gap-2`}>
-                                    <View style={tw`flex-row items-center gap-2`}>
-                                        <View style={tw`w-1.5 h-1.5 rounded-full bg-gray-900`} />
-                                        <Text style={tw`text-sm font-bold text-gray-700`}>{activeMenu.mainItem}</Text>
-                                    </View>
-                                    {activeMenu.sabzi && (
-                                        <View style={tw`flex-row items-center gap-2`}>
-                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-gray-900`} />
-                                            <Text style={tw`text-sm font-bold text-gray-700`}>{activeMenu.sabzi}</Text>
-                                        </View>
-                                    )}
-                                    {activeMenu.dal && (
-                                        <View style={tw`flex-row items-center gap-2`}>
-                                            <View style={tw`w-1.5 h-1.5 rounded-full bg-gray-900`} />
-                                            <Text style={tw`text-sm font-bold text-gray-700`}>{activeMenu.dal}</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        )}
+
 
                         {/* Order Details (For Pending/Confirmed/Completed) */}
                         {orderStatus !== 'NO_ORDER' && todaysOrder && (

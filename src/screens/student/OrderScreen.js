@@ -356,7 +356,7 @@ export const OrderScreen = ({ navigation }) => {
                 <View>
                     <View style={tw`flex-row items-center gap-2 mb-0.5`}>
                         <Text style={tw`text-[10px] font-black text-yellow-600 uppercase tracking-widest`}>
-                            {activeDateKey} • AVAILABLE MEALS
+                            {activeDateKey}
                         </Text>
                         <View style={tw`w-1 h-1 rounded-full bg-yellow-400`} />
                         <View style={[
@@ -432,6 +432,43 @@ export const OrderScreen = ({ navigation }) => {
                 ) : (
                     <View style={tw`bg-white p-10 rounded-3xl items-center`}>
                         <Text style={tw`text-gray-400 font-bold`}>Meal details not available.</Text>
+                    </View>
+                )}
+
+                {/* Extras Section - MOVED UP */}
+                {selectedItem && menu?.extras && menu.extras.length > 0 && (
+                    <View style={tw`mt-8`}>
+                        <View style={tw`flex-row items-center gap-2 mb-4`}>
+                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Add-ons & Extras</Text>
+                            <View style={tw`h-[1px] flex-1 bg-gray-100`} />
+                        </View>
+                        <View style={tw`gap-3`}>
+                            {menu.extras.map((extra, idx) => (
+                                <View key={idx} style={tw`flex-row justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm`}>
+                                    <View>
+                                        <Text style={tw`font-black text-gray-900`}>{extra.name}</Text>
+                                        <View style={tw`bg-yellow-100 px-2 py-0.5 rounded-md self-start mt-1`}>
+                                            <Text style={tw`text-[9px] font-black text-yellow-800`}>+₹{extra.price}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={tw`flex-row items-center gap-3`}>
+                                        <Pressable
+                                            onPress={() => updateExtraQty(extra.name, -1)}
+                                            style={tw`w-8 h-8 rounded-lg bg-gray-50 items-center justify-center border border-gray-100`}
+                                        >
+                                            <Minus size={14} color="#9ca3af" />
+                                        </Pressable>
+                                        <Text style={tw`font-black text-gray-900 w-4 text-center`}>{extrasQty[extra.name] || 0}</Text>
+                                        <Pressable
+                                            onPress={() => updateExtraQty(extra.name, 1)}
+                                            style={tw`w-8 h-8 rounded-lg bg-gray-900 items-center justify-center`}
+                                        >
+                                            <Plus size={14} color="white" />
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
                     </View>
                 )}
 
@@ -530,42 +567,6 @@ export const OrderScreen = ({ navigation }) => {
                     </View>
                 )}
 
-                {/* Extras Section */}
-                {selectedItem && menu?.extras && menu.extras.length > 0 && (
-                    <View style={tw`mt-8`}>
-                        <View style={tw`flex-row items-center gap-2 mb-4`}>
-                            <Text style={tw`text-[9px] font-black text-gray-400 uppercase tracking-widest`}>Add-ons & Extras</Text>
-                            <View style={tw`h-[1px] flex-1 bg-gray-100`} />
-                        </View>
-                        <View style={tw`gap-3`}>
-                            {menu.extras.map((extra, idx) => (
-                                <View key={idx} style={tw`flex-row justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm`}>
-                                    <View>
-                                        <Text style={tw`font-black text-gray-900`}>{extra.name}</Text>
-                                        <View style={tw`bg-yellow-100 px-2 py-0.5 rounded-md self-start mt-1`}>
-                                            <Text style={tw`text-[9px] font-black text-yellow-800`}>+₹{extra.price}</Text>
-                                        </View>
-                                    </View>
-                                    <View style={tw`flex-row items-center gap-3`}>
-                                        <Pressable
-                                            onPress={() => updateExtraQty(extra.name, -1)}
-                                            style={tw`w-8 h-8 rounded-lg bg-gray-50 items-center justify-center border border-gray-100`}
-                                        >
-                                            <Minus size={14} color="#9ca3af" />
-                                        </Pressable>
-                                        <Text style={tw`font-black text-gray-900 w-4 text-center`}>{extrasQty[extra.name] || 0}</Text>
-                                        <Pressable
-                                            onPress={() => updateExtraQty(extra.name, 1)}
-                                            style={tw`w-8 h-8 rounded-lg bg-gray-900 items-center justify-center`}
-                                        >
-                                            <Plus size={14} color="white" />
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                )}
             </ScrollView>
 
             {/* Bottom Bar - High Impact */}
