@@ -227,7 +227,8 @@ export const OrdersScreen = () => {
                             <Search size={16} color="#9ca3af" strokeWidth={2.5} />
                             <TextInput
                                 style={tw`flex-1 py-3 ml-2 font-bold text-gray-900 text-sm`}
-                                placeholder="Search student identity..."
+                                placeholder="Search customer identity..."
+                                placeholderTextColor="#9ca3af"
                                 value={searchTerm}
                                 onChangeText={setSearchTerm}
                             />

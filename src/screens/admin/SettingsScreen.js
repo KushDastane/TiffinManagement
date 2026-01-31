@@ -846,7 +846,7 @@ export const SettingsScreen = () => {
                             <View style={tw`bg-amber-50 rounded-2xl p-4 flex-row gap-3 border border-amber-100`}>
                                 <Info size={16} color="#ca8a04" style={tw`mt-0.5`} />
                                 <Text style={tw`flex-1 text-[11px] font-bold text-amber-800 leading-4`}>
-                                    Kitchens control how much unpaid balance a student can accumulate before ordering is restricted.
+                                    Kitchens control how much unpaid balance a customer can accumulate before ordering is restricted.
                                 </Text>
                             </View>
 
@@ -877,13 +877,10 @@ export const SettingsScreen = () => {
                 {/* Sign Out Button */}
                 <Pressable
                     onPress={handleLogout}
-                    style={({ pressed }) => [
-                        tw`bg-red-50 rounded-[24px] p-6 mb-5 flex-row items-center justify-center gap-3 border border-red-100`,
-                        pressed && tw`bg-red-100`
-                    ]}
+                    style={tw`flex-row items-center justify-center gap-2 p-4 opacity-80`}
                 >
                     <LogOut size={20} color="#dc2626" />
-                    <Text style={tw`text-red-600 font-black text-sm uppercase tracking-widest`}>Sign Out</Text>
+                    <Text style={tw`text-red-500 font-black text-xs uppercase tracking-widest`}>Sign Out</Text>
                 </Pressable>
 
                 <Text style={tw`text-center text-xs text-gray-300 mt-2 uppercase font-bold tracking-widest`}>DabbaMe v1.0.0 • Production</Text>

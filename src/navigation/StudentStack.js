@@ -9,6 +9,7 @@ import { HistoryScreen } from '../screens/student/HistoryScreen';
 import { ProfileScreen } from '../screens/student/ProfileScreen';
 import { JoinKitchenScreen } from '../screens/student/JoinKitchenScreen';
 import { DiscoveryScreen } from '../screens/student/DiscoveryScreen';
+import { StudentSetupScreen } from '../screens/StudentSetupScreen';
 import { KhataStack } from './KhataStack';
 import { StudentTabBar } from '../components/StudentTabBar';
 
@@ -62,13 +63,10 @@ export const StudentStack = () => {
                 name="JoinKitchen"
                 component={JoinKitchenScreen}
                 options={{
-                    presentation: 'modal',
-                    headerShown: true,
-                    title: 'Join Kitchen',
-                    headerStyle: { backgroundColor: '#ffffff' },
-                    headerTitleStyle: { fontSize: 22, fontWeight: '900', color: '#111827' },
-                    headerTintColor: '#111827',
-                    headerShadowVisible: false,
+                    presentation: 'transparentModal',
+                    headerShown: false,
+                    animation: 'fade',
+                    contentStyle: { backgroundColor: 'transparent' }
                 }}
             />
             <Stack.Screen
@@ -78,6 +76,11 @@ export const StudentStack = () => {
                     presentation: 'modal',
                     headerShown: false,
                 }}
+            />
+            <Stack.Screen
+                name="EditLocation"
+                component={StudentSetupScreen}
+                options={{ headerShown: false }}
             />
         </Stack.Navigator>
     );

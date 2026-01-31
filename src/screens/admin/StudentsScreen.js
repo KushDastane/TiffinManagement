@@ -127,7 +127,7 @@ export const StudentsScreen = ({ navigation }) => {
                     <View style={tw`mb-4`}>
                         <View style={tw`flex-row justify-between items-center mb-4`}>
                             <View>
-                                <Text style={tw`text-2xl font-black text-gray-900`}>Students</Text>
+                                <Text style={tw`text-2xl font-black text-gray-900`}>Customers</Text>
                                 <View style={tw`flex-row items-center gap-2 bg-yellow-50 self-start px-2 py-0.5 rounded-lg border border-yellow-100 mt-1`}>
                                     <Users size={10} color="#ca8a04" />
                                     <Text style={tw`text-[9px] font-black text-yellow-800 uppercase`}>
@@ -156,7 +156,7 @@ export const StudentsScreen = ({ navigation }) => {
                                 <Search size={16} color="#9ca3af" strokeWidth={2.5} />
                                 <TextInput
                                     style={tw`flex-1 py-3 ml-2 font-bold text-gray-900 text-sm`}
-                                    placeholder="Search student identity..."
+                                    placeholder="Search customer identity..."
                                     placeholderTextColor="#9ca3af"
                                     value={searchTerm}
                                     onChangeText={setSearchTerm}
@@ -205,7 +205,7 @@ export const StudentsScreen = ({ navigation }) => {
                                         <Text style={tw`text-lg font-black text-yellow-800 uppercase`}>{(s.name || 'S')[0]}</Text>
                                     </View>
                                     <View style={tw`flex-1`}>
-                                        <Text style={tw`text-base font-bold text-gray-900`}>{s.name || 'Unnamed Student'}</Text>
+                                        <Text style={tw`text-base font-bold text-gray-900`}>{s.name || 'Unnamed Customer'}</Text>
                                         <View style={tw`flex-row items-center gap-1.5 mt-0.5`}>
                                             <View style={tw`w-1.5 h-1.5 rounded-full bg-yellow-400`} />
                                             <Text style={tw`text-[10px] font-bold text-gray-400 uppercase tracking-widest`}>{s.phoneNumber || 'NO PHONE'}</Text>
@@ -248,7 +248,7 @@ export const StudentsScreen = ({ navigation }) => {
                 {(activeTab === 'ALL' ? filteredStudents : duesSummary.students).length === 0 && (
                     <View style={tw`items-center justify-center py-20`}>
                         <Users size={48} color="#e5e7eb" />
-                        <Text style={tw`text-gray-400 font-bold mt-4`}>No students found</Text>
+                        <Text style={tw`text-gray-400 font-bold mt-4`}>No customers found</Text>
                     </View>
                 )}
             </ScrollView>

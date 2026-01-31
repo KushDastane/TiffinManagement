@@ -458,7 +458,7 @@ export const HomeScreen = () => {
                 contentContainerStyle={tw`p-6 pt-56 pb-32`}
             >
                 {/* Dynamic Status Card */}
-                <View style={[tw`rounded-[32px] mb-6 shadow-xl shadow-gray-200/50`, { backgroundColor: 'white' }]}>
+                <View style={[tw`rounded-[32px] mb-6 mt-7 shadow-xl shadow-gray-200/50`, { backgroundColor: 'white' }]}>
                     <LinearGradient
                         colors={config.gradient}
                         start={{ x: 0, y: 0 }}

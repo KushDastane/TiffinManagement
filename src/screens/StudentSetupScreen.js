@@ -22,15 +22,15 @@ export const StudentSetupScreen = ({ route, navigation }) => {
     const [autoDetected, setAutoDetected] = useState(false);
     const [resetting, setResetting] = useState(false);
 
-    // Pre-fill location data in edit mode
+    // Pre-fill location data if available (allow verification even if not in explicit editMode)
     useEffect(() => {
-        if (editMode && userProfile) {
-            setCity(userProfile.cityDisplay || userProfile.city || '');
-            setPincode(userProfile.pincode || '');
-            setArea(userProfile.area || '');
-            setName(userProfile.name || '');
+        if (userProfile) {
+            if (userProfile.cityDisplay || userProfile.city) setCity(userProfile.cityDisplay || userProfile.city);
+            if (userProfile.pincode) setPincode(userProfile.pincode);
+            if (userProfile.area) setArea(userProfile.area);
+            if (userProfile.name) setName(userProfile.name);
         }
-    }, [editMode, userProfile]);
+    }, [userProfile]);
 
     const handleBack = async () => {
         if (step > 1) {

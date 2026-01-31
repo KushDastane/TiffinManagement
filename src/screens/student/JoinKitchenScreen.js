@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Keyboard, Pressable, Modal } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { joinKitchen } from '../../services/kitchenService';
 import tw from 'twrnc';
-import { ChefHat, ArrowRight, Key } from 'lucide-react-native';
+import { ChefHat, ArrowRight, X } from 'lucide-react-native';
 
-export const JoinKitchenScreen = () => {
+export const JoinKitchenScreen = ({ navigation }) => {
     const { user } = useAuth();
     const [joinCode, setJoinCode] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleJoin = async () => {
+        // Dismiss keyboard to ensure UI is stable
+        Keyboard.dismiss();
+
         if (!joinCode.trim() || joinCode.length < 8) {
             Alert.alert("Invalid Code", "Please enter a valid 8-character code (e.g., ZBJ-2929)");
             return;
@@ -23,7 +26,11 @@ export const JoinKitchenScreen = () => {
         if (result.error) {
             Alert.alert("Error", result.error);
         } else {
-            Alert.alert("Success", "Joined kitchen successfully!");
+            Alert.alert(
+                "Success",
+                "Joined kitchen successfully!",
+                [{ text: "OK", onPress: () => navigation.goBack() }]
+            );
         }
     };
 
@@ -36,64 +43,80 @@ export const JoinKitchenScreen = () => {
     };
 
     return (
-        <ScrollView
-            style={tw`flex-1 bg-white`}
-            contentContainerStyle={tw`flex-grow items-center justify-center p-6`}
-            showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={tw`flex-1`}
         >
-            {/* Icon */}
-            <View style={tw`w-20 h-20 bg-yellow-50 rounded-3xl items-center justify-center mb-6`}>
-                <ChefHat size={36} color="#ca8a04" />
-            </View>
+            {/* Dimmed Background Overlay */}
+            <Pressable
+                style={tw`absolute inset-0 bg-black/60`}
+                onPress={() => navigation.goBack()}
+            />
 
-            {/* Header */}
-            <Text style={tw`text-2xl font-black text-gray-900 text-center tracking-tight mb-2`}>
-                Join a Kitchen
-            </Text>
-            <Text style={tw`text-gray-500 text-sm font-medium text-center px-8 mb-10 leading-relaxed`}>
-                Enter the code shared by{'\n'}your kitchen
-            </Text>
+            <View style={tw`flex-1 justify-center items-center px-6`}>
+                {/* Modal Card */}
+                <Pressable style={tw`w-full bg-white rounded-[32px] overflow-hidden shadow-xl`} onPress={Keyboard.dismiss}>
 
-            {/* Code Input */}
-            <View style={tw`w-full max-w-sm mb-8`}>
-                <View style={tw`bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-6 items-center`}>
+                    {/* Close Button */}
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={tw`absolute top-4 right-4 z-10 p-2 bg-gray-50 rounded-full`}
+                    >
+                        <X size={20} color="#9ca3af" />
+                    </TouchableOpacity>
 
-                    <TextInput
-                        style={tw`text-4xl text-center font-black tracking-[8px] uppercase text-gray-900 w-full`}
-                        placeholder="ZBJ-2929"
-                        placeholderTextColor="#d1d5db"
-                        maxLength={8}
-                        value={joinCode}
-                        onChangeText={handleTextChange}
-                        autoCapitalize="characters"
-                        autoFocus={true}
-                        editable={true}
-                        selectionColor="#ca8a04"
-                    />
-                </View>
+                    <View style={tw`p-8 items-center`}>
+                        {/* Icon */}
+                        <View style={tw`w-16 h-16 bg-yellow-400 rounded-2xl items-center justify-center mb-5 rotate-3`}>
+                            <ChefHat size={32} color="black" />
+                        </View>
 
-            </View>
-
-            {/* Join Button */}
-            <TouchableOpacity
-                style={tw`w-full max-w-sm bg-yellow-400 rounded-xl py-4 items-center flex-row justify-center gap-2 shadow-sm ${loading ? 'opacity-70' : ''}`}
-                onPress={handleJoin}
-                disabled={loading}
-                activeOpacity={0.8}
-            >
-                {loading ? (
-                    <ActivityIndicator color="black" />
-                ) : (
-                    <>
-                        <Text style={tw`text-black font-black text-sm uppercase tracking-widest`}>
-                            Join Kitchen
+                        {/* Text */}
+                        <Text style={tw`text-2xl font-black text-gray-900 text-center mb-1`}>
+                            Join a Kitchen
                         </Text>
-                        <ArrowRight size={16} color="black" />
-                    </>
-                )}
-            </TouchableOpacity>
+                        <Text style={tw`text-gray-400 font-bold text-xs uppercase tracking-widest text-center mb-8`}>
+                            Enter Secret Code
+                        </Text>
 
-            {/* Help Text */}
-        </ScrollView>
+                        {/* Input */}
+                        <View style={tw`w-full bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 mb-6`}>
+                            <TextInput
+                                style={tw`text-3xl text-center font-black tracking-[6px] uppercase text-gray-900 w-full`}
+                                placeholder="XXX-XXXX"
+                                placeholderTextColor="#e5e7eb"
+                                maxLength={8}
+                                value={joinCode}
+                                onChangeText={handleTextChange}
+                                autoCapitalize="characters"
+                                selectionColor="#ca8a04"
+                                autoFocus={true}
+                            />
+                        </View>
+
+                        {/* Action Button */}
+                        <TouchableOpacity
+                            style={[
+                                tw`w-full bg-gray-900 rounded-2xl py-4 items-center flex-row justify-center gap-2 shadow-lg`,
+                                loading && tw`opacity-70`
+                            ]}
+                            onPress={handleJoin}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <>
+                                    <Text style={tw`text-white font-black text-sm uppercase tracking-widest`}>
+                                        Join Now
+                                    </Text>
+                                    <ArrowRight size={16} color="white" />
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </Pressable>
+            </View>
+        </KeyboardAvoidingView>
     );
 };

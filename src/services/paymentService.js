@@ -69,7 +69,7 @@ export const requestPayment = async (kitchenId, paymentData) => {
             amount: parseFloat(paymentData.amount),
             type: 'credit',
             method: paymentData.method, // 'UPI' | 'CASH'
-            status: 'pending', // Default for student requests
+            status: 'pending', // Default for customer requests
             screenshotUrl,
             note: paymentData.note || '',
             createdAt: serverTimestamp()
@@ -81,7 +81,7 @@ export const requestPayment = async (kitchenId, paymentData) => {
     }
 };
 
-// Fetch all students belonging to this kitchen
+// Fetch all customers belonging to this kitchen
 export const getKitchenStudents = async (kitchenId) => {
     try {
         const usersRef = collection(db, 'users');
@@ -226,7 +226,7 @@ export const getKitchenOutstandingSummary = async (kitchenId) => {
                 const outstanding = Math.abs(balance);
                 summary.push({
                     userId,
-                    name: userData.name || 'Unnamed Student',
+                    name: userData.name || 'Unnamed Customer',
                     phoneNumber: userData.phoneNumber,
                     outstanding
                 });

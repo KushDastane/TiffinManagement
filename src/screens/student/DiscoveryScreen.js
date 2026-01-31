@@ -26,7 +26,12 @@ export const DiscoveryScreen = ({ navigation }) => {
 
     // Handle back navigation
     const handleGoBack = () => {
-        navigation.navigate('EditLocation', { editMode: true });
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            // Fallback if we can't go back (e.g. initial screen in a stack)
+            navigation.navigate('EditLocation', { editMode: true });
+        }
     };
 
     useEffect(() => {

@@ -65,7 +65,7 @@ export const AddPaymentScreen = () => {
       const paymentData = {
         userId: user.uid,
         phoneNumber: userProfile?.phoneNumber || null,
-        userDisplayName: userProfile?.name || 'Student',
+        userDisplayName: userProfile?.name || 'Customer',
         amount: amount,
         method: paymentMode,
         screenshotUri: uploadedUrl, // We specifically pass the URL now, not URI. Wait, service expects URI and uploads it? 

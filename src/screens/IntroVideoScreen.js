@@ -205,7 +205,7 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
                                 Welcome to DabbaMe!
                             </Text>
                             <Text style={tw`text-gray-500 font-medium text-center text-xs w-[60%]`}>
-                                Quick tour for you as a {role === 'admin' ? 'Kitchen Manager' : 'Student'}.
+                                Quick tour for you as a {role === 'admin' ? 'Kitchen Manager' : 'Customer'}.
                             </Text>
                         </View>
 
