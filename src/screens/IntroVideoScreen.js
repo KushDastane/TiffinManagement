@@ -54,7 +54,7 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
     // Determine config based on role
     const configKey = role === 'admin' ? 'admin' : 'student';
     const videoSource = VIDEO_CONFIG[configKey] || VIDEO_CONFIG.student;
-    const storageKey = role === 'admin' ? VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_ADMIN : VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_STUDENT;
+    const storageKey = `HAS_WATCHED_INTRO_${role?.toUpperCase()}_${user?.uid}`;
 
     useEffect(() => {
         if (!videoLoaded || !status.isPlaying) return;

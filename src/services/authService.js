@@ -111,7 +111,8 @@ export const createUserProfile = async (uid, data) => {
             ...data,
             createdAt: new Date().toISOString(),
             joinedKitchens: data.joinedKitchens || [],
-            currentKitchenId: data.currentKitchenId || null
+            currentKitchenId: data.currentKitchenId || null,
+            hasWatchedIntro: false
         }, { merge: true });
         return { success: true };
     } catch (error) {

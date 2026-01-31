@@ -31,15 +31,13 @@ export const RootNavigator = () => {
         const checkIntroStatus = async () => {
             if (userProfile?.role) {
                 // 1. Check if Firestore already has it
-                if (userProfile.hasWatchedIntro) {
+                if (userProfile.hasWatchedIntro === true) {
                     setIntroWatched(true);
                     return;
                 }
 
-                // 2. Fallback to AsyncStorage (for users who watched on this device but not synced to profile)
-                const storageKey = userProfile.role === 'admin'
-                    ? VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_ADMIN
-                    : VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_STUDENT;
+                // 2. Fallback to user-specific AsyncStorage
+                const storageKey = `HAS_WATCHED_INTRO_${userProfile.role.toUpperCase()}_${user.uid}`;
 
                 try {
                     const hasWatched = await AsyncStorage.getItem(storageKey);
@@ -48,6 +46,7 @@ export const RootNavigator = () => {
                         // Sync back to Firestore if missing
                         updateUserProfile(user.uid, { hasWatchedIntro: true });
                     } else {
+                        // Definitely not watched
                         setIntroWatched(false);
                     }
                 } catch (e) {
