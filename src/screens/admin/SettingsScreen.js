@@ -10,6 +10,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChefHat, Clock, Calendar, LogOut, Save, ShieldCheck, Sun, Moon, Coffee, UtensilsCrossed, Edit2, Check, Copy, MapPin, CreditCard, Info } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
+const SLOT_DEFAULTS = {
+    breakfast: { active: false, start: '22:00', end: '07:00', pickupStart: '07:30', pickupEnd: '09:00', deliveryStart: '07:30', deliveryEnd: '09:00' },
+    lunch: { active: false, start: '22:00', end: '14:00', pickupStart: '12:30', pickupEnd: '14:30', deliveryStart: '12:30', deliveryEnd: '14:30' },
+    snacks: { active: false, start: '16:00', end: '18:00', pickupStart: '17:00', pickupEnd: '19:00', deliveryStart: '17:00', deliveryEnd: '19:00' },
+    dinner: { active: false, start: '16:00', end: '20:00', pickupStart: '19:30', pickupEnd: '21:30', deliveryStart: '19:30', deliveryEnd: '21:30' }
+};
+
 // Helper to format 24h string to 12h display
 const formatTime12h = (time24) => {
     if (!time24) return '';
@@ -98,9 +105,18 @@ export const SettingsScreen = () => {
 
     const openPicker = (mode, field, subField, currentValue) => {
         let date = new Date();
-        if (mode === 'time' && currentValue) {
-            const [h, m] = currentValue.split(':');
-            date.setHours(parseInt(h) || 0, parseInt(m) || 0, 0, 0);
+        if (mode === 'time') {
+            let timeStr = currentValue;
+            // If no current value, try to find a default for this slot/field
+            if (!timeStr && field === 'mealSlots' && subField) {
+                const [slotId, timeField] = subField.split('.');
+                timeStr = SLOT_DEFAULTS[slotId]?.[timeField];
+            }
+
+            if (timeStr) {
+                const [h, m] = timeStr.split(':');
+                date.setHours(parseInt(h) || 0, parseInt(m) || 0, 0, 0);
+            }
         } else if (mode === 'date' && currentValue) {
             const parts = currentValue.split('-');
             if (parts.length === 3) date = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -432,7 +448,7 @@ export const SettingsScreen = () => {
                         { id: 'snacks', label: 'Snacks', icon: UtensilsCrossed },
                         { id: 'dinner', label: 'Dinner', icon: Moon }
                     ].map((m) => {
-                        const slot = config?.mealSlots?.[m.id] || { active: false, start: '08:00', end: '10:00' };
+                        const slot = config?.mealSlots?.[m.id] || SLOT_DEFAULTS[m.id];
                         const Icon = m.icon;
 
                         return (

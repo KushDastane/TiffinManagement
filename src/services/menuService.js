@@ -176,12 +176,23 @@ export const getDinnerDateKey = (kitchenConfig) => getSlotDateKey('dinner', kitc
  */
 export const getSlotStatus = (slotObj, currentTime) => {
     if (!slotObj || !slotObj.start || !slotObj.end) return 'ENDED';
+
+    // Check if it's a wrapping slot (e.g., 22:00 to 07:00)
+    // We use a simple comparison for wrapping detection
+    const isWrapping = slotObj.start > slotObj.end;
+
     const starts = compareTimes(currentTime, slotObj.start);
     const ends = compareTimes(currentTime, slotObj.end);
 
-    if (starts >= 0 && ends <= 0) return 'ACTIVE';
-    if (starts < 0) return 'UPCOMING';
-    return 'ENDED';
+    if (isWrapping) {
+        // Active if current time is after start OR before end
+        if (starts >= 0 || ends <= 0) return 'ACTIVE';
+        return 'UPCOMING';
+    } else {
+        if (starts >= 0 && ends <= 0) return 'ACTIVE';
+        if (starts < 0) return 'UPCOMING';
+        return 'ENDED';
+    }
 };
 
 /**

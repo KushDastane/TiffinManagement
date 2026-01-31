@@ -26,10 +26,15 @@ export const AuthProvider = ({ children }) => {
                 profileUnsubscribe = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setUserProfile(docSnap.data());
+                        setLoading(false);
                     } else {
+                        // Profile was deleted or doesn't exist
                         setUserProfile(null);
+                        // If we are "logged in" but have no profile, we should sign out
+                        // to prevent being stuck in a partial auth state.
+                        auth.signOut();
+                        setLoading(false);
                     }
-                    setLoading(false);
                 }, (error) => {
                     console.error("Error fetching user profile:", error);
                     setLoading(false);

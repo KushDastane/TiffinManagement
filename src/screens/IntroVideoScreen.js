@@ -92,6 +92,9 @@ export const IntroVideoScreen = ({ route, navigation, onFinish, role: propRole }
     const handleFinish = async () => {
         try {
             await AsyncStorage.setItem(storageKey, 'true');
+            if (user?.uid) {
+                await updateUserProfile(user.uid, { hasWatchedIntro: true });
+            }
             if (onFinish) {
                 onFinish();
             } else {

@@ -46,10 +46,12 @@ export const DashboardScreen = ({ navigation }) => {
     const enabledSlots = useMemo(() => {
         if (!tenant?.mealSlots) return [];
 
+        const order = ['breakfast', 'lunch', 'snacks', 'dinner'];
+
         return Object.entries(tenant.mealSlots)
             .filter(([_, s]) => s && s.active)
             .map(([id, s]) => ({ id, ...s }))
-            .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+            .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     }, [tenant]);
 
     useEffect(() => {
@@ -287,12 +289,7 @@ export const DashboardScreen = ({ navigation }) => {
 
                     {/* Slot Switcher - For Overlap Resolution */}
                     {enabledSlots.length > 1 && (
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={tw`mt-6`}
-                            contentContainerStyle={tw`px-1`}
-                        >
+                        <View style={tw`mt-6 flex-row items-center gap-1.5 px-0.5`}>
                             {enabledSlots.map(s => {
                                 const isSelected = slot === s.id;
                                 const Icon = s.id === 'breakfast' ? Coffee : (s.id === 'lunch' ? Sun : (s.id === 'snacks' ? UtensilsCrossed : Moon));
@@ -301,27 +298,30 @@ export const DashboardScreen = ({ navigation }) => {
                                         key={s.id}
                                         onPress={() => setManualSlot(s.id)}
                                         style={[
-                                            tw`flex-row items-center gap-2 px-5 py-2.5 rounded-2xl mr-3 border`,
+                                            tw`flex-1 flex-row items-center justify-center gap-1.5 px-1 py-1.5 rounded-xl border`,
                                             isSelected
-                                                ? tw`bg-yellow-400 border-yellow-400 shadow-md shadow-yellow-100`
+                                                ? tw`bg-yellow-400 border-yellow-400 shadow-sm shadow-yellow-100`
                                                 : tw`bg-white border-white`
                                         ]}
                                     >
-                                        <Icon size={12} color={isSelected ? "#111827" : "#9ca3af"} />
+                                        <Icon size={10} color={isSelected ? "#111827" : "#9ca3af"} />
                                         <Text style={[
-                                            tw`text-[9px] font-black uppercase tracking-widest`,
+                                            tw`text-[8px] font-black uppercase tracking-tighter`,
                                             isSelected ? tw`text-gray-900` : tw`text-gray-400`
-                                        ]}>{s.id}</Text>
+                                        ]} numberOfLines={1}>{s.id}</Text>
                                     </Pressable>
                                 );
                             })}
-                        </ScrollView>
+                        </View>
                     )}
                 </LinearGradient>
             </View>
 
             <ScrollView
-                contentContainerStyle={tw`p-6 pt-105 pb-32`}
+                contentContainerStyle={[
+                    tw`p-6 pb-32`,
+                    { paddingTop: enabledSlots.length > 1 ? 465 : 410 }
+                ]}
                 style={tw`flex-1`}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}

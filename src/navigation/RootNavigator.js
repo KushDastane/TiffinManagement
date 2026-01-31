@@ -5,7 +5,7 @@ import { View, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
-import { logoutUser } from '../services/authService';
+import { logoutUser, updateUserProfile } from '../services/authService';
 
 import { AuthStack } from './AuthStack';
 import { AdminStack } from './AdminStack';
@@ -30,17 +30,29 @@ export const RootNavigator = () => {
     useEffect(() => {
         const checkIntroStatus = async () => {
             if (userProfile?.role) {
+                // 1. Check if Firestore already has it
+                if (userProfile.hasWatchedIntro) {
+                    setIntroWatched(true);
+                    return;
+                }
+
+                // 2. Fallback to AsyncStorage (for users who watched on this device but not synced to profile)
                 const storageKey = userProfile.role === 'admin'
                     ? VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_ADMIN
                     : VIDEO_CONFIG.STORAGE_KEYS.HAS_WATCHED_INTRO_STUDENT;
 
                 try {
                     const hasWatched = await AsyncStorage.getItem(storageKey);
-                    // DEBUG: Force false to show video
-                    setIntroWatched(false);
+                    if (hasWatched === 'true') {
+                        setIntroWatched(true);
+                        // Sync back to Firestore if missing
+                        updateUserProfile(user.uid, { hasWatchedIntro: true });
+                    } else {
+                        setIntroWatched(false);
+                    }
                 } catch (e) {
                     console.error("Error checking intro video status", e);
-                    setIntroWatched(false); // DEBUG: Find intro video
+                    setIntroWatched(false);
                 }
             } else {
                 setIntroWatched(null);
@@ -48,7 +60,7 @@ export const RootNavigator = () => {
         };
 
         checkIntroStatus();
-    }, [userProfile?.role]);
+    }, [userProfile?.role, userProfile?.hasWatchedIntro]);
 
     const handleIntroFinish = () => {
         setIntroWatched(true);

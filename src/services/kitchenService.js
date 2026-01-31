@@ -40,17 +40,35 @@ export const createKitchen = async (ownerId, kitchenData) => {
 
         // Smart Defaults based on Type
         let mealTypes = [];
+        let mealSlots = {};
+
+        const SLOT_DEFAULTS = {
+            breakfast: { active: false, start: '22:00', end: '07:00', pickupStart: '07:30', pickupEnd: '09:00', deliveryStart: '07:30', deliveryEnd: '09:00' },
+            lunch: { active: true, start: '22:00', end: '14:00', pickupStart: '12:30', pickupEnd: '14:30', deliveryStart: '12:30', deliveryEnd: '14:30' },
+            snacks: { active: false, start: '16:00', end: '18:00', pickupStart: '17:00', pickupEnd: '19:00', deliveryStart: '17:00', deliveryEnd: '19:00' },
+            dinner: { active: true, start: '16:00', end: '20:00', pickupStart: '19:30', pickupEnd: '21:30', deliveryStart: '19:30', deliveryEnd: '21:30' }
+        };
+
         if (kitchenType === 'DABBA') {
             mealTypes = [
-                { id: 'lunch', label: 'Lunch', mode: 'FIXED', startTime: '07:00', endTime: '13:00', allowCustomization: true },
-                { id: 'dinner', label: 'Dinner', mode: 'FIXED', startTime: '16:00', endTime: '21:00', allowCustomization: true }
+                { id: 'lunch', label: 'Lunch', mode: 'FIXED', startTime: '22:00', endTime: '14:00', allowCustomization: true },
+                { id: 'dinner', label: 'Dinner', mode: 'FIXED', startTime: '16:00', endTime: '20:00', allowCustomization: true }
             ];
+            mealSlots = {
+                lunch: SLOT_DEFAULTS.lunch,
+                dinner: SLOT_DEFAULTS.dinner
+            };
         } else {
             mealTypes = [
-                { id: 'breakfast', label: 'Breakfast', mode: 'MENU', startTime: '07:00', endTime: '11:00' },
-                { id: 'lunch', label: 'Lunch', mode: 'MENU', startTime: '11:00', endTime: '15:00' },
-                { id: 'snacks', label: 'Snacks', mode: 'MENU', startTime: '15:00', endTime: '19:00' }
+                { id: 'breakfast', label: 'Breakfast', mode: 'MENU', startTime: '22:00', endTime: '07:00' },
+                { id: 'lunch', label: 'Lunch', mode: 'MENU', startTime: '22:00', endTime: '14:00' },
+                { id: 'snacks', label: 'Snacks', mode: 'MENU', startTime: '16:00', endTime: '18:00' }
             ];
+            mealSlots = {
+                breakfast: SLOT_DEFAULTS.breakfast,
+                lunch: SLOT_DEFAULTS.lunch,
+                snacks: SLOT_DEFAULTS.snacks
+            };
         }
 
         const newKitchen = {
@@ -59,6 +77,7 @@ export const createKitchen = async (ownerId, kitchenData) => {
             status: 'active',
             createdAt: serverTimestamp(),
             mealTypes,
+            mealSlots,
             fixedMealConfig: {
                 global: {
                     variants: [
