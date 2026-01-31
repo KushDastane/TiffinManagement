@@ -15,7 +15,6 @@ import { RoleSelectScreen } from '../screens/RoleSelectScreen';
 import { CreateKitchenScreen } from '../screens/admin/CreateKitchenScreen';
 import { LoadingScreen } from '../screens/LoadingScreen';
 import { StudentSetupScreen } from '../screens/StudentSetupScreen';
-import { LocationPickerScreen } from '../screens/student/LocationPickerScreen';
 import { IntroVideoScreen } from '../screens/IntroVideoScreen';
 import { VIDEO_CONFIG } from '../config/videoConfig';
 
@@ -96,11 +95,9 @@ export const RootNavigator = () => {
                 )
             ) : (
                 // 3b. Student Flow
-                !userProfile.name ? (
-                    // Only ask for name IF they are a student and haven't set it yet
+                !userProfile.locationSet ? (
+                    // Unified setup: Name + Location
                     <Stack.Screen name="Setup" component={StudentSetupScreen} />
-                ) : !userProfile.locationSet ? (
-                    <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
                 ) : !userProfile.currentKitchenId ? (
                     <Stack.Screen name="UnjoinedRoot" component={UnjoinedStudentStack} />
                 ) : (

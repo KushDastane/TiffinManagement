@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, BackHandler } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, BackHandler, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useAuth } from '../../contexts/AuthContext';
 import { createKitchen } from '../../services/kitchenService';
 import { updateUserProfile } from '../../services/authService';
 import tw from 'twrnc';
-import { ChefHat, ArrowRight, ChevronLeft, Navigation } from 'lucide-react-native';
+import { ChefHat, ArrowRight, ChevronLeft, Navigation, MapPin, Phone, Info, CheckCircle2 } from 'lucide-react-native';
+import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft, Layout } from 'react-native-reanimated';
+
+const { width } = Dimensions.get('window');
 
 export const CreateKitchenScreen = () => {
     const { user } = useAuth();
+    const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [building, setBuilding] = useState('');
     const [locality, setLocality] = useState('');
@@ -25,18 +29,42 @@ export const CreateKitchenScreen = () => {
     const [autoDetected, setAutoDetected] = useState(false);
 
     const types = [
-        { id: 'DABBA', label: 'Tiffin Service', icon: '🍱', desc: 'Fixed meals (Lunch/Dinner)' }
+        {
+            id: 'DABBA',
+            label: 'Tiffin Service',
+            icon: '🍱',
+            desc: 'Best for standard lunch/dinner subscription models.',
+            color: 'bg-yellow-50',
+            borderColor: 'border-yellow-400'
+        }
     ];
 
     const serviceModes = [
-        { id: 'DELIVERY', label: 'Delivery', icon: '🚚' },
-        { id: 'PICKUP', label: 'Pickup', icon: '🏃' }
+        { id: 'DELIVERY', label: 'Home Delivery', icon: '🚚', desc: 'You deliver to students' },
+        { id: 'PICKUP', label: 'Self Pickup', icon: '🏃', desc: 'Students collect from you' }
     ];
 
     const handleBack = async () => {
+        if (step > 1) {
+            setStep(step - 1);
+            return;
+        }
         setResetting(true);
         await updateUserProfile(user.uid, { role: null });
         setResetting(false);
+    };
+
+    const nextStep = () => {
+        if (step === 1) {
+            if (!name.trim()) return Alert.alert("Error", "Please enter your kitchen name");
+            setStep(2);
+        } else if (step === 2) {
+            if (!building.trim()) return Alert.alert("Error", "Building/Shop number is required");
+            if (!locality.trim()) return Alert.alert("Error", "Locality/Area is required");
+            if (!city.trim()) return Alert.alert("Error", "City is required");
+            if (!pincode.trim() || pincode.length !== 6) return Alert.alert("Error", "Valid 6-digit Pincode is required");
+            setStep(3);
+        }
     };
 
     useEffect(() => {
@@ -47,7 +75,7 @@ export const CreateKitchenScreen = () => {
 
         const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
         return () => subscription.remove();
-    }, []);
+    }, [step]);
 
     const detectLocation = async () => {
         try {
@@ -104,26 +132,6 @@ export const CreateKitchenScreen = () => {
     };
 
     const handleCreate = async () => {
-        if (!name.trim()) {
-            Alert.alert("Error", "Please enter a kitchen name");
-            return;
-        }
-
-        if (!building.trim()) {
-            Alert.alert("Error", "Building/Shop number is required");
-            return;
-        }
-
-        if (!city.trim() || !pincode.trim() || !locality.trim()) {
-            Alert.alert("Error", "Locality, City and Pincode are required");
-            return;
-        }
-
-        if (pincode.length !== 6) {
-            Alert.alert("Error", "Please enter a valid 6-digit Pincode");
-            return;
-        }
-
         if (!phone.trim() || phone.length < 10) {
             Alert.alert("Error", "Please enter a valid 10-digit phone number");
             return;
@@ -153,59 +161,103 @@ export const CreateKitchenScreen = () => {
 
     return (
         <SafeAreaView style={tw`flex-1 bg-white`}>
-            <View style={tw`flex-1`}>
-                {/* Back Button */}
+            {/* Header & Progress */}
+            <View style={tw`px-6 pt-4 pb-2 flex-row items-center justify-between`}>
                 <TouchableOpacity
                     onPress={handleBack}
-                    style={tw`absolute top-4 left-3 p-2 bg-gray-50 rounded-full z-10`}
+                    style={tw`p-2 bg-gray-50 rounded-full`}
                     disabled={resetting || loading}
                 >
                     {resetting ? <ActivityIndicator size="small" color="#9ca3af" /> : <ChevronLeft size={20} color="#374151" />}
                 </TouchableOpacity>
 
-                <ScrollView style={tw`flex-1 bg-white px-6`} showsVerticalScrollIndicator={false} contentContainerStyle={tw`items-center justify-center flex-grow pt-12 pb-10`}>
-                    <View style={tw`w-full max-w-[90%]`}>
-                        <View style={tw`mb-10 items-center`}>
-                            <View style={tw`w-14 h-14 bg-yellow-100 rounded-2xl items-center justify-center mb-3`}>
-                                <ChefHat size={24} color="#ca8a04" />
-                            </View>
-                            <Text style={tw`text-2xl font-black text-gray-900 tracking-tight text-center`}>Kitchen Setup</Text>
-                            <Text style={tw`text-xs text-gray-400 mt-1 font-bold uppercase tracking-wide text-center`}>Culinary Empire Starts Here</Text>
+                <View style={tw`flex-1 px-8`}>
+                    <View style={tw`h-1 w-full bg-gray-100 rounded-full overflow-hidden`}>
+                        <Animated.View
+                            layout={Layout.springify()}
+                            style={[tw`h-full bg-yellow-400`, { width: `${(step / 3) * 100}%` }]}
+                        />
+                    </View>
+                </View>
+
+                <View style={tw`w-10 items-center`}>
+                    <Text style={tw`text-[10px] font-black text-gray-400`}>{step}/3</Text>
+                </View>
+            </View>
+
+            <ScrollView
+                style={tw`flex-1`}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={tw`px-6 pt-6 pb-10`}
+            >
+                {step === 1 && (
+                    <Animated.View entering={FadeIn} exiting={FadeOut} style={tw`w-full`}>
+                        <View style={tw`mb-10`}>
+                            <Text style={tw`text-3xl font-black text-gray-900 tracking-tight`}>Let's name your{"\n"}Kitchen</Text>
+                            <Text style={tw`text-gray-400 mt-2 font-bold text-xs uppercase tracking-widest`}>Step 1: Identity</Text>
                         </View>
 
-                        {/* Kitchen Name */}
-                        <View style={tw`bg-gray-50 rounded-2xl p-4 mb-4`}>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Kitchen Name</Text>
+                        <View style={tw`bg-gray-50 rounded-3xl p-6 mb-8 border border-gray-100`}>
+                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1`}>Display Name</Text>
                             <TextInput
-                                style={tw`w-full text-base font-bold text-gray-900 py-1`}
+                                style={tw`w-full text-xl font-bold text-gray-900 py-1`}
                                 placeholder="e.g. Grandma's Tiffin"
                                 value={name}
                                 onChangeText={setName}
                                 placeholderTextColor="#9ca3af"
-                                selectionColor="#ca8a04"
+                                autoFocus
                             />
                         </View>
 
-                        {/* Address Group */}
-                        <View style={tw`bg-white rounded-2xl p-1 mb-4`}>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-1`}>Kitchen Location</Text>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-1`}>Kitchen Type</Text>
+                        <View style={tw`gap-4`}>
+                            {types.map((t) => (
+                                <TouchableOpacity
+                                    key={t.id}
+                                    onPress={() => setKitchenType(t.id)}
+                                    style={[
+                                        tw`p-5 rounded-3xl flex-row items-center gap-4 border-2`,
+                                        kitchenType === t.id ? tw`bg-yellow-50 border-yellow-400` : tw`bg-gray-50 border-transparent`
+                                    ]}
+                                >
+                                    <View style={tw`w-12 h-12 rounded-2xl bg-white items-center justify-center shadow-sm`}>
+                                        <Text style={tw`text-2xl`}>{t.icon}</Text>
+                                    </View>
+                                    <View style={tw`flex-1`}>
+                                        <Text style={tw`text-lg font-black text-gray-900`}>{t.label}</Text>
+                                        <Text style={tw`text-[10px] text-gray-400 font-bold leading-tight mt-0.5`}>{t.desc}</Text>
+                                    </View>
+                                    {kitchenType === t.id && <CheckCircle2 size={20} color="#ca8a04" />}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </Animated.View>
+                )}
 
-                            <TouchableOpacity
-                                onPress={detectLocation}
-                                disabled={detecting}
-                                style={tw`bg-blue-50 rounded-2xl p-4 flex-row items-center justify-center mb-4`}
-                            >
-                                {detecting ? (
-                                    <ActivityIndicator color="#2563eb" />
-                                ) : (
-                                    <>
-                                        <Navigation size={16} color="#2563eb" style={tw`mr-2`} />
-                                        <Text style={tw`text-blue-600 font-black text-xs uppercase tracking-widest`}>Detect My Location</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
+                {step === 2 && (
+                    <Animated.View entering={SlideInRight} exiting={SlideOutLeft} style={tw`w-full`}>
+                        <View style={tw`mb-8`}>
+                            <Text style={tw`text-3xl font-black text-gray-900 tracking-tight`}>Where is your{"\n"}Business?</Text>
+                            <Text style={tw`text-gray-400 mt-2 font-bold text-xs uppercase tracking-widest`}>Step 2: Location</Text>
+                        </View>
 
-                            <View style={tw`bg-gray-50 rounded-2xl p-4 mb-3`}>
+                        <TouchableOpacity
+                            onPress={detectLocation}
+                            disabled={detecting}
+                            style={tw`bg-blue-50 rounded-3xl p-5 flex-row items-center gap-4 mb-8 border border-blue-100`}
+                        >
+                            <View style={tw`w-12 h-12 bg-blue-100 rounded-2xl items-center justify-center`}>
+                                {detecting ? <ActivityIndicator size="small" color="#2563eb" /> : <MapPin size={24} color="#2563eb" />}
+                            </View>
+                            <View style={tw`flex-1`}>
+                                <Text style={tw`text-blue-700 font-black text-sm`}>Auto-detect Location</Text>
+                                <Text style={tw`text-blue-600/60 text-[10px] font-bold`}>Fetch address using GPS</Text>
+                            </View>
+                            {!detecting && <ArrowRight size={16} color="#2563eb" />}
+                        </TouchableOpacity>
+
+                        <View style={tw`gap-4`}>
+                            <View style={tw`bg-gray-50 rounded-2xl p-4`}>
                                 <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Flat / Shop / Building</Text>
                                 <TextInput
                                     style={tw`w-full text-base font-bold text-gray-900 py-1`}
@@ -216,7 +268,7 @@ export const CreateKitchenScreen = () => {
                                 />
                             </View>
 
-                            <View style={tw`bg-gray-50 rounded-2xl p-4 mb-3`}>
+                            <View style={tw`bg-gray-50 rounded-2xl p-4`}>
                                 <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Locality / Area</Text>
                                 <TextInput
                                     style={tw`w-full text-base font-bold text-gray-900 py-1`}
@@ -238,10 +290,8 @@ export const CreateKitchenScreen = () => {
                                         placeholderTextColor="#9ca3af"
                                     />
                                 </View>
-                                <View style={tw`flex-1 bg-gray-50 rounded-2xl p-4 border border-transparent ${autoDetected ? 'border-yellow-400/50' : ''}`}>
-                                    <View style={tw`flex-row items-center justify-between`}>
-                                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1`}>Pincode</Text>
-                                    </View>
+                                <View style={[tw`flex-1 bg-gray-50 rounded-2xl p-4 border border-transparent`, autoDetected && tw`border-yellow-400/30`]}>
+                                    <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Pincode</Text>
                                     <TextInput
                                         style={tw`w-full text-base font-bold text-gray-900 py-1`}
                                         placeholder="6 Digits"
@@ -254,78 +304,85 @@ export const CreateKitchenScreen = () => {
                                 </View>
                             </View>
                         </View>
+                    </Animated.View>
+                )}
 
-                        {/* Contact Group */}
-                        <View style={tw`bg-gray-50 rounded-2xl p-4 mb-8`}>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1`}>Contact Number (WhatsApp)</Text>
+                {step === 3 && (
+                    <Animated.View entering={SlideInRight} exiting={SlideOutLeft} style={tw`w-full`}>
+                        <View style={tw`mb-8`}>
+                            <Text style={tw`text-3xl font-black text-gray-900 tracking-tight`}>Final{"\n"}Checkpoints</Text>
+                            <Text style={tw`text-gray-400 mt-2 font-bold text-xs uppercase tracking-widest`}>Step 3: Business Details</Text>
+                        </View>
+
+                        <View style={tw`bg-gray-900 rounded-3xl p-6 mb-8`}>
+                            <View style={tw`flex-row items-center gap-3 mb-4`}>
+                                <View style={tw`w-8 h-8 bg-yellow-400 rounded-lg items-center justify-center`}>
+                                    <Phone size={16} color="black" />
+                                </View>
+                                <Text style={tw`text-white font-black text-xs uppercase tracking-widest`}>Contact Details</Text>
+                            </View>
+
+                            <Text style={tw`text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 ml-1`}>Primary WhatsApp Number</Text>
                             <TextInput
-                                style={tw`w-full text-base font-bold text-gray-900 py-1`}
+                                style={tw`w-full text-xl font-bold text-white py-1`}
                                 placeholder="9876543210"
                                 value={phone}
                                 onChangeText={(v) => {
                                     setPhone(v);
                                     setWhatsapp(v);
                                 }}
-                                placeholderTextColor="#9ca3af"
+                                placeholderTextColor="#4b5563"
                                 keyboardType="phone-pad"
+                                autoFocus
                             />
                         </View>
 
-                        {/* Service Mode Selection */}
-                        <View style={tw`mb-6 w-full`}>
-                            <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1 text-center`}>Service Mode</Text>
-                            <View style={tw`flex-row gap-3`}>
-                                {serviceModes.map((m) => (
-                                    <TouchableOpacity
-                                        key={m.id}
-                                        onPress={() => setServiceMode(m.id)}
-                                        style={[
-                                            tw`flex-1 p-4 rounded-2xl items-center`,
-                                            serviceMode === m.id ? tw`bg-gray-900` : tw`bg-gray-50`
-                                        ]}
-                                    >
-                                        <Text style={tw`text-2xl mb-2`}>{m.icon}</Text>
-                                        <Text style={[tw`font-black text-[9px] uppercase text-center`, { color: serviceMode === m.id ? 'white' : '#9ca3af' }]}>{m.label}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                        <Text style={tw`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-1`}>Service Availability</Text>
+                        <View style={tw`flex-row gap-4 mb-10`}>
+                            {serviceModes.map((m) => (
+                                <TouchableOpacity
+                                    key={m.id}
+                                    onPress={() => setServiceMode(m.id)}
+                                    style={[
+                                        tw`flex-1 p-5 rounded-3xl items-center border-2`,
+                                        serviceMode === m.id ? tw`bg-gray-900 border-gray-900` : tw`bg-gray-50 border-transparent`
+                                    ]}
+                                >
+                                    <Text style={tw`text-3xl mb-3`}>{m.icon}</Text>
+                                    <Text style={[tw`font-black text-[10px] uppercase text-center`, { color: serviceMode === m.id ? 'white' : '#111827' }]}>{m.label}</Text>
+                                    <Text style={[tw`text-[8px] font-bold text-center mt-1`, { color: serviceMode === m.id ? 'rgba(255,255,255,0.5)' : '#9ca3af' }]}>{m.desc}</Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
 
-                        {/* Kitchen Type Selection - Compact */}
-                        <View style={tw`mb-10`}>
-                            <View style={tw`flex-row gap-3`}>
-                                {types.map((t) => (
-                                    <TouchableOpacity
-                                        key={t.id}
-                                        onPress={() => setKitchenType(t.id)}
-                                        style={[
-                                            tw`flex-1 p-4 rounded-2xl items-center`,
-                                            kitchenType === t.id && tw`bg-gray-900`
-                                        ]}
-                                    >
-                                        <Text style={tw`text-2xl mb-2`}>{t.icon}</Text>
-                                        <Text style={[tw`font-black text-[10px] uppercase text-center`, { color: kitchenType === t.id ? 'white' : '#111827' }]}>{t.label}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                        <View style={tw`bg-yellow-50 rounded-2xl p-4 mb-8 flex-row items-start gap-3`}>
+                            <Info size={16} color="#ca8a04" style={tw`mt-0.5`} />
+                            <Text style={tw`flex-1 text-[10px] text-yellow-800 font-bold leading-tight`}>
+                                By launching, you agree to our terms. You can adjust your meal timings and menu later in settings.
+                            </Text>
                         </View>
+                    </Animated.View>
+                )}
+            </ScrollView>
 
-                        <TouchableOpacity
-                            onPress={handleCreate}
-                            disabled={loading}
-                            style={tw`w-full bg-[#FACC15] rounded-2xl py-4 shadow-sm items-center flex-row justify-center gap-2`}
-                        >
-                            {loading ? (
-                                <ActivityIndicator size="small" color="black" />
-                            ) : (
-                                <>
-                                    <Text style={tw`text-black font-black text-xs uppercase tracking-widest`}>Launch Kitchen</Text>
-                                    <ArrowRight size={16} color="black" />
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </ScrollView>
+            {/* Footer Action */}
+            <View style={tw`px-6 pb-8 pt-4 border-t border-gray-50 bg-white`}>
+                <TouchableOpacity
+                    onPress={step === 3 ? handleCreate : nextStep}
+                    disabled={loading}
+                    style={tw`w-full bg-[#FACC15] rounded-3xl py-4.5 shadow-lg items-center flex-row justify-center gap-3`}
+                >
+                    {loading ? (
+                        <ActivityIndicator size="small" color="black" />
+                    ) : (
+                        <>
+                            <Text style={tw`text-black font-black text-sm uppercase tracking-widest`}>
+                                {step === 3 ? "Launch Culinary Empire" : "Continue"}
+                            </Text>
+                            <ArrowRight size={18} color="black" />
+                        </>
+                    )}
+                </TouchableOpacity>
             </View>
         </SafeAreaView>
     );

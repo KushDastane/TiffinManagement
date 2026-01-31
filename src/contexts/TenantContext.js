@@ -25,7 +25,10 @@ export const TenantProvider = ({ children }) => {
                 return;
             }
 
-            setLoading(true);
+            // ONLY set loading if we don't already have the right tenant loaded
+            if (!tenant || tenant.id !== userProfile.currentKitchenId) {
+                setLoading(true);
+            }
             try {
                 // 1. Fetch current kitchen details
                 const kitchenRef = doc(db, 'kitchens', userProfile.currentKitchenId);

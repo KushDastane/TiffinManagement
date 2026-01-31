@@ -108,11 +108,11 @@ export const createUserProfile = async (uid, data) => {
 
         await setDoc(userRef, {
             id: uid,
+            hasWatchedIntro: false, // Default for new profiles
             ...data,
             createdAt: new Date().toISOString(),
             joinedKitchens: data.joinedKitchens || [],
-            currentKitchenId: data.currentKitchenId || null,
-            hasWatchedIntro: false
+            currentKitchenId: data.currentKitchenId || null
         }, { merge: true });
         return { success: true };
     } catch (error) {
